@@ -1,0 +1,143 @@
+Speed (ticks/row)
+Playback position
+Pattern number for this order
+Disk operations
+Pattern view
+Instrument editor
+Song view
+Mixer
+Settings
+Help
+Enable pattern editing
+Play from cursor
+Play from pattern start
+Stop
+Step playback
+Current row
+Current pattern
+Current tick
+Current speed
+Orders
+Note
+Instrument
+Volume
+Effect
+Row number
+About
+Instrument number
+Save instrument
+Load instrument
+Disable/Enable envelope
+Volume envelope
+Cutoff envelope
+Resonance envelope
+Duty envelope
+Shape envelope
+Pitch envelope
+Fine pitch envelope
+Panning envelope
+Sequence number
+Use next free sequence
+Clear envelope
+Hex mode
+Loop position (FF=disabled)
+Release position (FF=disabled)
+Envelope length
+Relative note (transposition)
+Filter mode (current: %s)
+Low pass
+High pass
+Band pass
+disabled
+lowpass
+highpass
+bandpass
+notch
+allpass
+low+band
+high+band
+PCM sample mode
+Sample offset
+Sample length
+Sample loop point
+PCM speed multiplier
+Maximum cutoff frequency
+Ring modulation
+Ring modulator frequency
+Ring modulator shape
+Ring modulator duty
+Oscillator sync
+Reset oscillator on new note
+Reset filter on new note
+Reset ringmod oscillator on new note
+Default volume
+Default song speed (ticks/row)
+Channel number
+Rows per beat
+Rows per bar
+Song detune (%s)
+Song length
+Default song tempo
+Frequency
+Volume
+Panning
+Duty
+Cutoff
+Resonance
+Filter mode
+Shape
+PCM
+Ring modulation
+Oscillator sync
+PCM offset
+PCM bound
+PCM start
+PCM multiplier
+RM frequency
+RM shape
+RM duty
+Playback mode
+Normal playback mode
+Impulse Tracker-compatible mode
+FastTracker 2-compatible mode
+ProTracker-compatible mode
+Scream Tracker 3-compatible mode
+Share Gxx memory with Exx and Fxx
+Double filter frequency limit
+Sliding mode
+Linear slides
+300KHz-periods mode
+Amiga slides
+Default channel volume
+Default channel panning
+Duty (%s%)
+Square
+Saw
+Sine
+Triangle
+Noise
+Duty noise
+Shape 6
+Shape 7
+Frequency (%sHz)
+Cutoff
+Instrument number
+Channel volume
+Volume envelope position
+Cutoff envelope position
+Resonance envelope position
+Duty envelope position
+Shape envelope position
+Pitch envelope position
+Fine pitch envelope position
+Panning envelope position
+Current note (%.2f, %.1fHz)
+Portamento note (%.2f, %.1fHz)
+New file
+Load file
+Save file
+Import ProTracker module
+Import Scream Tracker 3 module
+Import Impulse Tracker module
+Import FastTracker 2 module
+File name

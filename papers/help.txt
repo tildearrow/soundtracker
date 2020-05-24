@@ -1,0 +1,197 @@
+(100 columns)
+---SOUNDTRACKER HELP---
+table of contents:
+1. what's soundtracker?
+2. 
+3. user interface
+3.1. header
+3.2. pattern view
+3.3. instrument view
+3.4. song view
+3.5. mixer view
+3.6. diskop view
+3.7. config view
+4. reference
+4.1. keyboard reference
+4.2. effect reference
+4.3. volume column reference
+4.4. Zxx reference
+4.5. compatibility reference
+4.6. in-depth effect information
+4.7. chip's technical information
+
+1. what's soundtracker?
+soundtracker (not going to be the final name!) is a tool for creating 8-bit chiptunes
+using the basis of trackers.
+Unlike similar 8-bit trackers, this tracker is designed to be more IT-friendly.
+
+2. 
+
+3. user interface
+
+3.1.
+
+3.2. pattern view
+use left and right to move the cursor
+use up and down to scroll between rows
+use the keyboard like a piano to put a note (volume and instrument values are also set)
+you can set the current effect by going there
+NOTE|INSTRUMENT|VOLUME|EFFECT
+... .. ... ... -> C-5 01 v40 G00
+
+3.3. instrument view
+(I'll write more later)
+-INSXX^v: current instrument to be edited
+-Save: saves this instrument
+-Load: load an instrument
+-RelNote: sets relative note for this instrument
+-Name: sets the name of this instrument (max 32 chars)
+-Filter: sets the filter mode for this channel (won't be active if cutoff envelope is not active)
+
+
+
+(Sequence Editor)
+-ON/NO: toggles if this envelope will be used
+-SeqXX^v: sets the sequence to be used
+-NF: finds the next free envelope and assigns it to this instrument
+-X: clears the current envelope (no warnings!)
+-Loop: loop point for this sequence
+-Release: release point for this sequence
+-Length: length of this sequence
+
+4. reference
+
+4.1. keyboard reference
+
+4.2. effect reference
+The effect set used by soundtracker is the same used in Impulse Tracker.
+[effect] [action]
+  Axx    Sets the speed to XX. Effect is ignored if A00.
+  Bxx    Jumps to pattern XX.
+  Cxx    Pattern break. Jumps to next pattern at position XX.
+  Dxx    Volume slide. 0X for a down slide and X0 for a up slide.
+  Exx    Pitch slide down.
+  Fxx    Pitch slide up.
+  Gxx    Tone portamento. XX is speed.
+  Hxy    Vibrato.
+  Ixy    Tremor.
+  Jxy    Arpeggio.
+  Kxx    Volume slide + Vibrato.
+  Lxx    Volume slide + Tone Portamento.
+  Mxx    Sets channel volume.
+  Nxx    Channel volume slide.
+  Oxx    Start all envelopes at position XX.
+  Pxx    Panning slide. 0X for a right slide and X0 for a left slide.
+  Qxy    Retriggers all envelopes.
+  Rxy    Tremolo.
+  Sxy    Special commands.
+  Txx    Set tempo.
+  Uxy    Fine vibrato.
+  Vxx    Set master volume.
+  Wxx    Master volume slide.
+  Xxx    Set panning.
+  Yxy    Panning tremolo.
+  Zxx    Tracker command.
+
+4.3. volume column reference
+
+4.4. Zxx reference
+*** NOTE: This is not implemented yet! ***
+The Zxx effect allows controlling the chip's registers and some tracker variables directly.
+Values from 00-7f change the current variable's value.
+Values from 80-ff allow setting up the current variable.
+[value] [action]
+  $80   Do nothing.
+  $81   Enable smooth value changes.
+  $82   Disable smooth value changes.
+$90-$97 Enable envelopes for this channel.
+$98-$9f Disable envelopes for this channel.
+$a0-$a7 Set filter mode for unfiltered notes on this channel.
+$a8-$af Force filters on this channel.
+  $b0   Cutoff handling.
+  $b1   Resonance handling.
+  $b2   Toggle forcing ring modulator.
+  $b3   Ring modulator (note) handling.
+  $b4   Ring modulator (sweep) handling.
+  $b5   Ring modulator (relative note) handling.
+  $b6   Ring modulator (multiplier) handling.
+  $b7   Ring modulator pulse width handling.
+$b8-$bf Set ring modulator shape.
+  $c0   Pulse width handling.
+  $c1   Pulse width (sweep) handling.
+$c8-$cf Force a shape under non-shaped notes on this channel.
+  $d0   Force ADSR volume on this channel.
+  $d1   Force ADSR cutoff on this channel.
+$d2-$d5 Volume ADSR parameter handling.
+$d6-$d9 Cutoff ADSR parameter handling.
+$e0-$e7 Toggle forcing another envelope on this channel.
+$e8-$ef Forced envelope handling.
+  $f0   Force oscillator.
+  $f1   Force PCM sampler.
+  $f2   Toggle forcing oscillator sync (self). Use RM parameters.
+  $f3   Toggle forcing oscillator sync (send).
+  $f4   Local mode for switches.
+  $f5   Global mode for switches.
+  $fb   Reset registers.
+  $fc   Reset oscillator.
+  $fd   Reset filter.
+  $fe   Reset RM oscillator.
+  $ff   Reset channel.
+
+4.5. compatibility reference
+-Gxx behavior:
+ -IT: share Gxx memory with Exx and Fxx
+ -original/PT/XM/S3M: don't share memory
+-Exx/Fxx memory:
+ -IT: there is E/F memory
+ -original/PT/XM/S3M: nothing
+-Arpeggios:
+ -original/IT/PT/S3M: normal arpeggios
+ -XM: reversed arpeggios, and unexpected behavior at speed>16
+-Effect values:
+ -original/IT/PT/XM: zero values don't use the previous effect's value
+ -S3M: zero values use the previous effect's value
+-Note range:
+ -original/IT/XM/S3M: C-0 to B-9
+ -PT: C-3 to B-6
+-Retrigger with RVCT value 0:
+ -original/IT/PT/S3M: no change
+ -XM: previous value
+-Tremor:
+ -original/PT/S3M/XM: clean tremor
+ -IT: buggy tremor
+-Instrument without note:
+ -original/S3M/XM: reset volume, nothing else
+ -IT: retrigger note with new instrument
+ -PT: change instrument but do not retrigger note
+-Dxx memory:
+ -PT: no Dxx memory
+ -original/IT/S3M/XM: Dxx memory present
+
+4.6. in-depth effect information
+this is how soundtracker processes effects.
+-Axx: Set Speed: sets the speed ONLY in the first tick.
+-Bxx: Jump to Row: jumps to order XX after this row.
+-Cxx: Jump to Next: jumps to next order after this row, starting at position XX.
+-Dxx: Volume Slide: slides the volume either up or down per tick.
+    -if 0x, then volume-=x; otherwise volume+=x
+    -if Fx, then previous procedure applies only in the first tick
+-Exx: Pitch Slide Down: slides the pitch down per tick.
+    -if Ex, changes are 4 times more precise
+    -if Fx, slide is only done in first tick
+-Fxx: Pitch Slide Up: same as above but goes up.
+-Gxx: Tone Portamento: slides to new note with speed xx.
+    -if this effect is present do not reset envelopes.
+-Hxy: Vibrato: executes a vibrato using a sine wave at speed X and depth Y.
+    -original pitch is preserved, though.
+-Ixy: Tremor: note on for X ticks, and off for Y ticks.
+-Jxy: Arpeggio:
+(i'll write more later)
+
+4.7. chip's technical information
+the chip emulated in the tracker is a custom chip. here's its description.
+-8 channels
+-2 modes per channel: OSCILLATOR, and PCM SAMPLES.
+-filters (low, high and band) in all modes.
+-ring modulation in ALL modes!
+(i'll write more later, sorry)
