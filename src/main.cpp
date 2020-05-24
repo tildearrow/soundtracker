@@ -57,7 +57,7 @@ soundchip chip[4]; // up to 4 soundchips
 
 using namespace std;
 const bool verbose=false; // change this to turn on verbose mode
-char songdf=0;
+signed char songdf=0;
 double FPS=50;
 int tempo;
 
@@ -93,7 +93,7 @@ int coff[32]={262144,262144,262144,262144,262144,262144,262144,
 unsigned char creso[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 unsigned char cfmode[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 unsigned char cmode[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-char cpan[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+signed char cpan[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 bool cfsweep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int cfcycles[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int cfperiod[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -111,7 +111,7 @@ unsigned short crmfreq[32]={100,1,1,1,1,1,1,1,
                1,1,1,1,1,1,1,1,
                1,1,1,1,1,1,1,1};
 unsigned char crmshape[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-char crm[32]={0,0,0,0,0,0,0,0,
+signed char crm[32]={0,0,0,0,0,0,0,0,
          0,0,0,0,0,0,0,0,
                0,0,0,0,0,0,0,0,
                0,0,0,0,0,0,0,0};
@@ -170,8 +170,8 @@ int orders=0;
 int instruments=0;
 int patterns=0;
 int seqs=255;
-char chpan[32]={};
-char chvol[32]={};
+signed char chpan[32]={};
+signed char chvol[32]={};
 bool muted[32]={};
 bool leftpress=false;
 bool rightpress=false;
@@ -190,7 +190,7 @@ bool EnvelopesRunning[32][8]={}; // EnvelopesRunning[channel][envelope]
 char name[32]=""; // song name
 unsigned char defspeed=6; // default song speed
 unsigned char speed=6; // current speed
-char playmode=0; // playmode (-1: reverse, 0: stopped, 1: playing, 2: paused)
+signed char playmode=0; // playmode (-1: reverse, 0: stopped, 1: playing, 2: paused)
 int curstep=0; // current step
 unsigned char curpat=0; // current pattern
 int curtick=0; // current tick
@@ -266,7 +266,7 @@ int plcount[32]={0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0}; // SBx processor - count
-char chanpan[32]={0,0,0,0,0,0,0,0,
+signed char chanpan[32]={0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0}; // channel panning
@@ -281,7 +281,7 @@ unsigned char defchanvol[32]={128,128,128,128,128,128,128,128,
                   128,128,128,128,128,128,128,128,
                   128,128,128,128,128,128,128,128,
                   128,128,128,128,128,128,128,128}; // default channel volume
-char defchanpan[32]={0,0,0,0,0,0,0,0,
+signed char defchanpan[32]={0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0}; // default channel panning
