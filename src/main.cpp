@@ -2842,7 +2842,7 @@ int ImportIT() {
     printf("module name is ");
     for (sk=4;sk<30;sk++) {
       name[sk-4]=memblock[sk];
-      if (sk==4) {printf(&memblock[sk]);}
+      if (sk==4) {printf("%s",&memblock[sk]);}
     }
     printf("\n");
     // orders, instruments, samples and patterns
@@ -3031,7 +3031,7 @@ int ImportMOD(const char* rfn) {
     printf("module name is ");
     for (sk=0;sk<20;sk++) {
       name[sk]=memblock[sk];
-      if (sk==0) {printf(&memblock[sk]);}
+      if (sk==0) {printf("%s",&memblock[sk]);}
     }
     printf("\n");
     printf("---ORDER LIST---\n");
@@ -3218,7 +3218,7 @@ int ImportS3M() {
   printf("module name is ");
   for (sk=0;sk<28;sk++) {
     name[sk]=memblock[sk];
-    if (sk==0) {printf(&memblock[sk]);}
+    if (sk==0) {printf("%s",&memblock[sk]);}
   }
   printf("\n");
   orders=memblock[0x20];
