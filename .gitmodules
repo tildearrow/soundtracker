@@ -1,0 +1,4 @@
+[submodule "SDL"]
+	path = SDL
+	url = https://github.com/spurious/SDL-mirror
+	branch = release-2.0.12
