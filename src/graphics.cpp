@@ -1,4 +1,5 @@
 #include "tracker.h"
+#include "unifont.h"
 
 float intens[6]={
   0, 0.37, 0.53, 0.68, 0.84, 1
@@ -173,7 +174,7 @@ bool Graphics::preinit() {
   */
   
   if (SDL_Init(SDL_INIT_EVENTS)==-1) return false;
-  if (TTF_Init()==-1) return false;
+  //if (TTF_Init()==-1) return false;
   
   return true;
 }
@@ -194,14 +195,29 @@ bool Graphics::init(int width, int height) {
   
   SDL_RenderSetScale(sdlRend,dpiScale,dpiScale);
   
+  /*
   sdlFont=TTF_OpenFont("unifont.ttf",16);
   if (sdlFont==NULL) {
     printf("unifont.ttf wasn't found...");
     return false;
   }
+  */
   scrSize.x=width;
   scrSize.y=height;
   
+  fontCache=SDL_CreateRGBSurfaceWithFormat(0,16*16,16*16,32,SDL_PIXELFORMAT_RGBA32);
+  // unpack the unifont dump
+  for (int i=0; i<8192; i++) {
+    for (int j=0; j<8; j++) {
+      ((unsigned char*)fontCache->pixels)[(i<<5)+(j<<2)]=255;
+      ((unsigned char*)fontCache->pixels)[(i<<5)+(j<<2)+1]=255;
+      ((unsigned char*)fontCache->pixels)[(i<<5)+(j<<2)+2]=255;
+      ((unsigned char*)fontCache->pixels)[(i<<5)+(j<<2)+3]=(unifont[i]&(1<<(7-j)))?255:0;
+    }
+  }
+  
+  // uncomment for unifont.cpp generating code
+  /*
   // copy font to texture
   SDL_Color c;
   SDL_Surface* s;
@@ -217,6 +233,32 @@ bool Graphics::init(int width, int height) {
     SDL_BlitSurface(s,&s->clip_rect,fontCache,&sr);
     SDL_FreeSurface(s);
   }
+  FILE* st;
+  st=fopen("unifont.cpp","wb");
+  int packBitIndex=0;
+  int writeByte=0;
+  unsigned char packByte=0;
+  fprintf(st,"const unsigned char unifont[]={\n  ");
+  for (int i=0; i<65536; i++) {
+    packByte=((((unsigned char*)fontCache->pixels)[i*4])?1:0)|(packByte<<1);
+    packBitIndex++;
+    if (packBitIndex>=8) {
+      fprintf(st,"%3d, ",packByte);
+      packBitIndex=0;
+      packByte=0;
+      writeByte++;
+      if (writeByte>=16) {
+        if (i!=65535) {
+          fprintf(st,"\n  ");
+        }
+        writeByte=0;
+      }
+    };
+  }
+  fprintf(st,"\n};\n");
+  fclose(st);
+  */
+  
   sdlText=SDL_CreateTextureFromSurface(sdlRend,fontCache);
   
   //fprintf(stderr,"\x1b[2J");
