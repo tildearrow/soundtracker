@@ -5151,9 +5151,33 @@ DETUNE_FACTOR_GLOBAL=1;
         mstate.x=ev.motion.x/dpiScale;
         mstate.y=ev.motion.y/dpiScale;
       } else if (ev.type == SDL_MOUSEBUTTONDOWN) {
-        mstate.buttons=ev.motion.state;
+        mstate.x=ev.button.x/dpiScale;
+        mstate.y=ev.button.y/dpiScale;
+        switch (ev.button.button) {
+          case SDL_BUTTON_LEFT:
+            mstate.buttons|=1;
+            break;
+          case SDL_BUTTON_RIGHT:
+            mstate.buttons|=2;
+            break;
+          case SDL_BUTTON_MIDDLE:
+            mstate.buttons|=4;
+            break;
+        }
       } else if (ev.type == SDL_MOUSEBUTTONUP) {
-        mstate.buttons&=~ev.motion.state;
+        mstate.x=ev.button.x/dpiScale;
+        mstate.y=ev.button.y/dpiScale;
+        switch (ev.button.button) {
+          case SDL_BUTTON_LEFT:
+            mstate.buttons&=~1;
+            break;
+          case SDL_BUTTON_RIGHT:
+            mstate.buttons&=~2;
+            break;
+          case SDL_BUTTON_MIDDLE:
+            mstate.buttons&=~4;
+            break;
+        }
       } else if (ev.type == SDL_MOUSEWHEEL) {
         mstate.z+=ev.wheel.y;
       } else if (ev.type == SDL_WINDOWEVENT) {
