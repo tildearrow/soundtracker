@@ -5231,9 +5231,7 @@ DETUNE_FACTOR_GLOBAL=1;
 
      maxrasterdelta=(maxval(0,raster2-raster1)>maxrasterdelta)?(maxval(0,raster2-raster1)):(maxrasterdelta);
          if (!playermode) {
-           g._WRAP_set_blender(SDL_BLENDMODE_NONE);
-           g._WRAP_clear_to_color(g._WRAP_map_rgba_f(0.0f,0.0f,0.0f,1.0f));
-           g._WRAP_set_blender(SDL_BLENDMODE_BLEND);
+           g.clearScreen();
      drawdisp();
      if (kb[SDL_SCANCODE_LSHIFT]) {
      g.tColor(9);

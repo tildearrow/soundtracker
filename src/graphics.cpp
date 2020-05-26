@@ -18,7 +18,7 @@ double getScale() {
   if (SDL_GetDisplayDPI(0,&dpi,NULL,NULL)==-1) {
     return 2.0;
   }
-  return fmax(1,round(dpi/120));
+  return fmax(1,round(dpi/180));
 #elif defined(__linux__)
   // linux (wayland) code here
 #elif defined(_WIN32)
@@ -191,6 +191,13 @@ bool Graphics::init(int width, int height) {
   if (SDL_InitSubSystem(SDL_INIT_VIDEO)==-1) return false;
   
   dpiScale=getScale();
+
+#ifdef ANDROID
+  // workaround for https://bugzilla.libsdl.org/show_bug.cgi?id=2291
+  SDL_GL_SetAttribute(SDL_GL_RED_SIZE,8);
+  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,8);
+  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,8);
+#endif
   
   sdlWin=SDL_CreateWindow("soundtracker (SDL)",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,width*dpiScale,height*dpiScale,SDL_WINDOW_RESIZABLE);
   if (!sdlWin) return false;

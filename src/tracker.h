@@ -230,6 +230,10 @@ class Graphics {
       //al_draw_circle(x,y,r,color,thick);
     }
     
+    void clearScreen() {
+      SDL_SetRenderDrawColor(sdlRend,0,0,0,255);
+      SDL_RenderClear(sdlRend);
+    }
     void tPos(float x, float y);
     void tPos(float y);
     void tNLPos(float x);
