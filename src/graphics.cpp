@@ -12,7 +12,14 @@ double getScale() {
   if (env!=NULL) {
     return atof(env);
   }
-#if defined(__linux__)
+#if defined(ANDROID)
+  // android code here
+  float dpi;
+  if (SDL_GetDisplayDPI(0,&dpi,NULL,NULL)==-1) {
+    return 2.0;
+  }
+  return fmax(1,round(dpi/120));
+#elif defined(__linux__)
   // linux (wayland) code here
 #elif defined(_WIN32)
   // windows code here
@@ -31,10 +38,8 @@ double getScale() {
   if ((dpi=nsStubDPI())>0) {
     return dpi;
   }
-#elif defined(__ANDROID__)
-  // android code here
 #endif
-#if defined(__unix__)
+#if defined(__unix__) && !defined(ANDROID)
   // X11
   Display* disp;
   int dpi;

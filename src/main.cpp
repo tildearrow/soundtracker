@@ -5227,13 +5227,9 @@ DETUNE_FACTOR_GLOBAL=1;
      }
 
      maxrasterdelta=(maxval(0,raster2-raster1)>maxrasterdelta)?(maxval(0,raster2-raster1)):(maxrasterdelta);
-         if (!playermode) {g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
+         if (!playermode) {g._WRAP_clear_to_color(g._WRAP_map_rgba_f(0.0f,0.0f,0.0f,1.0f));
      drawdisp();
      if (kb[SDL_SCANCODE_LSHIFT]) {
-     g._WRAP_draw_filled_rectangle(0,raster1,scrW,(raster1>raster2)?(525):(raster2),g._WRAP_map_rgba(64,64,128,64));
-     if (raster1>raster2) {
-       g._WRAP_draw_filled_rectangle(0,0,scrW,raster2,g._WRAP_map_rgba(64,64,128,64));
-     }
      g.tColor(9);
      g.tAlign(0.5);
      g.tPos((float)scrW/16.0,0);

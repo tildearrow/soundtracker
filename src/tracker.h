@@ -4,11 +4,16 @@
 #include <stdio.h>
 #include <math.h>
 
+#ifdef ANDROID
+#include <SDL.h>
+#define ANDRO
+#else
 #include <SDL2/SDL.h>
+#endif
 #ifdef _WIN32
 #include <windows.h>
 #else
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(ANDROID)
 #include <X11/Xlib.h>
 #endif
 #include <dirent.h>
