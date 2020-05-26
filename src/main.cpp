@@ -5057,7 +5057,10 @@ DETUNE_FACTOR_GLOBAL=1;
    }
    
    curdir=new char[4096];
-#ifdef _WIN32
+#ifdef ANDROID
+   // TODO: find the actual path
+   strcpy(curdir,"/storage/emulated/0");
+#elif defined(_WIN32)
    GetCurrentDirectory(4095,curdir);
 #else
    getcwd(curdir,4095);
