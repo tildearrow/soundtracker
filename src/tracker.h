@@ -63,6 +63,83 @@ struct Color {
     a(al) {}
 };
 
+class Swiper {
+  float* out;
+  float speed;
+  float frict;
+  float lMin;
+  float lMax;
+  float dpos;
+  float oldpos;
+  float iout;
+  bool drag;
+  bool dir;
+  public:
+    bool start(float pos) {
+      if (out==NULL) return false;
+      if (!drag) {
+        drag=true;
+        dpos=pos;
+        iout=*out;
+        return true;
+      }
+      return false;
+    }
+    bool update(float pos) {
+      if (out==NULL) return false;
+      if (drag) {
+        *out=iout-(pos-dpos);
+        oldpos=pos;
+      } else {
+        if (dir) {
+          *out-=speed;
+        } else {
+          *out+=speed;
+        }
+        speed-=frict;
+        if (speed<0) speed=0;
+      }
+      if (*out>lMax) {
+        *out=lMax;
+        speed=0;
+      }
+      if (*out<lMin) {
+        *out=lMin;
+        speed=0;
+      }
+      return drag;
+    }
+    bool end(float pos) {
+      if (out==NULL) return false;
+      if (drag) {
+        drag=false;
+        dir=(dpos-pos)<0;
+        speed=fabs(oldpos-pos);
+        return true;
+      }
+      return false;
+    }
+    void setOut(float* o) {
+      out=o;
+    }
+    void setFrict(float f) {
+      frict=f;
+    }
+    void setRange(float rMin, float rMax) {
+      lMin=rMin;
+      lMax=rMax;
+    }
+    Swiper():
+      out(NULL),
+      speed(0),
+      frict(0.1),
+      lMin(0),
+      lMax(500),
+      dpos(0),
+      iout(0),
+      drag(false) {}
+};
+
 class Graphics {
   Point textPos;
   Point scrSize;

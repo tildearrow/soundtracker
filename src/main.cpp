@@ -175,6 +175,8 @@ signed char chvol[32]={};
 bool muted[32]={};
 bool leftpress=false;
 bool rightpress=false;
+bool leftrelease=false;
+bool rightrelease=false;
 bool hexmode=false;
 bool quit=false;
 // channel memory stuff
@@ -485,6 +487,10 @@ const char* pageNames[]={
 
 bool mobileUI;
 float mobScroll;
+float topScroll;
+
+Swiper swX;
+Swiper swY;
 // NEW VARIABLES END //
 
 void Playback();
@@ -3913,28 +3919,29 @@ void LoadRawSample(const char* filename,int position) {
 void ClickEvents() {
   reversemode=false;
   // click events
-  leftclickprev=leftclick;
-  leftclick=(mstate.buttons&1);
   leftpress=false;
   rightpress=false;
+  leftrelease=false;
+  rightrelease=false;
+
+  leftclickprev=leftclick;
+  leftclick=(mstate.buttons&1);
   if (leftclick!=leftclickprev && leftclick==true) {
-    /*if (verbose) {
-    cout << "leftclick ";
-    cout << mstate.x;
-    cout << " ";
-    cout << mstate.y;
-    cout << ", ";
-    }*/
     leftpress=true;
   }
+  if (leftclick!=leftclickprev && leftclick==false) {
+    leftrelease=true;
+  }
+
   rightclickprev=rightclick;
   rightclick=(mstate.buttons&2);
   if (rightclick!=rightclickprev && rightclick==true) {
-    if (verbose) {
-    ////cout << "rightclick, ";
-    }
     rightpress=true;
   }
+  if (rightclick!=rightclickprev && rightclick==false) {
+    rightrelease=true;
+  }
+
   // hover functions
   for (int ii=0; ii<16; ii++) {
     // decrease hover amount
@@ -3955,61 +3962,77 @@ void ClickEvents() {
   for (int ii=0; ii<16; ii++) {
     if (hover[ii]>8) {hover[ii]=8;}
   }
+
   // screen event
-  if (leftclick) {
-  if (PIR(32,12,56,24,mstate.x,mstate.y)) {screen=1;}
-  if (PIR(0,12,24,24,mstate.x,mstate.y)) {screen=0;drawpatterns(true);}
-  if (PIR(32,24,56,36,mstate.x,mstate.y)) {screen=2;}
-  if (PIR(0,24,24,36,mstate.x,mstate.y)) {screen=3;}
-  if (PIR(0,36,24,48,mstate.x,mstate.y)) {screen=4;}
-  if (PIR(32,36,56,48,mstate.x,mstate.y)) {screen=5;}
-  /*
-  if (PIR(640,12,672,28,mstate.x,mstate.y)) {screen=6;}
-  */
-  if (PIR(0,0,128,11,mstate.x,mstate.y)) {screen=7;}
-  if (PIR(64,12,88,24,mstate.x,mstate.y)) {screen=9;}
-  if (PIR(64,24,88,36,mstate.x,mstate.y)) {screen=10;}
-  if (PIR(64,36,88,48,mstate.x,mstate.y)) {screen=12;}
-  if (PIR((scrW/2)-61,13,(scrW/2)-21,37,mstate.x,mstate.y)) {
-    if (curtick==0) {
-      Play();
-    } else {
-      playmode=1;
+  if (mobileUI) {
+    if (leftpress) {
+      if (PIR(0,0,scrW,59,mstate.x,mstate.y)) {
+        swX.setOut(&topScroll);
+        swX.setRange(0,820-scrW);
+        swX.start(mstate.x);
+      }
+    }
+    if (leftrelease) {
+      swX.end(mstate.x);
+    }
+    swX.update(mstate.x);
+  } else {
+    if (leftclick) {
+      if (PIR(32,12,56,24,mstate.x,mstate.y)) {screen=1;}
+      if (PIR(0,12,24,24,mstate.x,mstate.y)) {screen=0;drawpatterns(true);}
+      if (PIR(32,24,56,36,mstate.x,mstate.y)) {screen=2;}
+      if (PIR(0,24,24,36,mstate.x,mstate.y)) {screen=3;}
+      if (PIR(0,36,24,48,mstate.x,mstate.y)) {screen=4;}
+      if (PIR(32,36,56,48,mstate.x,mstate.y)) {screen=5;}
+      /*
+      if (PIR(640,12,672,28,mstate.x,mstate.y)) {screen=6;}
+      */
+      if (PIR(0,0,128,11,mstate.x,mstate.y)) {screen=7;}
+      if (PIR(64,12,88,24,mstate.x,mstate.y)) {screen=9;}
+      if (PIR(64,24,88,36,mstate.x,mstate.y)) {screen=10;}
+      if (PIR(64,36,88,48,mstate.x,mstate.y)) {screen=12;}
+      if (PIR((scrW/2)-61,13,(scrW/2)-21,37,mstate.x,mstate.y)) {
+        if (curtick==0) {
+          Play();
+        } else {
+          playmode=1;
+        }
+      }
+      if (PIR((scrW/2)-61,37,(scrW/2)-21,48,mstate.x,mstate.y)) {reversemode=true;}
+      if (PIR((scrW/2)+21,13,(scrW/2)+61,37,mstate.x,mstate.y)) {playmode=0;}
+    }
+    if (leftpress) {
+      inputvar=NULL;inputcurpos=0;maxinputsize=32;inputwhere=0;
+      if (PIR(272,24,279,36,mstate.x,mstate.y)) {curoctave--; if (curoctave<0) {curoctave=0;}}
+      if (PIR(280,24,288,36,mstate.x,mstate.y)) {curoctave++; if (curoctave>8) {curoctave=8;}}
+      if (PIR(160,12,167,23,mstate.x,mstate.y)) {speed--; if (speed<1) {speed=1;}}
+      if (PIR(168,12,176,23,mstate.x,mstate.y)) {speed++; if (speed>31) {speed=31;}; if (speed<1) {speed=1;}}
+      if (PIR(160,24,167,35,mstate.x,mstate.y)) {tempo--; if (tempo<31) {tempo=31;}; FPS=tempo/2.5;}
+      if (PIR(168,24,176,35,mstate.x,mstate.y)) {tempo++; if (tempo>255) {tempo=255;}; FPS=tempo/2.5;}
+      if (PIR(160,36,167,48,mstate.x,mstate.y)) {if (curpat>0) curpat--; if (playmode==1) Play();}
+      if (PIR(168,36,176,48,mstate.x,mstate.y)) {if (curpat<255) curpat++; if (playmode==1) Play();}
+      if (PIR(272,12,279,24,mstate.x,mstate.y)) {patid[curpat]--;}
+      if (PIR(280,12,288,24,mstate.x,mstate.y)) {patid[curpat]++;}
+      if (PIR(272,36,279,48,mstate.x,mstate.y)) {patlength[patid[curpat]]--;}
+      if (PIR(280,36,288,48,mstate.x,mstate.y)) {patlength[patid[curpat]]++;}
+      if (PIR((scrW/2)-20,37,(scrW/2)+20,48,mstate.x,mstate.y)) {StepPlay();}
+      if (PIR((scrW/2)-20,13,(scrW/2)+20,37,mstate.x,mstate.y)) {Play();}
+      if (PIR(scrW-34*8,24,scrW-28*8,36,mstate.x,mstate.y)) {follow=!follow;}
+      
+      if (PIR(scrW-28*8,12,scrW-27*8,24,mstate.x,mstate.y)) {
+        curins--;
+        if (curins<0) curins=0;
+      }
+      if (PIR(scrW-27*8,12,scrW-26*8,24,mstate.x,mstate.y)) {
+        curins++;
+        if (curins>255) curins=255;
+      }
+      
+      if (PIR(96,12,136,24,mstate.x,mstate.y)) {speedlock=!speedlock;}
+      if (PIR(96,24,136,36,mstate.x,mstate.y)) {tempolock=!tempolock;}
     }
   }
-  if (PIR((scrW/2)-61,37,(scrW/2)-21,48,mstate.x,mstate.y)) {reversemode=true;}
-  if (PIR((scrW/2)+21,13,(scrW/2)+61,37,mstate.x,mstate.y)) {playmode=0;}
-  }
-  if (leftpress) {
-    inputvar=NULL;inputcurpos=0;maxinputsize=32;inputwhere=0;
-    if (PIR(272,24,279,36,mstate.x,mstate.y)) {curoctave--; if (curoctave<0) {curoctave=0;}}
-    if (PIR(280,24,288,36,mstate.x,mstate.y)) {curoctave++; if (curoctave>8) {curoctave=8;}}
-    if (PIR(160,12,167,23,mstate.x,mstate.y)) {speed--; if (speed<1) {speed=1;}}
-    if (PIR(168,12,176,23,mstate.x,mstate.y)) {speed++; if (speed>31) {speed=31;}; if (speed<1) {speed=1;}}
-    if (PIR(160,24,167,35,mstate.x,mstate.y)) {tempo--; if (tempo<31) {tempo=31;}; FPS=tempo/2.5;}
-    if (PIR(168,24,176,35,mstate.x,mstate.y)) {tempo++; if (tempo>255) {tempo=255;}; FPS=tempo/2.5;}
-    if (PIR(160,36,167,48,mstate.x,mstate.y)) {if (curpat>0) curpat--; if (playmode==1) Play();}
-    if (PIR(168,36,176,48,mstate.x,mstate.y)) {if (curpat<255) curpat++; if (playmode==1) Play();}
-    if (PIR(272,12,279,24,mstate.x,mstate.y)) {patid[curpat]--;}
-    if (PIR(280,12,288,24,mstate.x,mstate.y)) {patid[curpat]++;}
-    if (PIR(272,36,279,48,mstate.x,mstate.y)) {patlength[patid[curpat]]--;}
-    if (PIR(280,36,288,48,mstate.x,mstate.y)) {patlength[patid[curpat]]++;}
-    if (PIR((scrW/2)-20,37,(scrW/2)+20,48,mstate.x,mstate.y)) {StepPlay();}
-    if (PIR((scrW/2)-20,13,(scrW/2)+20,37,mstate.x,mstate.y)) {Play();}
-    if (PIR(scrW-34*8,24,scrW-28*8,36,mstate.x,mstate.y)) {follow=!follow;}
-    
-    if (PIR(scrW-28*8,12,scrW-27*8,24,mstate.x,mstate.y)) {
-      curins--;
-      if (curins<0) curins=0;
-    }
-    if (PIR(scrW-27*8,12,scrW-26*8,24,mstate.x,mstate.y)) {
-      curins++;
-      if (curins>255) curins=255;
-    }
-    
-    if (PIR(96,12,136,24,mstate.x,mstate.y)) {speedlock=!speedlock;}
-    if (PIR(96,24,136,36,mstate.x,mstate.y)) {tempolock=!tempolock;}
-  }
+
   // events only in pattern view
   if (screen==0) {
     if (mstate.y>60) {
@@ -4934,12 +4957,20 @@ void drawdisp() {
     //g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
 
     // page select
-    g._WRAP_draw_filled_rectangle(0,0,scrW,59,g._WRAP_map_rgb(0,0,0));
+    g._WRAP_draw_filled_rectangle(-scrW*(1-mobScroll),0,scrW*mobScroll,59,g._WRAP_map_rgb(0,0,0));
 
+    if (kb[SDL_SCANCODE_LEFT]) {
+      topScroll++;
+      if (topScroll+scrW>(820)) topScroll=820-scrW;
+    }
+    if (kb[SDL_SCANCODE_RIGHT]) {
+      topScroll--;
+      if (topScroll<0) topScroll=0;
+    }
     for (int i=0; i<10; i++) {
-      g.tPos(3+(10*i)+float(7-strlen(pageNames[i]))/2,1.666667);
+      g.tPos((-topScroll+(1-mobScroll)*-scrW)/8+3+(10*i)+float(7-strlen(pageNames[i]))/2,1.666667);
       g.tColor(15);
-      g._WRAP_draw_rectangle(16+(10*8*i),12,16+72+(10*8*i),48,g._WRAP_map_rgb(128,128,128),1);
+      g._WRAP_draw_rectangle(((1-mobScroll)*-scrW)+16+(10*8*i)-topScroll,12,((1-mobScroll)*-scrW)+16+72+(10*8*i)-topScroll,48,g._WRAP_map_rgb(128,128,128),1);
       g.printf("%s",pageNames[i]);
     }
   } else {
