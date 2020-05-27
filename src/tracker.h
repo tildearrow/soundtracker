@@ -70,6 +70,7 @@ class Swiper {
   float lMin;
   float lMax;
   float dpos;
+  float curpos;
   float oldpos;
   float iout;
   bool drag;
@@ -81,6 +82,8 @@ class Swiper {
         drag=true;
         dpos=pos;
         iout=*out;
+        curpos=pos;
+        oldpos=pos;
         return true;
       }
       return false;
@@ -89,7 +92,8 @@ class Swiper {
       if (out==NULL) return false;
       if (drag) {
         *out=iout-(pos-dpos);
-        oldpos=pos;
+        oldpos=curpos;
+        curpos=pos;
       } else {
         if (dir) {
           *out-=speed;
@@ -113,8 +117,8 @@ class Swiper {
       if (out==NULL) return false;
       if (drag) {
         drag=false;
-        dir=(dpos-pos)<0;
-        speed=fabs(oldpos-pos);
+        dir=(oldpos-curpos)<0;
+        speed=fabs(oldpos-curpos);
         return true;
       }
       return false;
@@ -132,7 +136,7 @@ class Swiper {
     Swiper():
       out(NULL),
       speed(0),
-      frict(0.1),
+      frict(0.2),
       lMin(0),
       lMax(500),
       dpos(0),
