@@ -469,6 +469,8 @@ namespace settings {
 
 // NEW VARIABLES BEGIN //
 Graphics g;
+
+bool mobileUI;
 // NEW VARIABLES END //
 
 void Playback();
@@ -4818,15 +4820,6 @@ void drawdisp() {
                                g._WRAP_map_rgba(128,128,128,128));
     }
   }
-  /*
-  switch(curselmode) {
-  case 0: g._WRAP_draw_filled_rectangle(((scrW/2)-400)+24+(curselchan*96)+((8-chanstodisplay)*45),255,((scrW/2)-400)+48+(curselchan*96)+((8-chanstodisplay)*45),266,g._WRAP_map_rgb(128,128,128)); break;
-  case 1: g._WRAP_draw_filled_rectangle(((scrW/2)-400)+48+(curselchan*96)+((8-chanstodisplay)*45),255,((scrW/2)-400)+64+(curselchan*96)+((8-chanstodisplay)*45),266,g._WRAP_map_rgb(128,128,128)); break;
-  case 2: g._WRAP_draw_filled_rectangle(((scrW/2)-400)+64+(curselchan*96)+((8-chanstodisplay)*45),255,((scrW/2)-400)+88+(curselchan*96)+((8-chanstodisplay)*45),266,g._WRAP_map_rgb(128,128,128)); break;
-  case 3: g._WRAP_draw_filled_rectangle(((scrW/2)-400)+88+(curselchan*96)+((8-chanstodisplay)*45),255,((scrW/2)-400)+96+(curselchan*96)+((8-chanstodisplay)*45),266,g._WRAP_map_rgb(128,128,128)); break;
-  case 4: g._WRAP_draw_filled_rectangle(((scrW/2)-400)+96+(curselchan*96)+((8-chanstodisplay)*45),255,((scrW/2)-400)+112+(curselchan*96)+((8-chanstodisplay)*45),266,g._WRAP_map_rgb(128,128,128)); break;
-  }
-  */
   g._WRAP_draw_filled_rectangle(0,(follow)?(255):(fmax(60,255+(maxval(0,curstep)-curpatrow)*12)),scrW+1,((follow)?(266):(fmax(60,(255+(maxval(0,curstep)-curpatrow)*12)+11))),g._WRAP_map_rgba(64,64,64,128));
   }
   // grid markers
@@ -4837,102 +4830,7 @@ void drawdisp() {
   g.printf("%d, %d",(mstate.x/8)*8,(mstate.y/12)*12);
   #endif
   
-  // header
-  g.tPos(0,0);
-  g.tColor(14);
-  g.printf(PROGRAM_NAME);
-  g.tPos(14,0);
-  g.printf("r%d",ver);
-
-  // properties - buttons
-  patseek+=(curpat-patseek)/4;
-  if (fmod(patseek,1)>0.999 || fmod(patseek,1)<0.001) {
-    patseek=round(patseek);
-  }
-  g.tPos(0,1);
-  g.tColor(8);
-  g.printf("pat|ins|sfx|speed   v^|  |patID   v^|\n");
-  g.printf("sng|dsk|mem|tempo   v^|  |octave  v^|\n");
-  g.printf("lvl|cfg|vis|order   v^|  |length  v^|\n");
-  g.tPos(((float)scrW)/8.0-37,1);
-  g.tNLPos(((float)scrW)/8.0-37);
-  g.printf("|instr   v^\n");
-  g.printf("|  follow  \n");
-  g.printf("|   loop   \n");
-  g.tNLPos(0);
-  if (speedlock) {
-    g.tColor(14);
-    g.tPos(12,1);
-    g.printf("speed");
-  }
-  if (tempolock) {
-    g.tColor(14);
-    g.tPos(12,2);
-    g.printf("tempo");
-  }
-
-  g.tColor(14);
-  g.tPos(18,1); g.printf("%.2X",speed);
-  g.tPos(17,2); g.printf("%d",tempo);
-  g.tPos(18,3); g.printf("%.2X",curpat);
-  g.tPos(32,1); g.printf("%.2X",patid[curpat]);
-  g.tPos(32,2); g.printf("%.2X",curoctave);
-  g.tPos(32,3); g.printf("%.2X",patlength[patid[curpat]]);
-  
-  g.tNLPos(((float)scrW/8.0)-36);
-  g.tPos(1);
-  if (curins==0) {
-    g.printf("      --\n");
-  } else {
-    g.printf("      %.2X\n",curins);
-  }
-  if (follow) {
-    g.printf("  follow");
-  }
-  
-  g.tNLPos(((float)scrW/8.0)-24);
-  g.tPos(0.6666667);
-  g.tColor(15);
-  g.printf(" %.2x/%.2x\n",curtick,speed);
-  g.printf(" %.2x/%.2x\n",maxval(0,curstep),patlength[patid[curpat]]);
-  g.printf(" %.2x:%.2x",patid[curpat],curpat,songlength);
-  // draw orders
-  // -128, 192, 255, +191, 128
-  g._WRAP_set_clipping_rectangle(184,16,16,36);
-  delta=(6*fmod(patseek,1));
-  g.tNLPos(23);
-  g.tPos(-fmod(patseek,1));
-  g.tColor(244-delta); g.printf("%.2X\n",patid[maxval((int)patseek-2,0)]);
-  g.tColor(250-delta); g.printf("%.2X\n",patid[maxval((int)patseek-1,0)]);
-  g.tColor(255-delta); g.printf("%.2X\n",patid[(int)patseek]);
-  g.tColor(249+delta); g.printf("%.2X\n",patid[minval((int)patseek+1,255)]);
-  g.tColor(244+delta); g.printf("%.2X",patid[maxval((int)patseek+2,0)]);
-  g._WRAP_reset_clipping_rectangle();
-  g.tNLPos(0);
-  // boundaries
-  g._WRAP_draw_line(scrW-200,0,scrW-200,59,g._WRAP_map_rgb(255,255,255),1);
-  g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
-  // play/pattern/stop buttons
-  g._WRAP_draw_rectangle((scrW/2)-61,13,(scrW/2)-21,37,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,37,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_rectangle((scrW/2)+21,13,(scrW/2)+61,37,g._WRAP_map_rgb(255,255,255),2);
-  // reverse/step/follow buttons
-  g._WRAP_draw_rectangle((scrW/2)-61,37,(scrW/2)-21,48,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_rectangle((scrW/2)-20,37,(scrW/2)+20,48,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_rectangle((scrW/2)+21,37,(scrW/2)+61,48,g._WRAP_map_rgb(255,255,255),2);
-  // play button
-  g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-48,32,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_line((scrW/2)-48,32,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
-  // pattern button
-  g._WRAP_draw_line((scrW/2)-8,17,(scrW/2)-8,33,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)-5,32,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
-  g._WRAP_draw_line((scrW/2)-5,32,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
-  // stop button
-  g._WRAP_draw_rectangle((scrW/2)+34,18,(scrW/2)+48,32,g._WRAP_map_rgb(255,255,255),2);
   // oscilloscope
-  g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
   g.setTarget(osc);
   g._WRAP_set_blender(SDL_BLENDMODE_ADD);
   pointsToDraw=735;//(pointsToDraw*255+(signed short)(oscbufWPos-oscbufRPos))/256;
@@ -4953,7 +4851,121 @@ void drawdisp() {
   }
   g._WRAP_set_blender(SDL_BLENDMODE_BLEND);
   g.setTarget(NULL);
-  g._WRAP_draw_bitmap(osc,scrW-128,0,0);
+  
+  if (mobileUI) {
+    g.tPos(20,0);
+    g.tColor(14);
+    g.printf("Mobile UI region.");
+    // page select
+    g._WRAP_draw_line(16,20,40,20,g._WRAP_map_rgb(255,255,255),1);
+    g._WRAP_draw_line(16,30,40,30,g._WRAP_map_rgb(255,255,255),1);
+    g._WRAP_draw_line(16,40,40,40,g._WRAP_map_rgb(255,255,255),1);
+    // boundaries
+    g._WRAP_draw_line(scrW-200,0,scrW-200,59,g._WRAP_map_rgb(255,255,255),1);
+    g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
+    // oscilloscope
+    g._WRAP_draw_bitmap(osc,scrW-128,0,0);
+    g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
+  } else {
+    // header
+    g.tPos(0,0);
+    g.tColor(14);
+    g.printf(PROGRAM_NAME);
+    g.tPos(14,0);
+    g.printf("r%d",ver);
+  
+    // properties - buttons
+    patseek+=(curpat-patseek)/4;
+    if (fmod(patseek,1)>0.999 || fmod(patseek,1)<0.001) {
+      patseek=round(patseek);
+    }
+    g.tPos(0,1);
+    g.tColor(8);
+    g.printf("pat|ins|sfx|speed   v^|  |patID   v^|\n");
+    g.printf("sng|dsk|mem|tempo   v^|  |octave  v^|\n");
+    g.printf("lvl|cfg|vis|order   v^|  |length  v^|\n");
+    g.tPos(((float)scrW)/8.0-37,1);
+    g.tNLPos(((float)scrW)/8.0-37);
+    g.printf("|instr   v^\n");
+    g.printf("|  follow  \n");
+    g.printf("|   loop   \n");
+    g.tNLPos(0);
+    if (speedlock) {
+      g.tColor(14);
+      g.tPos(12,1);
+      g.printf("speed");
+    }
+    if (tempolock) {
+      g.tColor(14);
+      g.tPos(12,2);
+      g.printf("tempo");
+    }
+  
+    g.tColor(14);
+    g.tPos(18,1); g.printf("%.2X",speed);
+    g.tPos(17,2); g.printf("%d",tempo);
+    g.tPos(18,3); g.printf("%.2X",curpat);
+    g.tPos(32,1); g.printf("%.2X",patid[curpat]);
+    g.tPos(32,2); g.printf("%.2X",curoctave);
+    g.tPos(32,3); g.printf("%.2X",patlength[patid[curpat]]);
+    
+    g.tNLPos(((float)scrW/8.0)-36);
+    g.tPos(1);
+    if (curins==0) {
+      g.printf("      --\n");
+    } else {
+      g.printf("      %.2X\n",curins);
+    }
+    if (follow) {
+      g.printf("  follow");
+    }
+    
+    g.tNLPos(((float)scrW/8.0)-24);
+    g.tPos(0.6666667);
+    g.tColor(15);
+    g.printf(" %.2x/%.2x\n",curtick,speed);
+    g.printf(" %.2x/%.2x\n",maxval(0,curstep),patlength[patid[curpat]]);
+    g.printf(" %.2x:%.2x",patid[curpat],curpat,songlength);
+    // draw orders
+    // -128, 192, 255, +191, 128
+    g._WRAP_set_clipping_rectangle(184,16,16,36);
+    delta=(6*fmod(patseek,1));
+    g.tNLPos(23);
+    g.tPos(-fmod(patseek,1));
+    g.tColor(244-delta); g.printf("%.2X\n",patid[maxval((int)patseek-2,0)]);
+    g.tColor(250-delta); g.printf("%.2X\n",patid[maxval((int)patseek-1,0)]);
+    g.tColor(255-delta); g.printf("%.2X\n",patid[(int)patseek]);
+    g.tColor(249+delta); g.printf("%.2X\n",patid[minval((int)patseek+1,255)]);
+    g.tColor(244+delta); g.printf("%.2X",patid[maxval((int)patseek+2,0)]);
+    g._WRAP_reset_clipping_rectangle();
+    g.tNLPos(0);
+    // boundaries
+    g._WRAP_draw_line(scrW-200,0,scrW-200,59,g._WRAP_map_rgb(255,255,255),1);
+    g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
+    // play/pattern/stop buttons
+    g._WRAP_draw_rectangle((scrW/2)-61,13,(scrW/2)-21,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)+21,13,(scrW/2)+61,37,g._WRAP_map_rgb(255,255,255),2);
+    // reverse/step/follow buttons
+    g._WRAP_draw_rectangle((scrW/2)-61,37,(scrW/2)-21,48,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)-20,37,(scrW/2)+20,48,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)+21,37,(scrW/2)+61,48,g._WRAP_map_rgb(255,255,255),2);
+    // play button
+    g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-48,32,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-48,32,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
+    // pattern button
+    g._WRAP_draw_line((scrW/2)-8,17,(scrW/2)-8,33,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)-5,32,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,32,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
+    // stop button
+    g._WRAP_draw_rectangle((scrW/2)+34,18,(scrW/2)+48,32,g._WRAP_map_rgb(255,255,255),2);
+    // oscilloscope
+    g._WRAP_draw_bitmap(osc,scrW-128,0,0);
+    g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
+  }
+  
   switch(screen) {
     case 0: drawpatterns(false); break;
     case 1: drawinsedit(); break;
@@ -4993,6 +5005,10 @@ int main(int argc, char **argv) {
   comments=new char[65536];
   memset(comments,0,65536);
   int filearg=0;
+  
+  // new variables
+  mobileUI=true;
+  
   if (argc>1) {
     // for each argument
     for (int i=1;i<argc;i++) {
@@ -5039,8 +5055,13 @@ DETUNE_FACTOR_GLOBAL=1;
    //int success=0;
    bool is_audio_inited=false;
    int helpfilesize;
-   scrW=800;
-   scrH=450;
+   if (mobileUI) {
+     scrW=540;
+     scrH=960;
+   } else {
+     scrW=800;
+     scrH=450;
+   }
    // create memory blocks
    patlength=new unsigned char[256];
     helptext=new char[18];
