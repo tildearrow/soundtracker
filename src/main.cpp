@@ -470,7 +470,21 @@ namespace settings {
 // NEW VARIABLES BEGIN //
 Graphics g;
 
+const char* pageNames[]={
+  "pattern",
+  "instr",
+  "soundfx",
+  "song",
+  "file",
+  "memory",
+  "mixer",
+  "config",
+  "visual",
+  "about"
+};
+
 bool mobileUI;
+float mobScroll;
 // NEW VARIABLES END //
 
 void Playback();
@@ -4852,6 +4866,7 @@ void drawdisp() {
   g._WRAP_set_blender(SDL_BLENDMODE_BLEND);
   g.setTarget(NULL);
   
+  mobScroll=1;
   if (mobileUI) {
     g.tPos(20,0);
     g.tColor(14);
@@ -4861,11 +4876,35 @@ void drawdisp() {
     g._WRAP_draw_line(16,30,32,30,g._WRAP_map_rgb(255,255,255),1);
     g._WRAP_draw_line(16,36,32,36,g._WRAP_map_rgb(255,255,255),1);
     // boundaries
-    g._WRAP_draw_line(scrW-200,0,scrW-200,59,g._WRAP_map_rgb(255,255,255),1);
     g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
+    // play/pattern/stop buttons
+    g._WRAP_draw_rectangle((scrW/2)-61,13,(scrW/2)-21,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)+21,13,(scrW/2)+61,37,g._WRAP_map_rgb(255,255,255),2);
+    // play button
+    g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-48,32,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-48,32,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
+    // pattern button
+    g._WRAP_draw_line((scrW/2)-8,17,(scrW/2)-8,33,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)-5,32,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,32,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
+    // stop button
+    g._WRAP_draw_rectangle((scrW/2)+34,18,(scrW/2)+48,32,g._WRAP_map_rgb(255,255,255),2);
     // oscilloscope
-    g._WRAP_draw_bitmap(osc,scrW-128,0,0);
-    g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
+    //g._WRAP_draw_bitmap(osc,scrW-128,0,0);
+    //g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
+
+    // page select
+    g._WRAP_draw_filled_rectangle(0,0,scrW,59,g._WRAP_map_rgb(0,0,0));
+
+    for (int i=0; i<10; i++) {
+      g.tPos(3+(10*i)+float(7-strlen(pageNames[i]))/2,1.666667);
+      g.tColor(15);
+      g._WRAP_draw_rectangle(16+(10*8*i),12,16+72+(10*8*i),48,g._WRAP_map_rgb(128,128,128),1);
+      g.printf("%s",pageNames[i]);
+    }
   } else {
     // header
     g.tPos(0,0);

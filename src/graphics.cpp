@@ -201,6 +201,13 @@ bool Graphics::init(int width, int height) {
   
   sdlWin=SDL_CreateWindow("soundtracker (SDL)",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,width*dpiScale,height*dpiScale,SDL_WINDOW_RESIZABLE);
   if (!sdlWin) return false;
+
+#if defined(ANDROID)
+  int sizeX, sizeY;
+  SDL_GetWindowSize(sdlWin,&sizeX,&sizeY);
+  scrSize.x=sizeX/dpiScale;
+  scrSize.y=sizeY/dpiScale;
+#endif
   
   sdlRend=SDL_CreateRenderer(sdlWin,-1,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
   if (!sdlRend) return false;
