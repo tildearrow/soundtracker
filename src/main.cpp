@@ -5056,8 +5056,8 @@ DETUNE_FACTOR_GLOBAL=1;
    bool is_audio_inited=false;
    int helpfilesize;
    if (mobileUI) {
-     scrW=540;
-     scrH=960;
+     scrW=360;
+     scrH=640;
    } else {
      scrW=800;
      scrH=450;
