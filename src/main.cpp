@@ -4857,9 +4857,9 @@ void drawdisp() {
     g.tColor(14);
     g.printf("Mobile UI region.");
     // page select
-    g._WRAP_draw_line(16,20,40,20,g._WRAP_map_rgb(255,255,255),1);
-    g._WRAP_draw_line(16,30,40,30,g._WRAP_map_rgb(255,255,255),1);
-    g._WRAP_draw_line(16,40,40,40,g._WRAP_map_rgb(255,255,255),1);
+    g._WRAP_draw_line(16,24,32,24,g._WRAP_map_rgb(255,255,255),1);
+    g._WRAP_draw_line(16,30,32,30,g._WRAP_map_rgb(255,255,255),1);
+    g._WRAP_draw_line(16,36,32,36,g._WRAP_map_rgb(255,255,255),1);
     // boundaries
     g._WRAP_draw_line(scrW-200,0,scrW-200,59,g._WRAP_map_rgb(255,255,255),1);
     g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
