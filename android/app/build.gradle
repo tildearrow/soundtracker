@@ -11,7 +11,7 @@ android {
     compileSdkVersion 26
     defaultConfig {
         if (buildAsApplication) {
-            applicationId "org.libsdl.app"
+            applicationId "com.github.tildearrow.soundtracker"
         }
         minSdkVersion 16
         targetSdkVersion 26
@@ -58,7 +58,7 @@ android {
             variant.outputs.each { output ->
                 def outputFile = output.outputFile
                 if (outputFile != null && outputFile.name.endsWith(".aar")) {
-                    def fileName = "org.libsdl.app.aar";
+                    def fileName = "com.github.tildearrow.soundtracker.aar";
                     output.outputFile = new File(outputFile.parent, fileName);
                 }
             }
