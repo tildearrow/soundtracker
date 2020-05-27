@@ -528,14 +528,31 @@ int nothing(jack_nframes_t nframes, void* arg) {
 static void nothing(void* userdata, Uint8* stream, int len) {
 #endif
   float* buf[2];
+  signed char* buf8[2];
+  short* buf16[2];
+  int* buf32[2];
   float temp[4];
 #ifdef JACK
   for (int i=0; i<2; i++) {
     buf[i]=(float*)jack_port_get_buffer(ao[i],nframes);
   }
 #else
-  size_t nframes=len/(sizeof(float)*2);
-  buf[0]=(float*)stream;
+  size_t nframes;
+  switch (spout->format) {
+    case AUDIO_U8: case AUDIO_S8:
+      nframes=len/(2);
+      buf8[0]=(signed char*)stream;
+      break;
+    case AUDIO_U16: case AUDIO_S16:
+      nframes=len/(2*2);
+      buf16[0]=(short*)stream;
+      break;
+    case AUDIO_S32: case AUDIO_F32:
+      nframes=len/(4*2);
+      buf[0]=(float*)stream;
+      buf32[0]=(int*)stream;
+      break;
+  }
 #endif
   if (ntsc) {
     ASC::interval=(int)(6180000/FPS);
@@ -601,8 +618,28 @@ static void nothing(void* userdata, Uint8* stream, int len) {
     buf[0][i]=0.5*resa1[0];
     buf[1][i]=0.5*resa1[1];
 #else
-    buf[0][i<<1]=0.5*resa1[0];
-    buf[0][1+(i<<1)]=0.5*resa1[1];
+    switch (spout->format) {
+      case AUDIO_F32:
+        buf[0][i<<1]=0.5*resa1[0];
+        buf[0][1+(i<<1)]=0.5*resa1[1];
+        break;
+      case AUDIO_S16:
+        buf16[0][i<<1]=fmin(fmax(-1,0.5*resa1[0]),1)*32767;
+        buf16[0][1+(i<<1)]=fmin(fmax(-1,0.5*resa1[1]),1)*32767;
+        break;
+      case AUDIO_S32:
+        buf32[0][i<<1]=int(fmin(fmax(-1,0.5*resa1[0]),1)*8388607)<<8;
+        buf32[0][1+(i<<1)]=int(fmin(fmax(-1,0.5*resa1[1]),1)*8388607)<<8;
+        break;
+      case AUDIO_S8:
+        buf8[0][i<<1]=fmin(fmax(-1,0.5*resa1[0]),1)*127;
+        buf8[0][1+(i<<1)]=fmin(fmax(-1,0.5*resa1[1]),1)*127;
+        break;
+      case AUDIO_U8:
+      case AUDIO_U16:
+        break;
+    }
+    
 #endif
     procPos+=noProc;
     if (procPos>=1) {
@@ -677,7 +714,7 @@ void initaudio() {
       sout->callback=nothing;
       sout->userdata=NULL;
       audioID=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,sout,spout, SDL_AUDIO_ALLOW_ANY_CHANGE);
-      jacksr=44100;
+      jacksr=spout->freq;
       sr=jacksr;
 #endif
 #ifdef JACK
