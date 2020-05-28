@@ -490,6 +490,7 @@ const int pageMap[]={
 };
 
 bool mobileUI;
+bool mobAltView;
 float mobScroll;
 float topScroll;
 bool pageSelectShow;
@@ -4019,8 +4020,13 @@ void ClickEvents() {
           }
         }
       } else {
+        // page select
         if (PIR(0,0,48,59,mstate.x,mstate.y)) {
           pageSelectShow=true;
+        }
+        // alternate view
+        if (PIR(scrW-48,0,scrW,59,mstate.x,mstate.y)) {
+          mobAltView=!mobAltView;
         }
       }
       swX.end(mstate.x);
@@ -4897,7 +4903,6 @@ void drawdisp() {
   if (playermode) {return;}
   ClickEvents();
   KeyboardEvents();
-  if (firstframe) {drawpatterns(true);firstframe=false;}
   // -(int)((((float)speed-(float)curtick)/(float)speed)*12.0f)
   if (screen==0) {
 #ifdef SMOOTH_SCROLL
@@ -4977,37 +4982,60 @@ void drawdisp() {
   g.setTarget(NULL);
   
   if (mobileUI) {
-    g.tPos(20,0);
-    g.tColor(14);
-    // page select
-    g._WRAP_draw_line(16,24,32,24,g._WRAP_map_rgb(255,255,255),1);
-    g._WRAP_draw_line(16,30,32,30,g._WRAP_map_rgb(255,255,255),1);
-    g._WRAP_draw_line(16,36,32,36,g._WRAP_map_rgb(255,255,255),1);
     // boundaries
     g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
-    // play/pattern/stop buttons
-    g._WRAP_draw_rectangle((scrW/2)-112,13,(scrW/2)-82,47,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)-71,13,(scrW/2)-31,47,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,47,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)+31,13,(scrW/2)+71,47,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)+82,13,(scrW/2)+112,47,g._WRAP_map_rgb(255,255,255),2);
-    // play button
-    g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-58,36,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-58,36,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
-    // pattern button
-    g._WRAP_draw_line((scrW/2)-8,21,(scrW/2)-8,37,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,22,(scrW/2)-5,36,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,22,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,36,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
-    // stop button
-    g._WRAP_draw_rectangle((scrW/2)+44,22,(scrW/2)+58,36,g._WRAP_map_rgb(255,255,255),2);
-    // skip left
-    g._WRAP_draw_line((scrW/2)-92,22,(scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-92,36,(scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
-    // skip right
-    g._WRAP_draw_line((scrW/2)+92,22,(scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)+92,36,(scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
+    if (mobAltView) {
+      // TODO: optimize for mobile
+      g.tPos(2,1);
+      g.tNLPos(2);
+      g.tColor(8);
+      g.printf("speed   v^|  |patID   v^\n");
+      g.printf("tempo   v^|  |octave  v^\n");
+      g.printf("order   v^|  |length  v^\n");
+      g.tPos(((float)scrW)/8.0-16,1);
+      g.tNLPos(((float)scrW)/8.0-16);
+      g.printf("|instr   v^\n");
+      g.printf("|  follow  \n");
+      g.printf("|   loop   \n");
+      g.tNLPos(0);
+    } else {
+      // page select
+      g._WRAP_draw_line(16,24,32,24,g._WRAP_map_rgb(255,255,255),1);
+      g._WRAP_draw_line(16,30,32,30,g._WRAP_map_rgb(255,255,255),1);
+      g._WRAP_draw_line(16,36,32,36,g._WRAP_map_rgb(255,255,255),1);
+      // play/pattern/stop buttons
+      g._WRAP_draw_rectangle((scrW/2)-112,13,(scrW/2)-82,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle((scrW/2)-71,13,(scrW/2)-31,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle((scrW/2)+31,13,(scrW/2)+71,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle((scrW/2)+82,13,(scrW/2)+112,47,g._WRAP_map_rgb(255,255,255),2);
+      // play button
+      g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-58,36,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line((scrW/2)-58,36,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
+      // pattern button
+      g._WRAP_draw_line((scrW/2)-8,21,(scrW/2)-8,37,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line((scrW/2)-5,22,(scrW/2)-5,36,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line((scrW/2)-5,22,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line((scrW/2)-5,36,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
+      // stop button
+      g._WRAP_draw_rectangle((scrW/2)+44,22,(scrW/2)+58,36,g._WRAP_map_rgb(255,255,255),2);
+      // skip left
+      g._WRAP_draw_line((scrW/2)-92,22,(scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line((scrW/2)-92,36,(scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
+      // skip right
+      g._WRAP_draw_line((scrW/2)+92,22,(scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line((scrW/2)+92,36,(scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
+    }
+
+    // alternate view
+    if (mobAltView) {
+      g._WRAP_draw_line(scrW-24,32,scrW-16,26,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(scrW-32,26,scrW-24,32,g._WRAP_map_rgb(255,255,255),2);
+    } else {
+      g._WRAP_draw_line(scrW-24,26,scrW-16,32,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(scrW-32,32,scrW-24,26,g._WRAP_map_rgb(255,255,255),2);
+    }
     // oscilloscope
     //g._WRAP_draw_bitmap(osc,scrW-128,0,0);
     //g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
@@ -5015,8 +5043,10 @@ void drawdisp() {
     // page select
     if (pageSelectShow) {
       mobScroll+=fmin(0.08,(1-mobScroll)*0.2);
+      if (mobScroll>0.999) mobScroll=1;
     } else {
       mobScroll=fmax(mobScroll-0.08,mobScroll*0.8);
+      if (mobScroll<0.001) mobScroll=0;
     }
     g._WRAP_set_clipping_rectangle(-scrW*(1-mobScroll),0,scrW,59);
     g._WRAP_draw_filled_rectangle(-scrW*(1-mobScroll),0,scrW*mobScroll,59,g._WRAP_map_rgb(0,0,0));
@@ -5170,6 +5200,7 @@ int main(int argc, char **argv) {
   
   // new variables
   mobileUI=true;
+  mobAltView=false;
   pageSelectShow=false;
   mobScroll=0;
   topScroll=0;
@@ -5310,7 +5341,9 @@ DETUNE_FACTOR_GLOBAL=1;
    // clear to black
    if (!playermode) {g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
    // flip buffers
-   g._WRAP_flip_display();}
+   g._WRAP_flip_display();
+   drawpatterns(true);
+}
    //printf("%d",argc);
    if (playermode || fileswitch) {
      if (LoadFile(argv[filearg])) {return 1;}
