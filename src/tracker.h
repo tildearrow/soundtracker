@@ -282,9 +282,15 @@ class Graphics {
     void _WRAP_reset_clipping_rectangle() {
       SDL_RenderSetClipRect(sdlRend,NULL);
     }
-    void _WRAP_set_clipping_rectangle(int x, int y, int w, int h) {
+    void _WRAP_set_clipping_rectangle(float x, float y, float w, float h) {
       SDL_Rect r;
       r.x=x; r.y=y; r.w=w; r.h=h;
+      if (r.w<1 || r.h<1) {
+        r.x=-10;
+        r.y=-10;
+        r.w=1;
+        r.h=1;
+      }
       SDL_RenderSetClipRect(sdlRend,&r);
     }
     int _WRAP_get_bitmap_width(SDL_Texture* bitmap) {

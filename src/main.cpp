@@ -5048,16 +5048,18 @@ void drawdisp() {
       mobScroll=fmax(mobScroll-0.08,mobScroll*0.8);
       if (mobScroll<0.001) mobScroll=0;
     }
-    g._WRAP_set_clipping_rectangle(-scrW*(1-mobScroll),0,scrW,59);
-    g._WRAP_draw_filled_rectangle(-scrW*(1-mobScroll),0,scrW*mobScroll,59,g._WRAP_map_rgb(0,0,0));
+    if (mobScroll>0) {
+      g._WRAP_set_clipping_rectangle(0,0,scrW*mobScroll,59);
+      g._WRAP_draw_filled_rectangle(-scrW*(1.0f-mobScroll),0,scrW*mobScroll,59,g._WRAP_map_rgb(0,0,0));
 
-    for (int i=0; i<10; i++) {
-      g.tPos((-topScroll+(1-mobScroll)*-scrW)/8+3+(10*i)+float(7-strlen(pageNames[i]))/2,1.666667);
-      g.tColor(15);
-      g._WRAP_draw_rectangle(((1-mobScroll)*-scrW)+16+(10*8*i)-topScroll,12,((1-mobScroll)*-scrW)+16+72+(10*8*i)-topScroll,48,g._WRAP_map_rgb(128,128,128),1);
-      g.printf("%s",pageNames[i]);
+      for (int i=0; i<10; i++) {
+        g.tPos((-topScroll+(1.0f-mobScroll)*-scrW)/8+3+(10*i)+float(7-strlen(pageNames[i]))/2,1.666667);
+        g.tColor(15);
+        g._WRAP_draw_rectangle(((1.0f-mobScroll)*-scrW)+16+(10*8*i)-topScroll,12,((1.0f-mobScroll)*-scrW)+16+72+(10*8*i)-topScroll,48,g._WRAP_map_rgb(128,128,128),1);
+        g.printf("%s",pageNames[i]);
+      }
+      g._WRAP_reset_clipping_rectangle();
     }
-    g._WRAP_reset_clipping_rectangle();
   } else {
     // header
     g.tPos(0,0);
