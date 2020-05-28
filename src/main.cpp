@@ -3977,6 +3977,23 @@ void ClickEvents() {
           swX.setRange(0,820-scrW);
           swX.start(mstate.x);
         }
+      } else {
+        // play button
+        if (PIR((scrW/2)-71,13,(scrW/2)-31,47,mstate.x,mstate.y)) {
+          if (curtick==0) {
+            Play();
+          } else {
+            playmode=1;
+          }
+        }
+        // pattern play button
+        if (PIR((scrW/2)-20,13,(scrW/2)+20,47,mstate.x,mstate.y)) {
+          Play();
+        }
+        // stop button
+        if (PIR((scrW/2)+31,13,(scrW/2)+71,47,mstate.x,mstate.y)) {
+          playmode=0;
+        }
       }
     }
     if (leftrelease) {
@@ -3991,7 +4008,7 @@ void ClickEvents() {
           }
         }
       } else {
-        if (PIR(0,0,64,59,mstate.x,mstate.y)) {
+        if (PIR(0,0,48,59,mstate.x,mstate.y)) {
           pageSelectShow=true;
         }
       }
@@ -4959,20 +4976,20 @@ void drawdisp() {
     // boundaries
     g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
     // play/pattern/stop buttons
-    g._WRAP_draw_rectangle((scrW/2)-61,13,(scrW/2)-21,37,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,37,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)+21,13,(scrW/2)+61,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)-71,13,(scrW/2)-31,47,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,47,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)+31,13,(scrW/2)+71,47,g._WRAP_map_rgb(255,255,255),2);
     // play button
-    g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-48,32,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-48,32,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-58,36,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-58,36,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
     // pattern button
-    g._WRAP_draw_line((scrW/2)-8,17,(scrW/2)-8,33,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)-5,32,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,32,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-8,21,(scrW/2)-8,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,22,(scrW/2)-5,36,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,22,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-5,36,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
     // stop button
-    g._WRAP_draw_rectangle((scrW/2)+34,18,(scrW/2)+48,32,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)+44,22,(scrW/2)+58,36,g._WRAP_map_rgb(255,255,255),2);
     // oscilloscope
     //g._WRAP_draw_bitmap(osc,scrW-128,0,0);
     //g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
