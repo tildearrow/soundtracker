@@ -575,7 +575,7 @@ static void nothing(void* userdata, Uint8* stream, int len) {
     targetSR=297500;
     noProc=sr/targetSR;
   }
-  if (kb[SDL_SCANCODE_ESCAPE] || (PIR((scrW/2)+21,37,(scrW/2)+61,48,mstate.x,mstate.y) && leftclick)) {
+  if (kb[SDL_SCANCODE_ESCAPE] || (PIR((scrW/2)+21,37,(scrW/2)+61,48,mstate.x,mstate.y) && leftclick && !mobileUI)) {
     ASC::interval=16384;
   }
   for (size_t i=0; i<nframes;) {
@@ -2372,7 +2372,7 @@ void drawmixerlayer() {
   g._WRAP_clear_to_color(g._WRAP_map_rgba(0,0,0,0));
   int mixerdrawoffset=(scrW/2)-chanstodisplay*48-12;
   for (int chantodraw=0;chantodraw<chanstodisplay;chantodraw++) {
-    g._WRAP_draw_line(12.5+(chantodraw*96)+mixerdrawoffset,60,12.5+(chantodraw*96)+mixerdrawoffset,scrW-0.5,g._WRAP_map_rgb(255,255,255),1);
+    g._WRAP_draw_line(12.5+(chantodraw*96)+mixerdrawoffset,60,12.5+(chantodraw*96)+mixerdrawoffset,scrH-0.5,g._WRAP_map_rgb(255,255,255),1);
     g.tColor(15);
     g.tNLPos(2+chantodraw*12+((float)mixerdrawoffset/8.0));
     g.tPos(5+2);
@@ -3994,6 +3994,16 @@ void ClickEvents() {
         if (PIR((scrW/2)+31,13,(scrW/2)+71,47,mstate.x,mstate.y)) {
           playmode=0;
         }
+        // skip left button
+        if (PIR((scrW/2)-112,13,(scrW/2)-82,47,mstate.x,mstate.y)) {
+          if (curpat>0) curpat--;
+          if (playmode==1) Play();
+        }
+        // skip right button
+        if (PIR((scrW/2)+82,13,(scrW/2)+112,47,mstate.x,mstate.y)) {
+          if (curpat<255) curpat++;
+          if (playmode==1) Play();
+        }
       }
     }
     if (leftrelease) {
@@ -4002,6 +4012,7 @@ void ClickEvents() {
           for (int i=0; i<10; i++) {
             if (PIR(((1-mobScroll)*-scrW)+16+(10*8*i)-topScroll,12,((1-mobScroll)*-scrW)+16+72+(10*8*i)-topScroll,48,mstate.x,mstate.y)) {
               screen=pageMap[i];
+              if (screen==0) drawpatterns(true);
               pageSelectShow=false;
               break;
             }
@@ -4968,7 +4979,6 @@ void drawdisp() {
   if (mobileUI) {
     g.tPos(20,0);
     g.tColor(14);
-    g.printf("Mobile UI region.");
     // page select
     g._WRAP_draw_line(16,24,32,24,g._WRAP_map_rgb(255,255,255),1);
     g._WRAP_draw_line(16,30,32,30,g._WRAP_map_rgb(255,255,255),1);
@@ -4976,9 +4986,11 @@ void drawdisp() {
     // boundaries
     g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
     // play/pattern/stop buttons
+    g._WRAP_draw_rectangle((scrW/2)-112,13,(scrW/2)-82,47,g._WRAP_map_rgb(255,255,255),2);
     g._WRAP_draw_rectangle((scrW/2)-71,13,(scrW/2)-31,47,g._WRAP_map_rgb(255,255,255),2);
     g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,47,g._WRAP_map_rgb(255,255,255),2);
     g._WRAP_draw_rectangle((scrW/2)+31,13,(scrW/2)+71,47,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle((scrW/2)+82,13,(scrW/2)+112,47,g._WRAP_map_rgb(255,255,255),2);
     // play button
     g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-58,36,g._WRAP_map_rgb(255,255,255),2);
     g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
@@ -4990,6 +5002,12 @@ void drawdisp() {
     g._WRAP_draw_line((scrW/2)-5,36,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
     // stop button
     g._WRAP_draw_rectangle((scrW/2)+44,22,(scrW/2)+58,36,g._WRAP_map_rgb(255,255,255),2);
+    // skip left
+    g._WRAP_draw_line((scrW/2)-92,22,(scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)-92,36,(scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
+    // skip right
+    g._WRAP_draw_line((scrW/2)+92,22,(scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line((scrW/2)+92,36,(scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
     // oscilloscope
     //g._WRAP_draw_bitmap(osc,scrW-128,0,0);
     //g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
