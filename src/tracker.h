@@ -63,6 +63,12 @@ struct Color {
     a(al) {}
 };
 
+enum SwipeStatus {
+  swNone=0,
+  swHolding,
+  swDragging
+};
+
 class Swiper {
   float* out;
   float speed;
@@ -74,12 +80,14 @@ class Swiper {
   float oldpos;
   float iout;
   bool drag;
+  bool actuallyDrag;
   bool dir;
   public:
     bool start(float pos) {
       if (out==NULL) return false;
       if (!drag) {
         drag=true;
+        actuallyDrag=false;
         dpos=pos;
         iout=*out;
         curpos=pos;
@@ -91,7 +99,14 @@ class Swiper {
     bool update(float pos) {
       if (out==NULL) return false;
       if (drag) {
-        *out=iout-(pos-dpos);
+        if (actuallyDrag) {
+          *out=iout-(pos-dpos);
+        } else {
+          if (fabs(pos-dpos)>3) {
+            actuallyDrag=true;
+            dpos=pos;
+          }
+        }
         oldpos=curpos;
         curpos=pos;
       } else {
@@ -111,7 +126,7 @@ class Swiper {
         *out=lMin;
         speed=0;
       }
-      return drag;
+      return (drag && actuallyDrag);
     }
     bool end(float pos) {
       if (out==NULL) return false;
@@ -122,6 +137,13 @@ class Swiper {
         return true;
       }
       return false;
+    }
+    SwipeStatus getStatus() {
+      if (drag) {
+        if (actuallyDrag) return swDragging;
+        return swHolding;
+      }
+      return swNone;
     }
     void setOut(float* o) {
       out=o;

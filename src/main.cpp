@@ -485,9 +485,14 @@ const char* pageNames[]={
   "about"
 };
 
+const int pageMap[]={
+  0, 1, 9, 3, 2, 10, 4, 5, 12, 7
+};
+
 bool mobileUI;
 float mobScroll;
 float topScroll;
+bool pageSelectShow;
 
 Swiper swX;
 Swiper swY;
@@ -3966,13 +3971,30 @@ void ClickEvents() {
   // screen event
   if (mobileUI) {
     if (leftpress) {
-      if (PIR(0,0,scrW,59,mstate.x,mstate.y)) {
-        swX.setOut(&topScroll);
-        swX.setRange(0,820-scrW);
-        swX.start(mstate.x);
+      if (pageSelectShow) {
+        if (PIR(0,0,scrW,59,mstate.x,mstate.y)) {
+          swX.setOut(&topScroll);
+          swX.setRange(0,820-scrW);
+          swX.start(mstate.x);
+        }
       }
     }
     if (leftrelease) {
+      if (pageSelectShow) {
+        if (swX.getStatus()==swHolding) {
+          for (int i=0; i<10; i++) {
+            if (PIR(((1-mobScroll)*-scrW)+16+(10*8*i)-topScroll,12,((1-mobScroll)*-scrW)+16+72+(10*8*i)-topScroll,48,mstate.x,mstate.y)) {
+              screen=pageMap[i];
+              pageSelectShow=false;
+              break;
+            }
+          }
+        }
+      } else {
+        if (PIR(0,0,64,59,mstate.x,mstate.y)) {
+          pageSelectShow=true;
+        }
+      }
       swX.end(mstate.x);
     }
     swX.update(mstate.x);
@@ -4926,7 +4948,6 @@ void drawdisp() {
   g._WRAP_set_blender(SDL_BLENDMODE_BLEND);
   g.setTarget(NULL);
   
-  mobScroll=1;
   if (mobileUI) {
     g.tPos(20,0);
     g.tColor(14);
@@ -4957,22 +4978,21 @@ void drawdisp() {
     //g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
 
     // page select
+    if (pageSelectShow) {
+      mobScroll+=fmin(0.08,(1-mobScroll)*0.2);
+    } else {
+      mobScroll=fmax(mobScroll-0.08,mobScroll*0.8);
+    }
+    g._WRAP_set_clipping_rectangle(-scrW*(1-mobScroll),0,scrW,59);
     g._WRAP_draw_filled_rectangle(-scrW*(1-mobScroll),0,scrW*mobScroll,59,g._WRAP_map_rgb(0,0,0));
 
-    if (kb[SDL_SCANCODE_LEFT]) {
-      topScroll++;
-      if (topScroll+scrW>(820)) topScroll=820-scrW;
-    }
-    if (kb[SDL_SCANCODE_RIGHT]) {
-      topScroll--;
-      if (topScroll<0) topScroll=0;
-    }
     for (int i=0; i<10; i++) {
       g.tPos((-topScroll+(1-mobScroll)*-scrW)/8+3+(10*i)+float(7-strlen(pageNames[i]))/2,1.666667);
       g.tColor(15);
       g._WRAP_draw_rectangle(((1-mobScroll)*-scrW)+16+(10*8*i)-topScroll,12,((1-mobScroll)*-scrW)+16+72+(10*8*i)-topScroll,48,g._WRAP_map_rgb(128,128,128),1);
       g.printf("%s",pageNames[i]);
     }
+    g._WRAP_reset_clipping_rectangle();
   } else {
     // header
     g.tPos(0,0);
@@ -5115,6 +5135,9 @@ int main(int argc, char **argv) {
   
   // new variables
   mobileUI=true;
+  pageSelectShow=false;
+  mobScroll=0;
+  topScroll=0;
   
   if (argc>1) {
     // for each argument
