@@ -1,6 +1,10 @@
 #include "soundchip.h"
 #include <string.h>
 
+#ifdef _WIN32
+#define M_PI 3.141592653589793238
+#endif
+
 void soundchip::NextSample(float* l, float* r) {
   for (int i=0; i<8; i++) {
     if (chan[i].vol==0 && !chan[i].flags.swvol) {fns[i]=0; continue;}

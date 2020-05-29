@@ -5,7 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 #ifdef JACK
 #include <jack/jack.h>
@@ -14,8 +18,11 @@ jack_client_t* ac;
 jack_port_t* ao[2];
 jack_status_t as;
 #else
-#define SDL_MAIN_HANDLED
+#ifdef _WIN32
+#include <SDL.h>
+#else
 #include <SDL2/SDL.h>
+#endif
 SDL_AudioDeviceID ai;
 SDL_AudioSpec* ac;
 SDL_AudioSpec* ar;
@@ -193,7 +200,7 @@ int main(int argc, char** argv) {
   ac->callback=process;
   ac->userdata=NULL;
   printf("hmm\n");
-  ai=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,ac,ar,SDL_AUDIO_ALLOW_ANY_CHANGE);
+  ai=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,ac,ar,SDL_AUDIO_ALLOW_FREQUENCY_CHANGE|SDL_AUDIO_ALLOW_FORMAT_CHANGE);
   printf("works\n");
   sr=ar->freq;
   noProc=sr/targetSR;
@@ -202,7 +209,11 @@ int main(int argc, char** argv) {
 #endif
   
   while (!quit) {
+#ifdef _WIN32
+    Sleep(50);
+#else
     usleep(50000);
+#endif
   }
 
 #ifdef JACK

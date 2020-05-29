@@ -3352,6 +3352,33 @@ int ImportS3M() {
   return 0;
 }
 
+#ifdef _WIN32
+static void print_entry(const char* filepath) {
+  HANDLE flist;
+  WIN32_FIND_DATA next;
+  flist=FindFirstFile(filepath,&next);
+  printf("listing dir...\n");
+  int increment=0;
+  FileInList neext;
+  neext.name="";
+  neext.isdir=false;
+  // clean file list
+  filenames.resize(0);
+  printf("finding files in %s\n",filepath);
+  while (FindNextFile(flist,&next)!=0) {
+    neext.name=filepath;
+    neext.name+='\\';
+    printf("found %s\n",next.cFileName);
+    neext.name+=next.cFileName;
+    neext.isdir=next.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY;
+    filenames.push_back(neext);
+    increment++;
+  }
+  filecount=increment;
+  FindClose(flist);
+  printf("finish.\n");
+}
+#else
 static void print_entry(const char* filepath) {
   DIR* flist;
   struct dirent* next;
@@ -3394,6 +3421,7 @@ static void print_entry(const char* filepath) {
       }
       printf("finish.\n");
 }
+#endif
 
 int SaveFile() {
   // save file

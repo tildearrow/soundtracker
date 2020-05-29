@@ -4,11 +4,13 @@
 #include <stdio.h>
 #include <math.h>
 
-#ifdef ANDROID
+#if defined(ANDROID) || defined(_WIN32)
 #include <SDL.h>
-#define ANDRO
 #else
 #include <SDL2/SDL.h>
+#endif
+#ifdef ANDROID
+#define ANDRO
 #endif
 #ifdef _WIN32
 #include <windows.h>
@@ -241,7 +243,11 @@ class Graphics {
       return SDL_PollEvent(e);
     }
     void _WRAP_rest(double t) {
+#ifdef _WIN32
+      Sleep(t*1000);
+#else
       usleep(t*1000000);
+#endif
     }
     void _WRAP_draw_pixel(float x, float y, Color color) {
       SDL_SetRenderDrawColor(sdlRend,color.r*255,color.g*255,color.b*255,color.a*255);

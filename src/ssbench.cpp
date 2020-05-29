@@ -5,7 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#ifdef _WIN32
+#else
 #include <unistd.h>
+#endif
 
 bool quit;
 
