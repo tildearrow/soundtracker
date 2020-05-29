@@ -5301,8 +5301,8 @@ DETUNE_FACTOR_GLOBAL=1;
 
    printf("initializing SDL\n");
    if (!g.preinit()) {
-      fprintf(stderr, "failed to initialize allegro!\n");
-      return -1;
+      fprintf(stderr, "failed to initialize SDL!\n");
+      return 1;
    }
    
    curdir=new char[4096];

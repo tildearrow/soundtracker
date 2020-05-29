@@ -143,7 +143,6 @@ int Graphics::printf(const char* format, ...) {
       SDL_SetTextureColorMod(sdlText,textCol.r*255,textCol.g*255,textCol.b*255);
       SDL_SetTextureAlphaMod(sdlText,textCol.a*255);
       SDL_RenderCopy(sdlRend,sdlText,&sr,&dr);
-      //al_draw_glyph(allegFont,alCol,8*textPos.x,12*textPos.y,putBuf[i]);
       textPos.x++;
     }
   }
