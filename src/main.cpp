@@ -2020,12 +2020,9 @@ void drawpatterns(bool force) {
     //if (i>curpatrow+15+((scrH-450)/12)) {continue;}
     //if (i<curpatrow-16) {continue;}
     g.tColor(8);
-    g.tPos(0,i);
+    g.tPos((((float)scrW/8)-(float)(3+(chanstodisplay*12)))/2,i);
     g.printf("%.2X",i);
-    g.tColor(15);
-    g.printf("|");
     // channel drawing routine, replicated 8 times
-    g.tPos((float)(((scrW/2)-400)+16+((8-chanstodisplay)*45))/8.0,i);
     for (int j=0;j<chanstodisplay;j++) {
       g.tColor(15);
       g.printf("|");
@@ -5201,7 +5198,11 @@ int main(int argc, char **argv) {
   int filearg=0;
   
   // new variables
+#ifdef ANDROID
   mobileUI=true;
+#else
+  mobileUI=false;
+#endif
   mobAltView=false;
   pageSelectShow=false;
   mobScroll=0;
