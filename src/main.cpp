@@ -2011,8 +2011,9 @@ void drawpatterns(bool force) {
   if ((!UPDATEPATTERNS || playmode==0 || playmode==1) && !force && oldpat==curpat) {oldpat=curpat;return;}
   oldpat=curpat;
   UPDATEPATTERNS=true;
+  printf("update.\n");
   g._WRAP_destroy_bitmap(patternbitmap);
-  patternbitmap=g._WRAP_create_bitmap(scrW,(((patlength[patid[curpat]]==0)?(256):(patlength[patid[curpat]]))*12)+4);
+  patternbitmap=g._WRAP_create_bitmap(24+chanstodisplay*96,(((patlength[patid[curpat]]==0)?(256):(patlength[patid[curpat]]))*12)+4);
   g.setTarget(patternbitmap);
   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
   g._WRAP_draw_filled_rectangle(0,60,scrW,scrH,g._WRAP_map_rgb(0,0,0));
@@ -2020,7 +2021,7 @@ void drawpatterns(bool force) {
     //if (i>curpatrow+15+((scrH-450)/12)) {continue;}
     //if (i<curpatrow-16) {continue;}
     g.tColor(8);
-    g.tPos((((float)scrW/8)-(float)(3+(chanstodisplay*12)))/2,i);
+    g.tPos(0,i);
     g.printf("%.2X",i);
     // channel drawing routine, replicated 8 times
     for (int j=0;j<chanstodisplay;j++) {
