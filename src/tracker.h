@@ -318,7 +318,7 @@ class Graphics {
       SDL_RenderCopy(sdlRend,bitmap,&sr,&dr);
     }
     void _WRAP_draw_scaled_bitmap(SDL_Texture* bitmap, float sx, float sy, float sw, float sh, float dx, float dy, float dw, float dh, int flags) {
-      SDL_Rect sr, dr;
+      SDL_Rect sr, dr, tr;
       sr.x=sx;
       sr.y=sy;
       sr.w=sw;
