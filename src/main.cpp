@@ -3369,6 +3369,8 @@ static void print_entry(const char* filepath) {
   filenames.resize(0);
   if (flist!=INVALID_HANDLE_VALUE) {
     do {
+      if (strcmp(next.cFileName,".")==0) continue;
+      if (strcmp(next.cFileName,"..")==0) continue;
       neext.name=filepath;
       neext.name+='\\';
       neext.name+=next.cFileName;
