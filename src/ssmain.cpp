@@ -24,8 +24,8 @@ jack_status_t as;
 #include <SDL2/SDL.h>
 #endif
 SDL_AudioDeviceID ai;
-SDL_AudioSpec* ac;
-SDL_AudioSpec* ar;
+SDL_AudioSpec ac;
+SDL_AudioSpec ar;
 #endif
 
 bool quit, viewMemory;
@@ -68,7 +68,7 @@ static void process(void* userdata, Uint8* stream, int len) {
     buf[i]=(float*)jack_port_get_buffer(ao[i],nframes);
   }
 #else
-  unsigned int nframes=len/8;
+  unsigned int nframes=len/(sizeof(float)*ar.channels);
   buf[0]=(float*)stream;
   buf[1]=&buf[0][1];
 #endif
@@ -113,8 +113,8 @@ static void process(void* userdata, Uint8* stream, int len) {
     buf[0][i]=0.25*resa1[0];
     buf[1][i]=0.25*resa1[1];
 #else
-    buf[0][i<<1]=0.25*resa1[0];
-    buf[1][i<<1]=0.25*resa1[1];
+    buf[0][i*ar.channels]=0.25*resa1[0];
+    buf[1][i*ar.channels]=0.25*resa1[1];
 #endif
     procPos+=noProc;
     if (procPos>=1) {
@@ -191,18 +191,16 @@ int main(int argc, char** argv) {
 #else
   SDL_Init(SDL_INIT_AUDIO);
 
-  ac=new SDL_AudioSpec;
-  ar=new SDL_AudioSpec;
-  ac->freq=44100;
-  ac->format=AUDIO_F32;
-  ac->channels=2;
-  ac->samples=1024;
-  ac->callback=process;
-  ac->userdata=NULL;
+  ac.freq=44100;
+  ac.format=AUDIO_F32;
+  ac.channels=2;
+  ac.samples=1024;
+  ac.callback=process;
+  ac.userdata=NULL;
   printf("hmm\n");
-  ai=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,ac,ar,SDL_AUDIO_ALLOW_FREQUENCY_CHANGE|SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+  ai=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,&ac,&ar,SDL_AUDIO_ALLOW_ANY_CHANGE);
   printf("works\n");
-  sr=ar->freq;
+  sr=ar.freq;
   noProc=sr/targetSR;
 
   SDL_PauseAudioDevice(ai,0);

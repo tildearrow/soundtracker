@@ -46,8 +46,8 @@ jack_status_t jstatus;
 jack_nframes_t jacksr;
 #else
 SDL_AudioDeviceID audioID;
-SDL_AudioSpec* sout;
-SDL_AudioSpec* spout;
+SDL_AudioSpec ac;
+SDL_AudioSpec ar;
 uint32_t jacksr;
 #endif
 
@@ -550,17 +550,17 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   }
 #else
   size_t nframes;
-  switch (spout->format) {
+  switch (ar.format) {
     case AUDIO_U8: case AUDIO_S8:
-      nframes=len/(2);
+      nframes=len/(ar.channels);
       buf8[0]=(signed char*)stream;
       break;
     case AUDIO_U16: case AUDIO_S16:
-      nframes=len/(2*2);
+      nframes=len/(2*ar.channels);
       buf16[0]=(short*)stream;
       break;
     case AUDIO_S32: case AUDIO_F32:
-      nframes=len/(4*2);
+      nframes=len/(4*ar.channels);
       buf[0]=(float*)stream;
       buf32[0]=(int*)stream;
       break;
@@ -630,22 +630,24 @@ static void nothing(void* userdata, Uint8* stream, int len) {
     buf[0][i]=0.5*resa1[0];
     buf[1][i]=0.5*resa1[1];
 #else
-    switch (spout->format) {
+    resa1[0]=fmin(fmax(resa1[0],-2),2);
+    resa1[1]=fmin(fmax(resa1[1],-2),2);
+    switch (ar.format) {
       case AUDIO_F32:
-        buf[0][i<<1]=0.5*resa1[0];
-        buf[0][1+(i<<1)]=0.5*resa1[1];
+        buf[0][i*ar.channels]=0.5*resa1[0];
+        buf[0][1+(i*ar.channels)]=0.5*resa1[1];
         break;
       case AUDIO_S16:
-        buf16[0][i<<1]=fmin(fmax(-1,0.5*resa1[0]),1)*32767;
-        buf16[0][1+(i<<1)]=fmin(fmax(-1,0.5*resa1[1]),1)*32767;
+        buf16[0][i*ar.channels]=fmin(fmax(-1,0.5*resa1[0]),1)*32767;
+        buf16[0][1+(i*ar.channels)]=fmin(fmax(-1,0.5*resa1[1]),1)*32767;
         break;
       case AUDIO_S32:
-        buf32[0][i<<1]=int(fmin(fmax(-1,0.5*resa1[0]),1)*8388607)<<8;
-        buf32[0][1+(i<<1)]=int(fmin(fmax(-1,0.5*resa1[1]),1)*8388607)<<8;
+        buf32[0][i*ar.channels]=int(fmin(fmax(-1,0.5*resa1[0]),1)*8388607)<<8;
+        buf32[0][1+(i*ar.channels)]=int(fmin(fmax(-1,0.5*resa1[1]),1)*8388607)<<8;
         break;
       case AUDIO_S8:
-        buf8[0][i<<1]=fmin(fmax(-1,0.5*resa1[0]),1)*127;
-        buf8[0][1+(i<<1)]=fmin(fmax(-1,0.5*resa1[1]),1)*127;
+        buf8[0][i*ar.channels]=fmin(fmax(-1,0.5*resa1[0]),1)*127;
+        buf8[0][1+(i*ar.channels)]=fmin(fmax(-1,0.5*resa1[1]),1)*127;
         break;
       case AUDIO_U8:
       case AUDIO_U16:
@@ -717,16 +719,14 @@ void initaudio() {
 #else
       //////////////// SDL CODE HERE ////////////////
       SDL_InitSubSystem(SDL_INIT_AUDIO);
-      sout=new SDL_AudioSpec;
-      spout=new SDL_AudioSpec;
-      sout->freq=44100;
-      sout->format=AUDIO_F32;
-      sout->channels=2;
-      sout->samples=1024;
-      sout->callback=nothing;
-      sout->userdata=NULL;
-      audioID=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,sout,spout, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE|SDL_AUDIO_ALLOW_FORMAT_CHANGE);
-      jacksr=spout->freq;
+      ac.freq=44100;
+      ac.format=AUDIO_F32;
+      ac.channels=2;
+      ac.samples=1024;
+      ac.callback=nothing;
+      ac.userdata=NULL;
+      audioID=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,&ac,&ar,SDL_AUDIO_ALLOW_ANY_CHANGE);
+      jacksr=ar.freq;
       sr=jacksr;
 #endif
 #ifdef JACK
