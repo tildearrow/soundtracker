@@ -725,7 +725,7 @@ void initaudio() {
       sout->samples=1024;
       sout->callback=nothing;
       sout->userdata=NULL;
-      audioID=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,sout,spout, SDL_AUDIO_ALLOW_ANY_CHANGE);
+      audioID=SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0,0),0,sout,spout, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE|SDL_AUDIO_ALLOW_FORMAT_CHANGE);
       jacksr=spout->freq;
       sr=jacksr;
 #endif
@@ -3355,8 +3355,11 @@ int ImportS3M() {
 #ifdef _WIN32
 static void print_entry(const char* filepath) {
   HANDLE flist;
-  WIN32_FIND_DATA next;
-  flist=FindFirstFile(filepath,&next);
+  WIN32_FIND_DATAA next;
+  string actualfp;
+  actualfp=filepath;
+  actualfp+="\\*";
+  flist=FindFirstFileA(actualfp.c_str(),&next);
   printf("listing dir...\n");
   int increment=0;
   FileInList neext;
@@ -3364,18 +3367,20 @@ static void print_entry(const char* filepath) {
   neext.isdir=false;
   // clean file list
   filenames.resize(0);
-  printf("finding files in %s\n",filepath);
-  while (FindNextFile(flist,&next)!=0) {
-    neext.name=filepath;
-    neext.name+='\\';
-    printf("found %s\n",next.cFileName);
-    neext.name+=next.cFileName;
-    neext.isdir=next.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY;
-    filenames.push_back(neext);
-    increment++;
+  if (flist!=INVALID_HANDLE_VALUE) {
+    do {
+      neext.name=filepath;
+      neext.name+='\\';
+      neext.name+=next.cFileName;
+      neext.isdir=next.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY;
+      filenames.push_back(neext);
+      increment++;
+    } while (FindNextFileA(flist,&next));
+    FindClose(flist);
+  } else {
+    abort();
   }
   filecount=increment;
-  FindClose(flist);
   printf("finish.\n");
 }
 #else
