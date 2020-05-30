@@ -290,3 +290,10 @@ SDL_Renderer* Graphics::_getDisplay() {
 float Graphics::_getScale() {
   return dpiScale;
 }
+
+bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky) {
+  // point-in-rectangle collision detection
+  if (checkx>x1 && checkx<x2 && checky>y1 && checky<y2) {
+    return true;}
+  return false;
+}

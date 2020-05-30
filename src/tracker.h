@@ -32,6 +32,10 @@ extern "C" {
 
 #include "fextra.h"
 
+typedef std::string string;
+
+bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky);
+
 struct Point {
   float x, y;
 };
@@ -363,4 +367,86 @@ class Graphics {
     Graphics(): inited(false), nlPos(0), align(0) {}
 };
 
+extern Graphics g;
+
+class Button {
+  string lab;
+  
+  void (*callback)(void*);
+  void (*pCallback)(void*);
+  
+  void* cData;
+  void* cpData;
+  
+  public:
+    float x, y, w, h;
+    void _pMove(float px, float py) {
+      
+    }
+    void _pPress(float px, float py, int b) {
+      if (b==0 && PIR(x,y,x+w,y+h,px,py)) {
+        if (pCallback!=NULL) {
+          pCallback(cpData);
+        }
+      }
+    }
+    void _pRelease(float px, float py, int b) {
+      if (b==0 && PIR(x,y,x+w,y+h,px,py)) {
+        if (callback!=NULL) {
+          callback(cData);
+        }
+      }
+    }
+    
+    void setCallback(void(*c)(void*), void* data) {
+      callback=c;
+      cData=data;
+    }
+    void setPressCallback(void(*c)(void*), void* data) {
+      pCallback=c;
+      cpData=data;
+    }
+    
+    void label(string l) {
+      lab=l;
+    }
+    
+    void pos(float px, float py) {
+      x=px; y=py;
+    }
+    void size(float sx, float sy) {
+      w=sx; h=sy;
+    }
+    
+    void draw() {
+      g._WRAP_draw_rectangle(x,y,x+w,y+h,Color(1.0f,1.0f,1.0f),0);
+      g.tPos((x+(w-lab.size()*8)/2)/8,(y+(h/2)-8)/12);
+      g.printf("%s",lab.c_str());
+    }
+    
+    Button(float px, float py, float pw, float ph, string l, void(*c)(void*), void* d):
+      lab(l),
+      callback(c),
+      pCallback(NULL),
+      cData(d),
+      cpData(NULL),
+      x(px), y(py), w(pw), h(ph) {}
+    
+    Button():
+      lab("Button"),
+      callback(NULL),
+      pCallback(NULL),
+      cData(NULL),
+      cpData(NULL),
+      x(16), y(80), w(32), h(16) {}
+};
+
+class NumberPad {
+  float x, y;
+  Button bNum[16];
+  Button bDel;
+  Button bOK;
+  Button bUp;
+  Button bDown;
+};
 #endif

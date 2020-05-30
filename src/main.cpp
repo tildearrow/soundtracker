@@ -497,18 +497,18 @@ bool pageSelectShow;
 
 Swiper swX;
 Swiper swY;
+
+// new file dialog
+Button bdNew;
+Button bdOpen;
+Button bdSave;
+
 // NEW VARIABLES END //
 
 void Playback();
 void MuteAllChannels();
 int playfx(const char* fxdata,int fxpos,int achan);
 void triggerfx(int num);
-bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky) {
-  // point-in-rectangle collision detection
-  if (checkx>x1 && checkx<x2 && checky>y1 && checky<y2) {
-    return true;}
-  return false;
-}
 #define interpolatee(aa,bb,cc) (aa+((bb-aa)*cc))
 
 bool reservedevent[32]={0,0,0,0,0,0,0,0,
@@ -2469,7 +2469,7 @@ void drawmixer() {
   g.tNLPos(0);
 }
 void drawdiskop() {
-  // draws the disk operations dialog
+  // draws the file dialog
   g.tPos(0,5);
   g.tColor(15);
   g.printf("Disk Operations|Open|Load|Save|ImportMOD|ImportS3M|ImportIT|ImportXM|LoadSample|LoadRawSample\n");
@@ -5213,6 +5213,12 @@ int playfx(const char* fxdata,int fxpos,int achan) {
   return toret;
 }
 
+void initNewBits() {
+  bdNew=Button(16,76,64,32,"New",NULL,NULL);
+  bdOpen=Button(88,76,64,32,"Open",NULL,NULL);
+  bdSave=Button(158,76,64,32,"Save",NULL,NULL);
+}
+
 int main(int argc, char **argv) {
   detunefactor=1;
   chip[0].Init();
@@ -5367,7 +5373,9 @@ DETUNE_FACTOR_GLOBAL=1;
      g.setTarget(mixer);
      g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
        drawmixerlayer();
-     g.setTarget(NULL);}
+     g.setTarget(NULL);
+     initNewBits();
+  }
    printf("initializing audio channels\n");
    initaudio();
    // clear to black
