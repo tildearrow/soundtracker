@@ -69,6 +69,12 @@ struct Color {
     a(al) {}
 };
 
+enum UIType {
+  UIClassic=0,
+  UIModern,
+  UIMobile
+};
+
 enum SwipeStatus {
   swNone=0,
   swHolding,

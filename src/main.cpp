@@ -489,7 +489,7 @@ const int pageMap[]={
   0, 1, 9, 3, 2, 10, 4, 5, 12, 7
 };
 
-bool mobileUI;
+UIType iface;
 bool mobAltView;
 float mobScroll;
 float topScroll;
@@ -576,7 +576,7 @@ static void nothing(void* userdata, Uint8* stream, int len) {
     targetSR=297500;
     noProc=sr/targetSR;
   }
-  if (kb[SDL_SCANCODE_ESCAPE] || (PIR((scrW/2)+21,37,(scrW/2)+61,48,mstate.x,mstate.y) && leftclick && !mobileUI)) {
+  if (kb[SDL_SCANCODE_ESCAPE] || (PIR((scrW/2)+21,37,(scrW/2)+61,48,mstate.x,mstate.y) && leftclick && iface!=UIMobile)) {
     ASC::interval=16384;
   }
   for (size_t i=0; i<nframes;) {
@@ -4003,7 +4003,7 @@ void ClickEvents() {
   }
 
   // screen event
-  if (mobileUI) {
+  if (iface==UIMobile) {
     if (leftpress) {
       if (pageSelectShow) {
         if (PIR(0,0,scrW,59,mstate.x,mstate.y)) {
@@ -5014,7 +5014,7 @@ void drawdisp() {
   g._WRAP_set_blender(SDL_BLENDMODE_BLEND);
   g.setTarget(NULL);
   
-  if (mobileUI) {
+  if (iface==UIMobile) {
     // boundaries
     g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
     if (mobAltView) {
@@ -5241,9 +5241,9 @@ int main(int argc, char **argv) {
   
   // new variables
 #ifdef ANDROID
-  mobileUI=true;
+  iface=UIMobile;
 #else
-  mobileUI=false;
+  iface=UIClassic;
 #endif
   mobAltView=false;
   pageSelectShow=false;
@@ -5296,7 +5296,7 @@ DETUNE_FACTOR_GLOBAL=1;
    //int success=0;
    bool is_audio_inited=false;
    int helpfilesize;
-   if (mobileUI) {
+   if (iface==UIMobile) {
      scrW=360;
      scrH=640;
    } else {

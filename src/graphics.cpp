@@ -198,7 +198,7 @@ bool Graphics::init(int width, int height) {
   SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,8);
 #endif
   
-  sdlWin=SDL_CreateWindow("soundtracker (SDL)",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,width*dpiScale,height*dpiScale,SDL_WINDOW_RESIZABLE);
+  sdlWin=SDL_CreateWindow("soundtracker",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,width*dpiScale,height*dpiScale,SDL_WINDOW_RESIZABLE);
   if (!sdlWin) return false;
   
   sdlRend=SDL_CreateRenderer(sdlWin,-1,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
