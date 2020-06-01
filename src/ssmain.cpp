@@ -84,7 +84,12 @@ static void process(void* userdata, Uint8* stream, int len) {
       if (feof(f)) quit=true;
       writable=0;
       s.next(str.c_str(),writable,str.size());
-      printf("ssinter: filename                      % 8ld/%ld  % 8d\n",ftell(f),fsize,frame);
+ #ifdef _WIN32
+      CONSOLE_SCREEN_BUFFER_INFO oCoord;
+      HANDLE so=GetStdHandle(STD_OUTPUT_HANDLE);
+      GetConsoleScreenBufferInfo(so,&oCoord);
+ #endif
+      printf("ssinter: filename                      % 8ld/%ld  % 8d",ftell(f),fsize,frame);
       if (viewMemory) {
         printf("\x1b[1;33m----\x1b[32m--\x1b[36m--\x1b[m----\x1b[1;34m----\x1b[31m--\x1b[35m--\x1b[30m------------\x1b[33m--------\x1b[32m--------\x1b[34m--------\x1b[m----\x1b[33m----\x1b[m\n");
         for (int i=0; i<256; i++) {
@@ -93,7 +98,11 @@ static void process(void* userdata, Uint8* stream, int len) {
         }
         printf("\x1b[10A");
       } else {
+#ifdef _WIN32
+        SetConsoleCursorPosition(so,oCoord.dwCursorPosition);
+#else
         printf("\x1b[A");
+#endif
       }
       ticks+=speed;
       frame++;
