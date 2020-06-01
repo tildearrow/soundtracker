@@ -2472,12 +2472,14 @@ void drawdiskop() {
   // draws the file dialog
   g.tPos(0,5);
   g.tColor(15);
-  g.printf("Disk Operations|Open|Load|Save|ImportMOD|ImportS3M|ImportIT|ImportXM|LoadSample|LoadRawSample\n");
-  g.printf("---------------------------------------------------------------------------------------------------\n");
-  g.printf("FilePath __________________________________________________________________________________________\n");
-  g.printf("---------------------------------------------------------------------------------------------------\n");
-  g.printf("<..>                                                                                               ^");
-  g.tPos(99,36);
+  g.printf("Disk Operations|Open|Load|Save|ImportMOD|ImportS3M|ImportIT|ImportXM|LoadSample|LoadRawSample\n\n");
+  g._WRAP_draw_line(0,80,scrW,80,g._WRAP_map_rgb(255,255,255),1);
+  g.printf("FilePath\n\n");
+  g._WRAP_draw_line(0,104,scrW,104,g._WRAP_map_rgb(255,255,255),1);
+  g.printf("<..>");
+  g.tPos((scrW/8.0f)-1,9);
+  g.printf("^");
+  g.tPos((scrW/8.0f)-1,(scrH/12.0f)-1);
   g.printf("v");
   
   g.tPos(9,7);
@@ -2485,7 +2487,7 @@ void drawdiskop() {
   if (selectedfileindex>(diskopscrollpos)) {
   g._WRAP_draw_filled_rectangle(0,111+((selectedfileindex-diskopscrollpos)*12),scrW,123+((selectedfileindex-diskopscrollpos)*12),g._WRAP_map_rgb(128,128,128));
   }
-  for (int i=diskopscrollpos; i<minval(diskopscrollpos+27,filecount); i++) {
+  for (int i=diskopscrollpos; i<minval(diskopscrollpos+(int(scrH/12)-9),filecount); i++) {
     g.tPos(0,10+i-diskopscrollpos);
     g.tColor(filenames[i].isdir?14:15);
 #ifdef _WIN32
