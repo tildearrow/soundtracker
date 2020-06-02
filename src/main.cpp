@@ -2479,7 +2479,7 @@ void drawdiskop() {
   g.printf("<..>");
   g.tPos((scrW/8.0f)-1,9);
   g.printf("^");
-  g.tPos((scrW/8.0f)-1,(scrH/12.0f)-1);
+  g.tPos((scrW/8.0f)-1,((scrH-4)/12.0f)-1);
   g.printf("v");
   
   g.tPos(9,7);
@@ -3644,7 +3644,7 @@ int LoadFile(const char* filename) {
   int seqparas[256];
   int commentpointer=0;
   int pcmpointer=0;
-  int maxpcmread=0;
+  size_t maxpcmread=0;
   int TVER;
   int oplaymode;
   bool IS_SEQ_BLANK[256];
@@ -3722,7 +3722,8 @@ int LoadFile(const char* filename) {
     pcmpointer=fgeti(sfile);
     if (pcmpointer!=0) {
       fseek(sfile,pcmpointer,SEEK_SET);
-      maxpcmread=min(65280,fgeti(sfile));
+      fread(&maxpcmread,4,1,sfile);
+      if (maxpcmread>65280) maxpcmread=65280;
       fread(chip[0].pcm,1,maxpcmread,sfile);
     }
     fseek(sfile,0x180,SEEK_SET);
