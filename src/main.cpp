@@ -3471,8 +3471,8 @@ int SaveFile() {
   
   // temporary, gonna get replaced by a better thing soon
   // just for the sake of linux
-  abort();
-  strcpy(rfn,".");
+  strcpy(rfn,"savefile");
+  popbox=PopupBox("Warning","work in progress! saving to savefile");
   
   sfile=fopen(rfn,"wb");
   if (sfile!=NULL) { // write the file
