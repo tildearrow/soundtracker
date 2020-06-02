@@ -89,19 +89,19 @@ static void process(void* userdata, Uint8* stream, int len) {
       HANDLE so=GetStdHandle(STD_OUTPUT_HANDLE);
       GetConsoleScreenBufferInfo(so,&oCoord);
  #endif
-      printf("ssinter: filename                      % 8ld/%ld  % 8d",ftell(f),fsize,frame);
+      fprintf(stderr,"ssinter: filename                      % 8ld/%ld  % 8d",ftell(f),fsize,frame);
       if (viewMemory) {
-        printf("\x1b[1;33m----\x1b[32m--\x1b[36m--\x1b[m----\x1b[1;34m----\x1b[31m--\x1b[35m--\x1b[30m------------\x1b[33m--------\x1b[32m--------\x1b[34m--------\x1b[m----\x1b[33m----\x1b[m\n");
+        fprintf(stderr,"\x1b[1;33m----\x1b[32m--\x1b[36m--\x1b[m----\x1b[1;34m----\x1b[31m--\x1b[35m--\x1b[30m------------\x1b[33m--------\x1b[32m--------\x1b[34m--------\x1b[m----\x1b[33m----\x1b[m\n");
         for (int i=0; i<256; i++) {
-          printf("%.2x",((unsigned char*)sc.chan)[i]);
+          fprintf(stderr,"%.2x",((unsigned char*)sc.chan)[i]);
           if ((i&31)==31) printf("\n");
         }
-        printf("\x1b[10A");
+        fprintf(stderr,"\x1b[10A");
       } else {
 #ifdef _WIN32
         SetConsoleCursorPosition(so,oCoord.dwCursorPosition);
 #else
-        printf("\x1b[A");
+        fprintf(stderr,"\x1b[G");
 #endif
       }
       ticks+=speed;
