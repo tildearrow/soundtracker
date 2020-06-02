@@ -154,6 +154,11 @@ void Graphics::setTarget(SDL_Texture* where) {
   SDL_SetRenderTarget(sdlRend,where);
 }
 
+void Graphics::setTitle(string t) {
+  SDL_SetWindowTitle(sdlWin,t.c_str());
+}
+
+
 void Graphics::trigResize(int tx, int ty) {
   scrSize.x=tx/dpiScale;
   scrSize.y=ty/dpiScale;

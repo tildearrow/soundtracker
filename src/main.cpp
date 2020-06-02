@@ -29,6 +29,15 @@ int dpiScale;
 //#define VBLANK
 //#define PRESERVE_INS
 
+#ifdef _WIN32
+#define DIR_SEPARATOR '\\'
+#define SDIR_SEPARATOR "\\"
+#else
+#define DIR_SEPARATOR '/'
+#define SDIR_SEPARATOR "/"
+#endif
+
+
 bool ntsc=false;
 
 float DETUNE_FACTOR_GLOBAL;
@@ -400,9 +409,10 @@ char* comments;
 int inputcurpos=0;
 int chantoplayfx=0;
 char* inputvar=NULL;
-int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments
+int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
 int maxinputsize=0;
 char* curdir;
+char* curfname;
 int pcmeditscale=0;
 int pcmeditseek=0;
 int pcmeditoffset=0;
@@ -433,7 +443,6 @@ double raster1, raster2, maxrasterdelta;
 #define mufflefb 0
 float muffleb0[2]={0,0};
 float muffleb1[2]={0,0};
-int filecount=0;
 int selectedfileindex=-1;
 struct FileInList {
   string name;
@@ -497,6 +506,8 @@ bool pageSelectShow;
 
 Swiper swX;
 Swiper swY;
+
+PopupBox popbox;
 
 // new file dialog
 Button bdNew;
@@ -1109,6 +1120,7 @@ int AllocateSequence(int seqid) {
   #ifdef SOUNDS
   triggerfx(1);
   #endif
+  popbox=PopupBox("Error","no free sequence found!");
   return 0;
 }
 int ProcessPitch(int insnumb, float offset) {
@@ -2330,25 +2342,14 @@ void EditSkip() {
 }
 void ParentDir(char *thedir) {
   // set thedir to parent directory
-  #if defined(__unix__) || defined(__APPLE__) // slashes
-  if (strrchr(thedir,'/')!=NULL) {
-    memset(strrchr(thedir,'/'),0,1);
-    if (strchr(thedir,'/')==NULL) {
-      int littlestr=strlen(thedir);
-      memset(thedir+littlestr,'/',1);
+  if (strrchr(thedir,DIR_SEPARATOR)!=NULL) {
+    memset(strrchr(thedir,DIR_SEPARATOR),0,1);
+    if (strchr(thedir,DIR_SEPARATOR)==NULL) {
+      size_t littlestr=strlen(thedir);
+      memset(thedir+littlestr,DIR_SEPARATOR,1);
       memset(thedir+littlestr+1,0,1);
     }
   }
-  #else // backslashes
-  if (strrchr(thedir,'\\')!=NULL) {
-    memset(strrchr(thedir,'\\'),0,1);
-    if (strchr(thedir,'\\')==NULL) {
-      int littlestr=strlen(thedir);
-      memset(thedir+littlestr,'\\',1);
-      memset(thedir+littlestr+1,0,1);
-    }
-  }
-  #endif
 }
 int NumberLetter(char cval) {
   switch (cval) {
@@ -2472,14 +2473,14 @@ void drawdiskop() {
   // draws the file dialog
   g.tPos(0,5);
   g.tColor(15);
-  g.printf("Disk Operations|Open|Load|Save|ImportMOD|ImportS3M|ImportIT|ImportXM|LoadSample|LoadRawSample\n\n");
+  g.printf("Disk Operations|Open|Load|Save                                      |LoadSample|LoadRawSample\n\n");
   g._WRAP_draw_line(0,80,scrW,80,g._WRAP_map_rgb(255,255,255),1);
   g.printf("FilePath\n\n");
   g._WRAP_draw_line(0,104,scrW,104,g._WRAP_map_rgb(255,255,255),1);
   g.printf("<..>");
   g.tPos((scrW/8.0f)-1,9);
   g.printf("^");
-  g.tPos((scrW/8.0f)-1,((scrH-4)/12.0f)-1);
+  g.tPos((scrW/8.0f)-1,((scrH-4)/12.0f)-3);
   g.printf("v");
   
   g.tPos(9,7);
@@ -2487,15 +2488,19 @@ void drawdiskop() {
   if (selectedfileindex>(diskopscrollpos)) {
   g._WRAP_draw_filled_rectangle(0,111+((selectedfileindex-diskopscrollpos)*12),scrW,123+((selectedfileindex-diskopscrollpos)*12),g._WRAP_map_rgb(128,128,128));
   }
-  for (int i=diskopscrollpos; i<minval(diskopscrollpos+(int(scrH/12)-9),filecount); i++) {
+  for (int i=diskopscrollpos; i<minval(diskopscrollpos+(int(scrH/12)-9),filenames.size()); i++) {
     g.tPos(0,10+i-diskopscrollpos);
     g.tColor(filenames[i].isdir?14:15);
-#ifdef _WIN32
-    g.printf(strrchr(filenames[i].name.c_str(),'\\')+1);
-#else
-    g.printf(strrchr(filenames[i].name.c_str(),'/')+1);
-#endif
+    g.printf(filenames[i].name.c_str());
   }
+  
+  g._WRAP_draw_filled_rectangle(0,scrH-24,scrW,scrH,g._WRAP_map_rgb(0,0,0));
+  g._WRAP_draw_line(0,scrH-24,scrW,scrH-24,g._WRAP_map_rgb(255,255,255),1);
+  g.tPos(0,((scrH-8.0f)/12.0f)-1.0f);
+  g.tColor(15);
+  g.printf("FileName");
+  g.tPos(9,((scrH-8.0f)/12.0f)-1.0f);
+  g.printf("%s",curfname);
 }
 
 void drawmemory() {
@@ -2867,7 +2872,7 @@ unsigned char ITVolumeConverter(unsigned char itvol) {
   }
   return itvol;
 }
-int ImportIT() {
+int ImportIT(FILE* it) {
   // import IT file, after YEARS I wasn't able to do this.
   // check out http://schismtracker.org/wiki/ITTECH.TXT for specs in IT format
     int64_t size;
@@ -2875,7 +2880,6 @@ int ImportIT() {
   int sk;
   bool istherenote=false;
   int samples;
-  FILE *it;
   //string fn;
   int NextByte;
   int NextChannel;
@@ -2886,13 +2890,12 @@ int ImportIT() {
   int LastVol[32];
   int LastFX[32];
   int LastFXVal[32];
-  abort();
+  //abort();
   char rfn[4096];
   strcpy(rfn,".");
   //int insparas[256];
   int patparas[256];
   //gets(rfn);
-  it=fopen(rfn,"rb");
   if (it!=NULL) { // read the file
   printf("loading IT file, ");
     size=fsize(it);
@@ -2903,6 +2906,7 @@ int ImportIT() {
     fclose(it);
   if (memblock[0]=='I' && memblock[1]=='M' && memblock[2]=='P' && memblock[3]=='M') {
     printf("IT module detected\n");
+    CleanupPatterns();
     // name
     printf("module name is ");
     for (sk=4;sk<30;sk++) {
@@ -3021,23 +3025,29 @@ int ImportIT() {
     delete[] memblock;
   }
   else {printf("error while importing file! file doesn't exist\n"); return 1;}
+  if (!playermode && !fileswitch) {curpat=0;}
+  if (playmode==1) {Play();}
+  if (strcmp(name,"")==0) {
+    g.setTitle(PROGRAM_NAME);
+  } else {
+    g.setTitle(S(name)+S(" - ")+S(PROGRAM_NAME));
+  }
   return 0;
 }
-int ImportMOD(const char* rfn) {
+int ImportMOD(FILE* mod) {
   // import MOD file
   // check out http://www.fileformat.info/format/mod/corion.htm for specs in MOD format
     int64_t size;
   char * memblock;
   int sk;
   bool istherenote=false;
-  FILE *mod;
   //string fn;
   int chans;
   int CurrentSampleSeek=0;
   printf("\nplease write filename? ");
-  mod=fopen(rfn,"rb");
   if (mod!=NULL) { // read the file
   printf("loading MOD file, ");
+  CleanupPatterns();
     size=fsize(mod);
   printf("%d bytes\n",size);
     memblock=new char[size];
@@ -3247,6 +3257,14 @@ int ImportMOD(const char* rfn) {
     delete[] memblock;
   }
   else {/*cout << "error while importing file! file doesn't exist\n";*/ return 1;}
+  songdf=0x1b; // Amiga compat
+  if (!playermode && !fileswitch) {curpat=0;}
+  if (playmode==1) {Play();}
+  if (strcmp(name,"")==0) {
+    g.setTitle(PROGRAM_NAME);
+  } else {
+    g.setTitle(S(name)+S(" - ")+S(PROGRAM_NAME));
+  }
   return 0;
 }
 int ImportS3M() {
@@ -3355,7 +3373,7 @@ int ImportS3M() {
 }
 
 #ifdef _WIN32
-static void print_entry(const char* filepath) {
+bool print_entry(const char* filepath) {
   HANDLE flist;
   WIN32_FIND_DATAA next;
   string actualfp;
@@ -3368,56 +3386,55 @@ static void print_entry(const char* filepath) {
   neext.name="";
   neext.isdir=false;
   // clean file list
-  filenames.resize(0);
+  filenames.clear();
   if (flist!=INVALID_HANDLE_VALUE) {
     do {
       if (strcmp(next.cFileName,".")==0) continue;
       if (strcmp(next.cFileName,"..")==0) continue;
-      neext.name=filepath;
-      neext.name+='\\';
-      neext.name+=next.cFileName;
+      neext.name=next.cFileName;
       neext.isdir=next.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY;
       filenames.push_back(neext);
       increment++;
     } while (FindNextFileA(flist,&next));
     FindClose(flist);
   } else {
-    abort();
+    return false;
   }
-  filecount=increment;
   printf("finish.\n");
+  return true;
 }
 #else
-static void print_entry(const char* filepath) {
+bool print_entry(const char* filepath) {
   DIR* flist;
   struct dirent* next;
   flist=opendir(filepath);
+  // clean file list
+  filenames.clear();
+  if (flist==NULL) {
+    return false;
+  }
   printf("listing dir...\n");
   int increment=0;
       FileInList neext;
       neext.name="";
       neext.isdir=false;
-      // clean file list
-      filenames.resize(0);
+      
       while ((next=readdir(flist))!=NULL) {
         if (strcmp(next->d_name,".")==0) continue;
         if (strcmp(next->d_name,"..")==0) continue;
-        neext.name=filepath;
-        neext.name+='/';
-        neext.name+=next->d_name;
+        neext.name=next->d_name;
         //printf("%-36s\n",neext.name.c_str());
         neext.isdir=next->d_type&DT_DIR;
         filenames.push_back(neext);
         increment++;
       }
-    filecount=increment;
       closedir(flist);
       // sort the files
       string tempname;
       bool tempisdir=false;
       tempname="";
-      for (int ii=0; ii<filecount; ii++) { // oooooohhhhhh ok it was the "i"
-      for (int j=0; j<filecount-1; j++) {
+      for (int ii=0; ii<filenames.size(); ii++) { // oooooohhhhhh ok it was the "i"
+      for (int j=0; j<filenames.size()-1; j++) {
          if (strcmp(filenames[j].name.c_str(), filenames[j+1].name.c_str()) > 0) {
       tempname=filenames[j].name;
       tempisdir=filenames[j].isdir;
@@ -3429,6 +3446,7 @@ static void print_entry(const char* filepath) {
       }
       }
       printf("finish.\n");
+      return true;
 }
 #endif
 
@@ -3663,11 +3681,30 @@ int LoadFile(const char* filename) {
       checkstr[4]!='K' ||
       checkstr[5]!='8' ||
       checkstr[6]!='B' ||
-      checkstr[7]!='T') {printf("error: not a soundtracker file!\n");fclose(sfile);
+      checkstr[7]!='T') {
+    // check if this is a different module type just in case.
+    if (checkstr[0]=='I' &&
+      checkstr[1]=='M' &&
+      checkstr[2]=='P' &&
+      checkstr[3]=='M') { // IT
+      return ImportIT(sfile);
+    } else {
+      fseek(sfile,1080,SEEK_SET);
+      fread(checkstr,1,8,sfile); // magic number for MOD
+      if ((checkstr[0]=='M' && checkstr[1]=='.' && checkstr[2]=='K' && checkstr[3]=='.')||
+     (checkstr[1]=='C' && checkstr[2]=='H' && checkstr[3]=='N')||
+     (checkstr[2]=='C' && checkstr[3]=='H')) {
+        return ImportMOD(sfile);
+      } else {
+        printf("error: not a soundtracker file!\n");fclose(sfile);
     #ifdef SOUNDS
     triggerfx(1);
     #endif
-    return 1;}
+    popbox=PopupBox("Error","not a soundtracker file!");
+    return 1;
+      }
+    }
+    }
     oplaymode=playmode;
     playmode=0;
     CleanupPatterns();
@@ -3880,9 +3917,15 @@ int LoadFile(const char* filename) {
     printf("done\n");
     if (!playermode && !fileswitch) {curpat=0;}
     if (oplaymode==1) {Play();}
+    if (strcmp(name,"")==0) {
+      g.setTitle(PROGRAM_NAME);
+    } else {
+      g.setTitle(S(name)+S(" - ")+S(PROGRAM_NAME));
+    }
     return 0;
   } else {
     perror("can't open file");
+    popbox=PopupBox("Error","can't open file!");
     #ifdef SOUNDS
     triggerfx(1);
     #endif
@@ -3982,6 +4025,11 @@ void ClickEvents() {
   }
   if (rightclick!=rightclickprev && rightclick==false) {
     rightrelease=true;
+  }
+  
+  if (popbox.isVisible()) {
+    if (leftpress) popbox.hide();
+    return;
   }
 
   // hover functions
@@ -4294,10 +4342,11 @@ void ClickEvents() {
       if (PIR(scrW-72,180,scrW-63,191,mstate.x,mstate.y)) {instrument[CurrentIns].pcmLen+=16;}
       if (PIR(scrW-64,180,scrW-56,191,mstate.x,mstate.y)) {instrument[CurrentIns].pcmLen++;}
 
-      if (PIR(scrW-(800-592),216,scrW-(800-599),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH-=16;}
-      if (PIR(scrW-(800-600),216,scrW-(800-607),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH--;}
-      if (PIR(scrW-(800-608),216,scrW-(800-615),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH-=4096;}
-      if (PIR(scrW-(800-616),216,scrW-(800-623),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH-=256;}
+      // filter. somebody screwed up the order.
+      if (PIR(scrW-(800-592),216,scrW-(800-599),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH-=4096;}
+      if (PIR(scrW-(800-600),216,scrW-(800-607),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH-=256;}
+      if (PIR(scrW-(800-608),216,scrW-(800-615),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH-=16;}
+      if (PIR(scrW-(800-616),216,scrW-(800-623),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH--;}
 
       if (PIR(scrW-(800-624),252,scrW-(800-631),264,mstate.x,mstate.y)) {instrument[CurrentIns].LFO++;}
       if (PIR(scrW-(800-632),252,scrW-(800-640),264,mstate.x,mstate.y)) {instrument[CurrentIns].LFO--;}
@@ -4315,10 +4364,12 @@ void ClickEvents() {
       if (PIR(scrW-(800-720),180,scrW-(800-727),191,mstate.x,mstate.y)) {instrument[CurrentIns].pcmLen-=256;}
       if (PIR(scrW-(800-728),180,scrW-(800-735),191,mstate.x,mstate.y)) {instrument[CurrentIns].pcmLen-=16;}
       if (PIR(scrW-(800-736),180,scrW-(800-744),191,mstate.x,mstate.y)) {instrument[CurrentIns].pcmLen--;}
-      if (PIR(scrW-(800-592),216,scrW-(800-599),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH+=16;}
-      if (PIR(scrW-(800-600),216,scrW-(800-607),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH++;}
-      if (PIR(scrW-(800-608),216,scrW-(800-615),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH+=4096;}
-      if (PIR(scrW-(800-616),216,scrW-(800-623),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH+=256;}
+      
+      // ditto and mimikyu
+      if (PIR(scrW-(800-592),216,scrW-(800-599),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH+=4096;}
+      if (PIR(scrW-(800-600),216,scrW-(800-607),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH+=256;}
+      if (PIR(scrW-(800-608),216,scrW-(800-615),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH+=16;}
+      if (PIR(scrW-(800-616),216,scrW-(800-623),228,mstate.x,mstate.y)) {instrument[CurrentIns].filterH++;}
     }
     if (leftclick) {
       if (PIR(0,scrH-18,8,scrH-6,mstate.x,mstate.y)) {scrollpos--; if (scrollpos<0) {scrollpos=0;};}
@@ -4347,9 +4398,9 @@ void ClickEvents() {
         //gets(rfn);
         int success=LoadFile(rfn);}
       if (PIR(208,60,240,72,mstate.x,mstate.y)) {int success=SaveFile();}
-      if (PIR(248,60,320,72,mstate.x,mstate.y)) {int success=ImportMOD(filenames[selectedfileindex-1].name.c_str());}
-      if (PIR(328,60,400,72,mstate.x,mstate.y)) {int success=ImportS3M();}
-      if (PIR(408,60,472,72,mstate.x,mstate.y)) {int success=ImportIT();}
+      /*if (PIR(248,60,320,72,mstate.x,mstate.y)) {int success=ImportMOD(filenames[selectedfileindex-1].name.c_str());}*/
+      //if (PIR(328,60,400,72,mstate.x,mstate.y)) {int success=ImportS3M();}
+      //if (PIR(408,60,472,72,mstate.x,mstate.y)) {int success=ImportIT();}
       if (PIR(552,60,632,72,mstate.x,mstate.y)) {
         printf("\nplease write filename? ");
         char rfn[256];
@@ -4370,28 +4421,42 @@ void ClickEvents() {
         //gets(rwpos);
         writeposition=0;//atoi(rwpos);
         LoadRawSample(rfn,writeposition);}
-      for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+27,filecount); ii++) {
-        if (PIR(0,120+(ii*12)-(diskopscrollpos*12),790,131+(ii*12)-(diskopscrollpos*12),mstate.x,mstate.y)) {
+        if (PIR(0,scrH-24,scrW,scrH,mstate.x,mstate.y)) {
+          
+        } else for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+((int)(scrH/12)-12),filenames.size()); ii++) {
+        if (PIR(0,120+(ii*12)-(diskopscrollpos*12),scrW-8,131+(ii*12)-(diskopscrollpos*12),mstate.x,mstate.y)) {
           if (selectedfileindex==ii+1) {
-          if (filenames[ii].isdir) {strcpy(curdir,filenames[ii].name.c_str());print_entry(curdir);diskopscrollpos=0;selectedfileindex=-1;}
-          else {
-                                          int success;
-                                          if (strstr(filenames[ii].name.c_str(),".mod")==NULL) {success=LoadFile(filenames[ii].name.c_str());} else {
-                                            ImportMOD(filenames[ii].name.c_str());
-                                          }
-                                          
-                                        }} else {
-            selectedfileindex=ii+1;}
+            if (filenames[ii].isdir) {
+              if (curdir[strlen(curdir)-1]!=DIR_SEPARATOR) {
+                strcat(curdir,SDIR_SEPARATOR);
+              }
+              strcat(curdir,filenames[ii].name.c_str());
+              diskopscrollpos=0;
+              selectedfileindex=-1;
+              strcpy(curfname,"");
+              if (!print_entry(curdir)) {
+                popbox=PopupBox("Error","can't read directory!");
+                triggerfx(1);
+                break;
+              }
+            } else {
+              int success;
+              success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+S(curfname)).c_str());
+            }
+          } else {
+            selectedfileindex=ii+1;
+            strcpy(curfname,filenames[ii].name.c_str());
+          }
         }
       }
-    if (PIR(0,108,790,119,mstate.x,mstate.y)) {ParentDir(curdir);print_entry(curdir);diskopscrollpos=0;}
+    if (PIR(0,108,790,119,mstate.x,mstate.y)) {ParentDir(curdir);print_entry(curdir);diskopscrollpos=0;selectedfileindex=-1;}
     }
     if (leftclick) {
-      if (PIR(792,108,800,119,mstate.x,mstate.y)) {diskopscrollpos--;if (diskopscrollpos<0) {diskopscrollpos=0;}}
-      if (PIR(792,432,800,444,mstate.x,mstate.y)) {diskopscrollpos++;if (diskopscrollpos>maxval(0,filecount-27)) {diskopscrollpos=maxval(0,filecount-27);}}
+      if (PIR(scrW-8,108,scrW,119,mstate.x,mstate.y)) {diskopscrollpos--;if (diskopscrollpos<0) {diskopscrollpos=0;}}
+      if (PIR(scrW-8,scrH-36,scrW,scrH-24,mstate.x,mstate.y)) {diskopscrollpos++;if (diskopscrollpos>maxval(0,(int)filenames.size()-((int)(scrH/12)-12))) {diskopscrollpos=maxval(0,(int)filenames.size()-((int)(scrH/12)-12));}}
     }
     if ((mstate.z-prevZ)<0) {
-      diskopscrollpos-=(mstate.z-prevZ)*4;if (diskopscrollpos>maxval(0,filecount-27)) {diskopscrollpos=maxval(0,filecount-27);}
+      diskopscrollpos-=(mstate.z-prevZ)*4;if (diskopscrollpos>maxval(0,(int)filenames.size()-((int)(scrH/12)-12))) {diskopscrollpos=maxval(0,(int)filenames.size()-((int)(scrH/12)-12));}
     }
     if ((mstate.z-prevZ)>0) {
       diskopscrollpos-=(mstate.z-prevZ)*4;if (diskopscrollpos<0) {diskopscrollpos=0;}
@@ -5211,6 +5276,8 @@ void drawdisp() {
     case 11: drawpcmeditor(); break;
     case 12: drawpiano(); break;
   }
+  
+  if (popbox.isVisible()) popbox.draw();
 }
 int playfx(const char* fxdata,int fxpos,int achan) {
   // returns number if not in the end, otherwise -1
@@ -5252,6 +5319,7 @@ int main(int argc, char **argv) {
   pageSelectShow=false;
   mobScroll=0;
   topScroll=0;
+  popbox=PopupBox(false);
   
   if (argc>1) {
     // for each argument
@@ -5322,6 +5390,9 @@ DETUNE_FACTOR_GLOBAL=1;
    }
    
    curdir=new char[4096];
+   curfname=new char[4096];
+   memset(curdir,0,4096);
+   memset(curfname,0,4096);
 #ifdef ANDROID
    // TODO: find the actual path
    strcpy(curdir,"/storage/emulated/0");
@@ -5467,6 +5538,12 @@ DETUNE_FACTOR_GLOBAL=1;
         }
       } else if (ev.type == SDL_KEYDOWN) {
       //printf("event, %c\n",ev.keyboard.unichar);
+      if (screen==1) {
+        RunTestNote(ev.key.keysym.sym);
+      }
+    } else if (ev.type == SDL_TEXTINPUT) {
+      printf("the input would be %c.\n",ev.text.text[0]);
+      /*
       if (inputvar!=NULL) {
       if (ev.key.keysym.sym==SDLK_BACKSPACE) {inputcurpos--; if (inputcurpos<0) {inputcurpos=0;}; inputvar[inputcurpos]=0;}
       else if (ev.key.keysym.sym==SDLK_RIGHT) {
@@ -5483,10 +5560,7 @@ DETUNE_FACTOR_GLOBAL=1;
       inputcurpos++;} else {sfxpos=0;}
       //printf("new inputvar value: %s\n",inputvar);
       }
-      }
-      if (screen==1) {
-        RunTestNote(ev.key.keysym.sym);
-      }
+      */
     }
       }
       if (true) {

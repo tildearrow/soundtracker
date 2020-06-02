@@ -33,6 +33,7 @@ extern "C" {
 #include "fextra.h"
 
 typedef std::string string;
+#define S(x) string(x)
 
 bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky);
 
@@ -365,6 +366,7 @@ class Graphics {
     void tAlign(float x);
     void tColor(unsigned char color);
     void setTarget(SDL_Texture* where);
+    void setTitle(string t);
     void trigResize(int tx, int ty);
     int printf(const char* format, ...);
     bool preinit();
@@ -374,6 +376,7 @@ class Graphics {
 };
 
 extern Graphics g;
+extern int scrW, scrH;
 
 class Button {
   string lab;
@@ -445,6 +448,56 @@ class Button {
       cData(NULL),
       cpData(NULL),
       x(16), y(80), w(32), h(16) {}
+};
+
+class PopupBox {
+  string title;
+  string content;
+  
+  bool show;
+  
+  public:
+    void hide() {
+      show=false;
+    }
+    
+    bool isVisible() {
+      return show;
+    }
+    
+    void draw() {
+      int sizeX=content.size();
+      int sizeY=4;
+      
+      g._WRAP_draw_filled_rectangle((scrW-(sizeX+2)*8)/2,scrH/2-20,(scrW+(sizeX+2)*8)/2,scrH/2+20,Color(0.0f,0.0f,0.0f));
+      g._WRAP_draw_rectangle((scrW-(sizeX+2)*8)/2,(scrH-sizeY*12)/2,(scrW+(sizeX+2)*8)/2,(scrH+sizeY*12)/2,Color(1.0f,1.0f,1.0f),0);
+      
+      g.tPos((((float)scrW/2)/8)-((float)title.size())/2,((float)(scrH-sizeY*12+2)/2)/12);
+      g.tColor(9);
+      g.printf(title.c_str());
+      
+      g.tPos((((float)scrW/2)/8)-((float)sizeX)/2,((float)(scrH-10)/2)/12);
+      g.tColor(15);
+      g.printf(content.c_str());
+    }
+    
+    //content("Lorem ipsum, quia dolor sit, amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt, ut labore et dolore magnam aliquam quaerat voluptatem.")
+    
+    PopupBox(string t, string c):
+      title(t),
+      content(c),
+      show(true) {}
+      
+    PopupBox(bool s):
+      title("Message"),
+      content("Lorem ipsum, quia dolor sit, amet."),
+      show(s) {}
+      
+    
+    PopupBox():
+      title("Message"),
+      content("Lorem ipsum, quia dolor sit, amet."),
+      show(true) {}
 };
 
 class NumberPad {
