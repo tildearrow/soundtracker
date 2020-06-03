@@ -510,6 +510,8 @@ Swiper swY;
 
 PopupBox popbox;
 
+Point maxTSize;
+
 // new file dialog
 Button bdNew;
 Button bdOpen;
@@ -2029,6 +2031,7 @@ void drawpatterns(bool force) {
   printf("update.\n");
   g._WRAP_destroy_bitmap(patternbitmap);
   patternbitmap=g._WRAP_create_bitmap(24+chanstodisplay*96,(((patlength[patid[curpat]]==0)?(256):(patlength[patid[curpat]]))*12)+4);
+  //popbox=PopupBox("Bitmap Size","bitmap size: "+std::to_string(24+chanstodisplay*96)+"x"+std::to_string((((patlength[patid[curpat]]==0)?(256):(patlength[patid[curpat]]))*12)+4));
   g.setTarget(patternbitmap);
   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
   g._WRAP_draw_filled_rectangle(0,60,scrW,scrH,g._WRAP_map_rgb(0,0,0));
@@ -5442,6 +5445,8 @@ DETUNE_FACTOR_GLOBAL=1;
    }
    dpiScale=g._getScale();
    curzoom=dpiScale;
+   maxTSize=g.maxTexSize();
+   popbox=PopupBox("Warning","texSize: "+std::to_string(maxTSize.x)+"x"+std::to_string(maxTSize.y));
    }
    patternbitmap=g._WRAP_create_bitmap(scrW,scrH);
    piano=g._WRAP_create_bitmap(700,60);

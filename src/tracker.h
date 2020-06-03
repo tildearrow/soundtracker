@@ -347,10 +347,14 @@ class Graphics {
       tr.x=0;
       tr.y=0;
       SDL_QueryTexture(bitmap,NULL,NULL,&tr.w,&tr.h);
-      if ((sr.h+sr.y)>tr.h) {
+      sr.w=tr.w;
+      sr.h=tr.h;
+      dr.w=tr.w;
+      dr.h=tr.h;
+      /*if ((sr.h+sr.y)>tr.h) {
         sr.h-=(sr.h+sr.y)-tr.h;
         dr.h=sr.h;
-      }
+      }*/
       dr.w*=cscale;
       dr.h*=cscale;
       SDL_RenderSetScale(sdlRend,1,1);
@@ -377,6 +381,14 @@ class Graphics {
     void _WRAP_draw_circle(float x, float y, float r, Color color, float thick) {
       ::printf("Draw Circle\n");
       //al_draw_circle(x,y,r,color,thick);
+    }
+    Point maxTexSize() {
+      SDL_RendererInfo si;
+      Point ret;
+      SDL_GetRendererInfo(sdlRend,&si);
+      ret.x=si.max_texture_width;
+      ret.y=si.max_texture_height;
+      return ret;
     }
     
     void clearScreen() {
