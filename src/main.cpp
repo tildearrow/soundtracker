@@ -2000,6 +2000,8 @@ void CleanupPatterns() {
     defchanvol[j]=0x80;
     defchanpan[j]=((j+1)&2)?96:-96;
   }
+  // default variables
+  defspeed=6;
 }
 
 Color mapHSV(float hue,float saturation,float value) {
@@ -2039,30 +2041,30 @@ void drawpatterns(bool force) {
     for (int j=0;j<chanstodisplay;j++) {
       g.tColor(15);
       g.printf("|");
-      if (pat[patid[curpat]][i][j+(curedpage*8)][0]==0 &&
-          pat[patid[curpat]][i][j+(curedpage*8)][1]==0 &&
-          pat[patid[curpat]][i][j+(curedpage*8)][2]==0 &&
-          pat[patid[curpat]][i][j+(curedpage*8)][3]==0 &&
-          pat[patid[curpat]][i][j+(curedpage*8)][4]==0) {
+      if (pat[patid[curpat]][i][j+curedpage][0]==0 &&
+          pat[patid[curpat]][i][j+curedpage][1]==0 &&
+          pat[patid[curpat]][i][j+curedpage][2]==0 &&
+          pat[patid[curpat]][i][j+curedpage][3]==0 &&
+          pat[patid[curpat]][i][j+curedpage][4]==0) {
         g.tColor(245);
         g.printf("...........");
         continue;
       }
       // note
       g.tColor(250);
-      g.printf("%s%s",getnote(pat[patid[curpat]][i][j+(curedpage*8)][0]),getoctave(pat[patid[curpat]][i][j+(curedpage*8)][0]));
+      g.printf("%s%s",getnote(pat[patid[curpat]][i][j+curedpage][0]),getoctave(pat[patid[curpat]][i][j+curedpage][0]));
       g.tColor(81);
-      g.printf("%s%s",getinsH(pat[patid[curpat]][i][j+(curedpage*8)][1]),getinsL(pat[patid[curpat]][i][j+(curedpage*8)][1]));
+      g.printf("%s%s",getinsH(pat[patid[curpat]][i][j+curedpage][1]),getinsL(pat[patid[curpat]][i][j+curedpage][1]));
       // instrument
-      if (pat[patid[curpat]][i][j+(curedpage*8)][2]==0 && pat[patid[curpat]][i][j+(curedpage*8)][0]!=0) {
+      if (pat[patid[curpat]][i][j+curedpage][2]==0 && pat[patid[curpat]][i][j+curedpage][0]!=0) {
         g.printf("v40");
       } else {
         g.tColor(27);
-        g.printf("%s%s%s",getVFX(pat[patid[curpat]][i][j+(curedpage*8)][2]),getVFXH(pat[patid[curpat]][i][j+(curedpage*8)][2]),getVFXL(pat[patid[curpat]][i][j+(curedpage*8)][2]));
+        g.printf("%s%s%s",getVFX(pat[patid[curpat]][i][j+curedpage][2]),getVFXH(pat[patid[curpat]][i][j+curedpage][2]),getVFXL(pat[patid[curpat]][i][j+curedpage][2]));
       }
       // effect
-      g.tColor(GetFXColor(pat[patid[curpat]][i][j+(curedpage*8)][3]));
-      g.printf("%s%s%s",getFX(pat[patid[curpat]][i][j+(curedpage*8)][3]),getinsH(pat[patid[curpat]][i][j+(curedpage*8)][4]),getinsL(pat[patid[curpat]][i][j+(curedpage*8)][4]));
+      g.tColor(GetFXColor(pat[patid[curpat]][i][j+curedpage][3]));
+      g.printf("%s%s%s",getFX(pat[patid[curpat]][i][j+curedpage][3]),getinsH(pat[patid[curpat]][i][j+curedpage][4]),getinsL(pat[patid[curpat]][i][j+curedpage][4]));
     }
     g.tColor(15);
     g.printf("|");
@@ -2316,13 +2318,9 @@ void drawinsedit() {
 }
 
 void EditSkip() {
-  // autovolume
-  /*if (pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]!=0 && (pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]%16)<13 && pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]==0) {
-    pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=0x7f;
-  } // no more autovolume because of the "no-value" switch*/
   // autoinstrument
-  if (pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]!=0 && (pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]%16)<13) {
-    pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=curins;
+  if (pat[patid[curpat]][curstep][curedpage+curedchan][0]!=0 && (pat[patid[curpat]][curstep][curedpage+curedchan][0]%16)<13) {
+    pat[patid[curpat]][curstep][curedpage+curedchan][1]=curins;
   }
   // skipping
   if (playmode==0) {
@@ -2413,7 +2411,7 @@ void drawmixer() {
   int mixerdrawoffset=(scrW/2)-chanstodisplay*48-12;
   g._WRAP_draw_bitmap(mixer,0,0,0);
   for (int chantodraw=0;chantodraw<chanstodisplay;chantodraw++) {
-    if (midion[chantodraw+(curedpage*8)]) {
+    if (midion[chantodraw+curedpage]) {
       g.tColor(9);
     } else {
       g.tColor(15);
@@ -2421,25 +2419,25 @@ void drawmixer() {
     g.tNLPos(2+chantodraw*12+((float)mixerdrawoffset/8.0));
     g.tPos(5);
     g.printf(" Channel ");
-    if (!muted[chantodraw+(curedpage*8)]) {
+    if (!muted[chantodraw+curedpage]) {
       g.tColor(14);
     } else {
       g.tColor(8);
     }
-    g.printf("%d\n\n",chantodraw+(curedpage*8));
+    g.printf("%d\n\n",chantodraw+curedpage);
 
-    g._WRAP_draw_filled_rectangle(16+(chantodraw*96)+mixerdrawoffset-1,scrH-4-1,58+(chantodraw*96)+mixerdrawoffset+1,(scrH-4)-(((float)cvol[chantodraw+(curedpage*8)]*((127-(maxval(0,(float)cpan[chantodraw+(curedpage*8)])))/127))*((scrH-244)/128))+1,g._WRAP_map_rgb(0,200,0));
-    g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset-1,scrH-4-1,104+(chantodraw*96)+mixerdrawoffset+1,(scrH-4)-(((float)cvol[chantodraw+(curedpage*8)]*((128+(minval(0,(float)cpan[chantodraw+(curedpage*8)])))/128))*((scrH-244)/128))+1,g._WRAP_map_rgb(0,200,0));
-    g._WRAP_draw_filled_rectangle(16+(chantodraw*96)+mixerdrawoffset,scrH-4,58+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)cvol[chantodraw+(curedpage*8)]*((127-(maxval(0,(float)cpan[chantodraw+(curedpage*8)])))/127))*((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
-    g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset,scrH-4,104+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)cvol[chantodraw+(curedpage*8)]*((128+(minval(0,(float)cpan[chantodraw+(curedpage*8)])))/128))*((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
+    g._WRAP_draw_filled_rectangle(16+(chantodraw*96)+mixerdrawoffset-1,scrH-4-1,58+(chantodraw*96)+mixerdrawoffset+1,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((127-(maxval(0,(float)cpan[chantodraw+curedpage])))/127))*((scrH-244)/128))+1,g._WRAP_map_rgb(0,200,0));
+    g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset-1,scrH-4-1,104+(chantodraw*96)+mixerdrawoffset+1,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((128+(minval(0,(float)cpan[chantodraw+curedpage])))/128))*((scrH-244)/128))+1,g._WRAP_map_rgb(0,200,0));
+    g._WRAP_draw_filled_rectangle(16+(chantodraw*96)+mixerdrawoffset,scrH-4,58+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((127-(maxval(0,(float)cpan[chantodraw+curedpage])))/127))*((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
+    g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset,scrH-4,104+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((128+(minval(0,(float)cpan[chantodraw+curedpage])))/128))*((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
     
     g.tColor(14);
-    g.printf("   %.2x",defchanvol[chantodraw+(curedpage*8)]);
+    g.printf("   %.2x",defchanvol[chantodraw+curedpage]);
     g.tColor(12);
-    g.printf("   %.2x%c\n",cduty[chantodraw+(curedpage*8)]%256,shapeSym(cshape[chantodraw+(curedpage*8)]));
+    g.printf("   %.2x%c\n",cduty[chantodraw+curedpage]%256,shapeSym(cshape[chantodraw+curedpage]));
     g.tColor(14);
-    g.printf("   %.2x   ",(unsigned char)defchanpan[chantodraw+(curedpage*8)]);
-    switch (cfmode[chantodraw+(curedpage*8)]) {
+    g.printf("   %.2x   ",(unsigned char)defchanpan[chantodraw+curedpage]);
+    switch (cfmode[chantodraw+curedpage]) {
       case 0: g.printf("   \n\n"); break;
       case 1: g.printf("  l\n\n"); break;
       case 2: g.printf(" h \n\n"); break;
@@ -2449,22 +2447,22 @@ void drawmixer() {
       case 6: g.printf("bh \n\n"); break;
       case 7: g.printf("bhl\n\n"); break;
     }
-    g.printf("      %.4x\n",cfreq[chantodraw+(curedpage*8)]);
+    g.printf("      %.4x\n",cfreq[chantodraw+curedpage]);
     g.tColor(12);
-    g.printf("    %.1f\n",(float)coff[chantodraw+(curedpage*8)]/10);
+    g.printf("    %.1f\n",(float)coff[chantodraw+curedpage]/10);
 
     g.tColor(14);
-    g.printf("   %.2x",Mins[chantodraw+(curedpage*8)]);
-    g.printf("    %.2x\n",Mvol[chantodraw+(curedpage*8)]);
+    g.printf("   %.2x",Mins[chantodraw+curedpage]);
+    g.printf("    %.2x\n",Mvol[chantodraw+curedpage]);
 
     for (int j=0; j<8; j++) {
-      g.tColor(getmixerposcol(chantodraw+(curedpage*8),j));
-      g.printf(j&1?"    %.2x\n":"   %.2x",inspos[chantodraw+(curedpage*8)][j]);
+      g.tColor(getmixerposcol(chantodraw+curedpage,j));
+      g.printf(j&1?"    %.2x\n":"   %.2x",inspos[chantodraw+curedpage][j]);
     }
 
     g.tColor(14);
-    g.printf("   %.2x",(int)(curnote[chantodraw+(curedpage*8)])%256);
-    g.printf("    %.2x",portastatic[chantodraw+(curedpage*8)]%256);
+    g.printf("   %.2x",(int)(curnote[chantodraw+curedpage])%256);
+    g.printf("    %.2x",portastatic[chantodraw+curedpage]%256);
 
   }
   g.tNLPos(0);
@@ -3094,6 +3092,7 @@ int ImportMOD(FILE* mod) {
   }
 #endif
   if ((memblock[1080]=='M' && memblock[1081]=='.' && memblock[1082]=='K' && memblock[1083]=='.')||
+    (memblock[1080]=='M' && memblock[1081]=='!' && memblock[1082]=='K' && memblock[1083]=='!')||
      (memblock[1081]=='C' && memblock[1082]=='H' && memblock[1083]=='N')||
      (memblock[1082]=='C' && memblock[1083]=='H')) {
        switch(memblock[1080]) {
@@ -3128,6 +3127,9 @@ int ImportMOD(FILE* mod) {
     printf("putting samples to PCM memory if possible\n");
     printf("%d bytes",size-1084-(patterns*chans*64*4));
     memcpy(chip[0].pcm,memblock+1084+((patterns+1)*chans*64*4),minval(65280,size-1084-((patterns+1)*chans*64*4)));
+    if (size-1084-((patterns+1)*chans*64*4)>65280) {
+      popbox=PopupBox("Warning","out of PCM memory to load all samples!");
+    }
     }
     printf("---PATTERNS---\n");
     for (int importid=0;importid<patterns+1;importid++) {
@@ -3692,15 +3694,16 @@ int LoadFile(const char* filename) {
       fseek(sfile,1080,SEEK_SET);
       fread(checkstr,1,8,sfile); // magic number for MOD
       if ((checkstr[0]=='M' && checkstr[1]=='.' && checkstr[2]=='K' && checkstr[3]=='.')||
+        (checkstr[0]=='M' && checkstr[1]=='!' && checkstr[2]=='K' && checkstr[3]=='!')||
      (checkstr[1]=='C' && checkstr[2]=='H' && checkstr[3]=='N')||
      (checkstr[2]=='C' && checkstr[3]=='H')) {
         return ImportMOD(sfile);
       } else {
-        printf("error: not a soundtracker file!\n");fclose(sfile);
+        printf("error: not a compatible file!\n");fclose(sfile);
     #ifdef SOUNDS
     triggerfx(1);
     #endif
-    popbox=PopupBox("Error","not a soundtracker file!");
+    popbox=PopupBox("Error","not a compatible file!");
     return 1;
       }
     }
@@ -4487,16 +4490,16 @@ void ClickEvents() {
     int mixerdrawoffset=(scrW/2)-chanstodisplay*48-12;
     if (leftclick) {
       for (int ii=0;ii<chanstodisplay;ii++) {
-        if (PIR(56+(ii*96)+mixerdrawoffset,84,63+(ii*96)+mixerdrawoffset,95,mstate.x,mstate.y)) {defchanvol[ii+(curedpage*8)]++;if (defchanvol[ii+(curedpage*8)]>128) {defchanvol[ii+(curedpage*8)]=128;}}
-        if (PIR(64+(ii*96)+mixerdrawoffset,84,72+(ii*96)+mixerdrawoffset,95,mstate.x,mstate.y)) {defchanvol[ii+(curedpage*8)]--;if (defchanvol[ii+(curedpage*8)]>250) {defchanvol[ii+(curedpage*8)]=0;}}
-        if (PIR(56+(ii*96)+mixerdrawoffset,96,63+(ii*96)+mixerdrawoffset,108,mstate.x,mstate.y)) {defchanpan[ii+(curedpage*8)]++;}
-        if (PIR(64+(ii*96)+mixerdrawoffset,96,72+(ii*96)+mixerdrawoffset,108,mstate.x,mstate.y)) {defchanpan[ii+(curedpage*8)]--;}
+        if (PIR(56+(ii*96)+mixerdrawoffset,84,63+(ii*96)+mixerdrawoffset,95,mstate.x,mstate.y)) {defchanvol[ii+curedpage]++;if (defchanvol[ii+curedpage]>128) {defchanvol[ii+curedpage]=128;}}
+        if (PIR(64+(ii*96)+mixerdrawoffset,84,72+(ii*96)+mixerdrawoffset,95,mstate.x,mstate.y)) {defchanvol[ii+curedpage]--;if (defchanvol[ii+curedpage]>250) {defchanvol[ii+curedpage]=0;}}
+        if (PIR(56+(ii*96)+mixerdrawoffset,96,63+(ii*96)+mixerdrawoffset,108,mstate.x,mstate.y)) {defchanpan[ii+curedpage]++;}
+        if (PIR(64+(ii*96)+mixerdrawoffset,96,72+(ii*96)+mixerdrawoffset,108,mstate.x,mstate.y)) {defchanpan[ii+curedpage]--;}
       }
     }
     if (leftpress) {
       for (int ii=0;ii<chanstodisplay;ii++) {
-        if (!kb[SDL_SCANCODE_LSHIFT]) {if (PIR(16+(ii*96)+mixerdrawoffset,60,96+(ii*96)+mixerdrawoffset,72,mstate.x,mstate.y)) {muted[ii+(curedpage*8)]=!muted[ii+(curedpage*8)];}}
-        else {if (PIR(16+(ii*96)+mixerdrawoffset,60,96+(ii*96)+mixerdrawoffset,72,mstate.x,mstate.y)) {midion[ii+(curedpage*8)]=!midion[ii+(curedpage*8)];}}
+        if (!kb[SDL_SCANCODE_LSHIFT]) {if (PIR(16+(ii*96)+mixerdrawoffset,60,96+(ii*96)+mixerdrawoffset,72,mstate.x,mstate.y)) {muted[ii+curedpage]=!muted[ii+curedpage];}}
+        else {if (PIR(16+(ii*96)+mixerdrawoffset,60,96+(ii*96)+mixerdrawoffset,72,mstate.x,mstate.y)) {midion[ii+curedpage]=!midion[ii+curedpage];}}
       }
     }
     if (rightpress) {
@@ -4504,7 +4507,7 @@ void ClickEvents() {
         if (PIR(16+(ii*96)+mixerdrawoffset,60,96+(ii*96)+mixerdrawoffset,72,mstate.x,mstate.y)) {
           bool solomode=true;
           for (int jj=0;jj<32;jj++) {
-            if (jj==ii+(curedpage*8)) {continue;}
+            if (jj==ii+curedpage) {continue;}
             if (!muted[jj]) {solomode=false;break;}
           }
           if (solomode) {
@@ -4515,7 +4518,7 @@ void ClickEvents() {
             for (int jj=0;jj<32;jj++) {
               muted[jj]=true;
             }
-            muted[ii+(curedpage*8)]=false;
+            muted[ii+curedpage]=false;
           }
         }
       }
@@ -4652,7 +4655,7 @@ void FastTracker() {
     for (int i=firstChan; i<=lastChan; i++) {
       for (int j=(i==firstChan)?firstMode:0; (j<5 && (i<lastChan || j<=lastMode)); j++) {
         for (int k=selTop; k<=selBottom; k++) {
-          pat[patid[curpat]][k][(8*curedpage)+i][j]=0x00;
+          pat[patid[curpat]][k][curedpage+i][j]=0x00;
         }
       }
     }
@@ -4664,128 +4667,128 @@ void FastTracker() {
   }
   if (curedmode==0) {
   // silences and stuff
-  if (kbpressed[71]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0d;EditSkip();}
-  if (kbpressed[70]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0f;EditSkip();}
-  if (kbpressed[28]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0e;EditSkip();}
+  if (kbpressed[71]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0d;EditSkip();}
+  if (kbpressed[70]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0f;EditSkip();}
+  if (kbpressed[28]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0e;EditSkip();}
   // notes, main octave
-  if (kbpressed[SDL_SCANCODE_Z]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x01+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_X]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x03+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x05+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_V]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x06+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x08+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_N]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0a+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_M]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0c+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_S]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x02+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x04+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_G]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x07+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_H]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x09+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_J]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0b+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[72]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[12]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x02+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[73]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[60]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x04+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_Z]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x01+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_X]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x03+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x05+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_V]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x06+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x08+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_N]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0a+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_M]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0c+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_S]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x02+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x04+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_G]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x07+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_H]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x09+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_J]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0b+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[72]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[12]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x02+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[73]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[60]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x04+minval((curoctave+1)<<4,0x90);EditSkip();}
   // notes, 2nd octave
-  if (kbpressed[SDL_SCANCODE_Q]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_W]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x05+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_R]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x06+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_T]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x08+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_Y]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0a+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_U]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0c+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_2]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x02+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_3]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x04+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_5]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x07+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_6]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x09+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_7]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x0b+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_I]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x01+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_9]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x02+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_O]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x03+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x04+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_P]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x05+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[66]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x06+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[65]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][0]=0x07+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_Q]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_W]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x05+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_R]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x06+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_T]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x08+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_Y]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0a+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_U]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0c+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_2]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x02+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_3]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x04+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_5]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x07+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_6]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x09+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_7]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0b+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_I]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x01+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_9]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x02+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_O]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x03+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x04+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_P]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x05+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[66]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x06+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[65]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x07+minval((curoctave+2)<<4,0x90);EditSkip();}
   }
   if (curedmode==1) {
-  if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][1]<<4)+15;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4);drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_1]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+1;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_2]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+2;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_3]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+3;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_4]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+4;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_5]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+5;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_6]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+6;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_7]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+7;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_8]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+8;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_9]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+9;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_A]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+10;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+11;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+12;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+13;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+14;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_F]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4)+15;drawpatterns(true);}
   }
   if (curedmode==2) {
-  if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][2]<<4)+15;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4);drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_1]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+1;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_2]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+2;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_3]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+3;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_4]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+4;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_5]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+5;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_6]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+6;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_7]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+7;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_8]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+8;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_9]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+9;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_A]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+10;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+11;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+12;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+13;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+14;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_F]) {pat[patid[curpat]][curstep][curedpage+curedchan][2]=(pat[patid[curpat]][curstep][curedpage+curedchan][2]<<4)+15;drawpatterns(true);}
   }
   if (curedmode==3) {
-  if (kbpressed[SDL_SCANCODE_A]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_G]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_H]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_I]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_J]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_K]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_L]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_M]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_N]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_O]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=15;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_P]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=16;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Q]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=17;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_R]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=18;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_S]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=19;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_T]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=20;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_U]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=21;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_V]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=22;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_W]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=23;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_X]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=24;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Y]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=25;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Z]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][3]=26;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_A]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=1;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=2;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=3;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=4;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=5;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_F]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=6;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_G]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=7;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_H]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=8;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_I]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=9;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_J]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=10;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_K]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=11;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_L]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=12;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_M]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=13;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_N]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=14;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_O]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=15;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_P]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=16;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_Q]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=17;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_R]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=18;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_S]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=19;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_T]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=20;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_U]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=21;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_V]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=22;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_W]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=23;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_X]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=24;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_Y]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=25;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_Z]) {pat[patid[curpat]][curstep][curedpage+curedchan][3]=26;drawpatterns(true);}
   }
   if (curedmode==4) {
-  if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]=(pat[patid[curpat]][curstep][(8*curedpage)+curedchan][4]<<4)+15;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4);drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_1]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+1;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_2]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+2;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_3]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+3;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_4]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+4;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_5]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+5;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_6]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+6;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_7]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+7;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_8]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+8;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_9]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+9;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_A]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+10;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_B]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+11;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_C]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+12;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_D]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+13;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_E]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+14;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_F]) {pat[patid[curpat]][curstep][curedpage+curedchan][4]=(pat[patid[curpat]][curstep][curedpage+curedchan][4]<<4)+15;drawpatterns(true);}
   }
 }
 void InstrumentTest(int testnote, int testchan) {
@@ -4943,7 +4946,7 @@ void KeyboardEvents() {
   // main code here
   if (edittype && screen==0) {FastTracker();} else {ModPlug();}
   if (screen==4) {MuteControls();}
-  if (kbpressed[SDL_SCANCODE_PAGEDOWN]) {curedpage++; if (curedpage>3) {curedpage=3;
+  if (kbpressed[SDL_SCANCODE_PAGEDOWN]) {curedpage++; if (curedpage>(32-chanstodisplay)) {curedpage=(32-chanstodisplay);
     #ifdef SOUNDS
     triggerfx(1);
     #endif
@@ -4960,7 +4963,11 @@ void KeyboardEvents() {
     #ifdef SOUNDS
     triggerfx(1);
     #endif
-  };drawpatterns(true);drawmixerlayer();}
+  }
+  if (curedpage>(32-chanstodisplay)) {
+    curedpage=(32-chanstodisplay);
+  }
+  drawpatterns(true);drawmixerlayer();}
   if (kbpressed[SDL_SCANCODE_HOME]) {chanstodisplay--;if (chanstodisplay<1) {
     chanstodisplay=1;
     #ifdef SOUNDS

@@ -469,7 +469,7 @@ class PopupBox {
       int sizeX=content.size();
       int sizeY=4;
       
-      g._WRAP_draw_filled_rectangle((scrW-(sizeX+2)*8)/2,scrH/2-20,(scrW+(sizeX+2)*8)/2,scrH/2+20,Color(0.0f,0.0f,0.0f));
+      g._WRAP_draw_filled_rectangle((scrW-(sizeX+2)*8)/2,(scrH-sizeY*12)/2,(scrW+(sizeX+2)*8)/2,(scrH+sizeY*12)/2,Color(0.0f,0.0f,0.0f));
       g._WRAP_draw_rectangle((scrW-(sizeX+2)*8)/2,(scrH-sizeY*12)/2,(scrW+(sizeX+2)*8)/2,(scrH+sizeY*12)/2,Color(1.0f,1.0f,1.0f),0);
       
       g.tPos((((float)scrW/2)/8)-((float)title.size())/2,((float)(scrH-sizeY*12+2)/2)/12);
