@@ -212,6 +212,7 @@ int curedmode=0; // current editing mode, 0=note, 1=instrument number 2=volume 3
 int curedpage=0; // current page, 0-3
 int curselchan=0;
 int curselmode=0;
+int curzoom=1;
 int selStart=0;
 int selEnd=0;
 bool follow=true;
@@ -4958,22 +4959,41 @@ void KeyboardEvents() {
     curedpage=0;
   };drawpatterns(true);drawmixerlayer();}
   maxCTD=(scrW-24)/96;
-  if (kbpressed[SDL_SCANCODE_END]) {chanstodisplay++;if (chanstodisplay>maxCTD) {
-    chanstodisplay=maxCTD;
-    #ifdef SOUNDS
-    triggerfx(1);
-    #endif
+  if (maxCTD<1) maxCTD=1;
+  if (kbpressed[SDL_SCANCODE_END]) {
+    if (kb[SDL_SCANCODE_LSHIFT]) {
+      curzoom++;
+    } else {
+      chanstodisplay++;
+      if (chanstodisplay>maxCTD) {
+        chanstodisplay=maxCTD;
+        #ifdef SOUNDS
+        triggerfx(1);
+        #endif
+      }
+      if (curedpage>(32-chanstodisplay)) {
+        curedpage=(32-chanstodisplay);
+      }
+    }
+    drawpatterns(true);
+    drawmixerlayer();
   }
-  if (curedpage>(32-chanstodisplay)) {
-    curedpage=(32-chanstodisplay);
+  if (kbpressed[SDL_SCANCODE_HOME]) {
+    if (kb[SDL_SCANCODE_LSHIFT]) {
+      curzoom--;
+      if (curzoom<1) curzoom=1;
+    } else {
+      chanstodisplay--;
+      if (chanstodisplay<1) {
+        chanstodisplay=1;
+        #ifdef SOUNDS
+        triggerfx(1);
+        #endif
+      }
+    }
+    drawpatterns(true);
+    drawmixerlayer();
   }
-  drawpatterns(true);drawmixerlayer();}
-  if (kbpressed[SDL_SCANCODE_HOME]) {chanstodisplay--;if (chanstodisplay<1) {
-    chanstodisplay=1;
-    #ifdef SOUNDS
-    triggerfx(1);
-    #endif
-  };drawpatterns(true);drawmixerlayer();}
   if (kbpressed[SDL_SCANCODE_TAB]) {MuteAllChannels();}
   if (kbpressed[SDL_SCANCODE_APPLICATION] || kbpressed[SDL_SCANCODE_GRAVE]) {ntsc=!ntsc; if (ntsc) {
     if (tempo==125) {
@@ -5017,13 +5037,16 @@ void drawdisp() {
     g._WRAP_draw_bitmap_region(patternbitmap,0,-minval(0,189-(curpatrow*12)+(int)(((float)curtick/(float)speed)*12.0)),g._WRAP_get_bitmap_width(patternbitmap),g._WRAP_get_bitmap_height(patternbitmap),0,60+maxval(0,189-(curpatrow*12)+(int)(((float)curtick/(float)speed)*12.0)),0);
 #else
     //g._WRAP_draw_bitmap(patternbitmap,0,0,0);
-    g._WRAP_draw_bitmap_region(patternbitmap,0,
-                          maxval(0,curpatrow-16)*12,
+    g._WRAP_set_clipping_rectangle(0,60,scrW,scrH-60);
+    g._WRAP_disregard_scale_draw(patternbitmap,0,
+                          0,//maxval(0,curpatrow-16)*12,
                           g._WRAP_get_bitmap_width(patternbitmap),
-                          scrH-maxval(60,252-(curpatrow*12)),//g._WRAP_get_bitmap_height(patternbitmap),
-                          0,
-                          maxval(60,252-(curpatrow*12)),
+                          scrH*dpiScale-maxval(60,252-(curpatrow*12)),
+                          (scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2,
+                          /*maxval(60*dpiScale,*/((252)-(curpatrow*12))*curzoom/*)*/,
+                          curzoom,
                           0);
+    g._WRAP_reset_clipping_rectangle();
     #endif
   firstChan=curedchan; firstMode=curedmode;
   lastChan=curselchan; lastMode=curselmode;
@@ -5418,6 +5441,7 @@ DETUNE_FACTOR_GLOBAL=1;
      return 1;
    }
    dpiScale=g._getScale();
+   curzoom=dpiScale;
    }
    patternbitmap=g._WRAP_create_bitmap(scrW,scrH);
    piano=g._WRAP_create_bitmap(700,60);
@@ -5534,7 +5558,7 @@ DETUNE_FACTOR_GLOBAL=1;
         if (ev.window.event==SDL_WINDOWEVENT_RESIZED) {
           g.trigResize(ev.window.data1,ev.window.data2);
           g._WRAP_destroy_bitmap(mixer);
-          //  recreate pattern bitmap
+          // recreate pattern bitmap
           g._WRAP_destroy_bitmap(patternbitmap);
           patternbitmap=g._WRAP_create_bitmap(g.getWSize().x,g.getWSize().y);
           scrW=g.getWSize().x;
@@ -5542,6 +5566,12 @@ DETUNE_FACTOR_GLOBAL=1;
           mixer=g._WRAP_create_bitmap(scrW,scrH);
           drawmixerlayer();
           drawpatterns(true);
+          // reduce channel count if needed
+          maxCTD=(scrW-24)/96;
+          if (maxCTD<1) maxCTD=1;
+          if (chanstodisplay>maxCTD) {
+            chanstodisplay=maxCTD;
+          }
         }
       } else if (ev.type == SDL_KEYDOWN) {
       //printf("event, %c\n",ev.keyboard.unichar);

@@ -334,6 +334,29 @@ class Graphics {
       }
       SDL_RenderCopy(sdlRend,bitmap,&sr,&dr);
     }
+    void _WRAP_disregard_scale_draw(SDL_Texture* bitmap, float x, float y, float w, float h, float dx, float dy, float cscale, int flags) {
+      SDL_Rect sr, dr, tr;
+      sr.x=x;
+      sr.y=y;
+      sr.w=w;
+      sr.h=h;
+      dr.x=dx;
+      dr.y=dy;
+      dr.w=w;
+      dr.h=h;
+      tr.x=0;
+      tr.y=0;
+      SDL_QueryTexture(bitmap,NULL,NULL,&tr.w,&tr.h);
+      if ((sr.h+sr.y)>tr.h) {
+        sr.h-=(sr.h+sr.y)-tr.h;
+        dr.h=sr.h;
+      }
+      dr.w*=cscale;
+      dr.h*=cscale;
+      SDL_RenderSetScale(sdlRend,1,1);
+      SDL_RenderCopy(sdlRend,bitmap,&sr,&dr);
+      SDL_RenderSetScale(sdlRend,dpiScale,dpiScale);
+    }
     void _WRAP_draw_scaled_bitmap(SDL_Texture* bitmap, float sx, float sy, float sw, float sh, float dx, float dy, float dw, float dh, int flags) {
       SDL_Rect sr, dr, tr;
       sr.x=sx;
