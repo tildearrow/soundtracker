@@ -4444,7 +4444,7 @@ void ClickEvents() {
 
         inputRefRect.x=72;
         inputRefRect.y=scrH-16;
-        inputRefRect.w=scrW-72:
+        inputRefRect.w=scrW-72;
         inputRefRect.h=16;
         SDL_SetTextInputRect(&inputRefRect);
         SDL_StartTextInput();
@@ -4531,7 +4531,7 @@ void ClickEvents() {
 
       inputRefRect.x=88;
       inputRefRect.y=84;
-      inputRefRect.w=344-88:
+      inputRefRect.w=344-88;
       inputRefRect.h=96-84;
       SDL_SetTextInputRect(&inputRefRect);
       SDL_StartTextInput();
@@ -5648,7 +5648,10 @@ DETUNE_FACTOR_GLOBAL=1;
       //printf("event, %c\n",ev.keyboard.unichar);
     } else if (ev.type == SDL_TEXTEDITING) {
       printf("Text Editing Event!\n");
+      popbox=PopupBox("Text Edit","IME detected. Handle this.");
     } else if (ev.type == SDL_TEXTINPUT) {
+      popbox=PopupBox("Text Input",S("the input would be ")+S(ev.text.text));
+
       printf("the input would be %c.\n",ev.text.text[0]);
       if (inputvar!=NULL) {
         
