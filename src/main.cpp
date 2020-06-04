@@ -414,7 +414,7 @@ int chantoplayfx=0;
 string* inputvar=NULL;
 int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
 int maxinputsize=0;
-SDL_FRect inputRefRect;
+SDL_Rect inputRefRect;
 char* curdir;
 string curfname;
 int pcmeditscale=0;
@@ -4168,7 +4168,9 @@ void ClickEvents() {
           inputcurpos=0;
           maxinputsize=32;
           inputwhere=0;
+          
           SDL_StopTextInput();
+          SDL_SetTextInputRect(NULL);
         }
       }
       if (PIR(272,24,279,36,mstate.x,mstate.y)) {curoctave--; if (curoctave<0) {curoctave=0;}}
@@ -4322,6 +4324,12 @@ void ClickEvents() {
         inputcurpos=minval((mstate.x-524)/8,inputvar->size());
         maxinputsize=32;
         inputwhere=2;
+        
+        inputRefRect.x=528;
+        inputRefRect.y=132;
+        inputRefRect.w=784-528;
+        inputRefRect.h=144-132;
+        SDL_SetTextInputRect(&inputRefRect);
         SDL_StartTextInput();
       }
       if (PIR(24,72,72,84,mstate.x,mstate.y)) {CurrentEnv=0;}
@@ -4433,6 +4441,12 @@ void ClickEvents() {
         inputcurpos=minval((mstate.x-104)/8,inputvar->size());
         maxinputsize=4095;
         inputwhere=5;
+
+        inputRefRect.x=72;
+        inputRefRect.y=scrH-16;
+        inputRefRect.w=scrW-72:
+        inputRefRect.h=16;
+        SDL_SetTextInputRect(&inputRefRect);
         SDL_StartTextInput();
       }
       
@@ -4514,6 +4528,12 @@ void ClickEvents() {
       inputcurpos=minval((mstate.x-84)/8,inputvar->size());
       maxinputsize=32;
       inputwhere=1;
+
+      inputRefRect.x=88;
+      inputRefRect.y=84;
+      inputRefRect.w=344-88:
+      inputRefRect.h=96-84;
+      SDL_SetTextInputRect(&inputRefRect);
       SDL_StartTextInput();
     }
     if (PIR(760,60,767,72,mstate.x,mstate.y)) {defspeed--;if (defspeed<1) {defspeed=1;};speed=defspeed;}
@@ -4588,6 +4608,7 @@ void ClickEvents() {
         inputcurpos=minval(mstate.x/8,inputvar->size());
         maxinputsize=65535;
         inputwhere=4;
+
         SDL_StartTextInput();
       }
     }
