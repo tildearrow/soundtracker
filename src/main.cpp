@@ -5676,8 +5676,33 @@ DETUNE_FACTOR_GLOBAL=1;
       //printf("event, %c\n",ev.keyboard.unichar);
       if (inputvar!=NULL) {
         switch (ev.key.keysym.sym) {
+          case SDLK_LEFT:
+            inputcurpos--;
+            if (inputcurpos<0) {
+              inputcurpos=0;
+              triggerfx(1);
+            }
+            break;
+          case SDLK_RIGHT:
+            inputcurpos++;
+            if (inputcurpos>inputvar->size()) {
+              inputcurpos=inputvar->size();
+              triggerfx(1);
+            }
+            break;
+          case SDLK_HOME:
+            inputcurpos=0;
+            break;
+          case SDLK_END:
+            inputcurpos=inputvar->size();
+            break;
           case SDLK_BACKSPACE:
-            popbox=PopupBox("Text Input","Backspace Handling.");
+            if (--inputcurpos<0) {
+              inputcurpos=0;
+              triggerfx(1);
+            } else {
+              inputvar->erase(inputcurpos,1);
+            }
             break;
           default:
             break;
@@ -5685,7 +5710,7 @@ DETUNE_FACTOR_GLOBAL=1;
       }
     } else if (ev.type == SDL_TEXTEDITING) {
       printf("Text Editing Event!\n");
-      popbox=PopupBox("Text Edit","IME detected. Handle this.");
+      //popbox=PopupBox("Text Edit","IME detected. Handle this.");
     } else if (ev.type == SDL_TEXTINPUT) {
 
       printf("the input would be %c.\n",ev.text.text[0]);
@@ -5693,6 +5718,8 @@ DETUNE_FACTOR_GLOBAL=1;
         if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
           inputvar->insert(inputcurpos,ev.text.text);
           inputcurpos+=strlen(ev.text.text);
+        } else {
+          triggerfx(1);
         }
       }
       /*
