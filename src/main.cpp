@@ -149,12 +149,13 @@ int rngpgv[32]={0};
 int scrollpos=0;
 int valuewidth=4;
 int oldpat=-1;
-unsigned char CurrentIns=0;
+unsigned char CurrentIns=1;
 unsigned char CurrentEnv=0;
 // init tracker stuff
 int pattern=0;
 unsigned char patid[256]={};
 unsigned char* patlength;
+string tempInsName;
 struct Instrument {
   char name[32];
   unsigned char id, pcmMult, activeEnv;
@@ -198,7 +199,7 @@ int Marp[32]={};
 int Mins[32]={};
 bool EnvelopesRunning[32][8]={}; // EnvelopesRunning[channel][envelope]
 
-char name[32]=""; // song name
+string name; // song name
 unsigned char defspeed=6; // default song speed
 unsigned char speed=6; // current speed
 signed char playmode=0; // playmode (-1: reverse, 0: stopped, 1: playing, 2: paused)
@@ -406,14 +407,14 @@ int hover[16]={}; // hover time per button
 int16_t ver=145; // version number
 unsigned char chs0[5000];
 char* helptext;
-char* comments;
+string comments;
 int inputcurpos=0;
 int chantoplayfx=0;
-char* inputvar=NULL;
+string* inputvar=NULL;
 int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
 int maxinputsize=0;
 char* curdir;
-char* curfname;
+string curfname;
 int pcmeditscale=0;
 int pcmeditseek=0;
 int pcmeditoffset=0;
@@ -2502,7 +2503,8 @@ void drawdiskop() {
   g.tColor(15);
   g.printf("FileName");
   g.tPos(9,((scrH-8.0f)/12.0f)-1.0f);
-  g.printf("%s",curfname);
+  g.tColor((inputwhere==5)?11:15);
+  g.printf("%s",curfname.c_str());
 }
 
 void drawmemory() {
@@ -2543,7 +2545,7 @@ void drawsong() {
   g.printf("---------------------------------------------------------------------------------------------------\n");
   g.printf("|Song Name ________________________________________________________\n");
   g.printf("---------------------------------------------------------------------------------------------------\n");
-  g.printf(comments);
+  g.printf(comments.c_str());
   
   g.tPos(0,18);
   g.printf("---------------------------------------------------------------------------------------------------\n");
@@ -2556,7 +2558,7 @@ void drawsong() {
   
   g.tColor((inputwhere==1)?11:15);
   g.tPos(11,7);
-  g.printf(name);
+  g.printf(name.c_str());
   if (inputwhere==1) {
       g._WRAP_draw_line(89+(inputcurpos*8),85,89+(inputcurpos*8),97,g._WRAP_map_rgb(255,255,0),1);
   }
@@ -2744,7 +2746,7 @@ void drawpiano() {
 void drawcomments() {
   int DRAWCUR_X=0;
   int DRAWCUR_Y=0;
-  for (int ii=0;ii<strlen(comments);ii++) {
+  for (int ii=0;ii<comments.size();ii++) {
   if (comments[ii]==13) {DRAWCUR_X=0;DRAWCUR_Y++;continue;}
   DRAWCUR_X++;
   if (DRAWCUR_X>(scrW/8)) {DRAWCUR_X=0;DRAWCUR_Y++;}
@@ -2755,7 +2757,7 @@ void drawcomments() {
   }
   g.tPos(0,5);
   g.tColor(15);
-  g.printf(comments);
+  g.printf(comments.c_str());
 }
 
 void drawsfxpanel() {
@@ -2910,12 +2912,12 @@ int ImportIT(FILE* it) {
     printf("IT module detected\n");
     CleanupPatterns();
     // name
-    printf("module name is ");
+    name="";
     for (sk=4;sk<30;sk++) {
-      name[sk-4]=memblock[sk];
-      if (sk==4) {printf("%s",&memblock[sk]);}
+      if (memblock[sk]==0) break;
+      name+=memblock[sk];
     }
-    printf("\n");
+    printf("module name is %s\n",name.c_str());
     // orders, instruments, samples and patterns
     printf("%d orders, %d instruments, %d samples, %d patterns\n",(int)memblock[0x20],(int)memblock[0x22],(int)memblock[0x24],(int)memblock[0x26]);
     orders=(unsigned char)memblock[0x20]; instruments=(unsigned char)memblock[0x22]; patterns=(unsigned char)memblock[0x26]; samples=(unsigned char)memblock[0x24];
@@ -3029,10 +3031,10 @@ int ImportIT(FILE* it) {
   else {printf("error while importing file! file doesn't exist\n"); return 1;}
   if (!playermode && !fileswitch) {curpat=0;}
   if (playmode==1) {Play();}
-  if (strcmp(name,"")==0) {
+  if (name=="") {
     g.setTitle(PROGRAM_NAME);
   } else {
-    g.setTitle(S(name)+S(" - ")+S(PROGRAM_NAME));
+    g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
   }
   return 0;
 }
@@ -3106,12 +3108,12 @@ int ImportMOD(FILE* mod) {
        if (memblock[1082]=='C' && memblock[1083]=='H') {chans=(NumberLetter(memblock[1080])*10)+NumberLetter(memblock[1081]);}
        if (memblock[1081]=='C' && memblock[1082]=='H' && memblock[1083]=='N') {chans=NumberLetter(memblock[1080]);}
     // name
-    printf("module name is ");
+    name="";
     for (sk=0;sk<20;sk++) {
-      name[sk]=memblock[sk];
-      if (sk==0) {printf("%s",&memblock[sk]);}
+      if (memblock[sk]==0) break;
+      name+=memblock[sk];
     }
-    printf("\n");
+    printf("module name is %s\n",name.c_str());
     printf("---ORDER LIST---\n");
     for (sk=952;sk<1080;sk++) {
       patid[sk-952]=memblock[sk];
@@ -3266,10 +3268,10 @@ int ImportMOD(FILE* mod) {
   songdf=0x1b; // Amiga compat
   if (!playermode && !fileswitch) {curpat=0;}
   if (playmode==1) {Play();}
-  if (strcmp(name,"")==0) {
+  if (name=="") {
     g.setTitle(PROGRAM_NAME);
   } else {
-    g.setTitle(S(name)+S(" - ")+S(PROGRAM_NAME));
+    g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
   }
   return 0;
 }
@@ -3304,12 +3306,11 @@ int ImportS3M() {
     //instrument[nonsense].env[envPan]=48;
   }
   // module name
-  printf("module name is ");
   for (sk=0;sk<28;sk++) {
-    name[sk]=memblock[sk];
-    if (sk==0) {printf("%s",&memblock[sk]);}
+    if (memblock[sk]==0) break;
+    name+=memblock[sk];
   }
-  printf("\n");
+  printf("module name is %s\n",name.c_str());
   orders=memblock[0x20];
   instruments=memblock[0x22];
   patterns=memblock[0x24]*2;
@@ -3495,7 +3496,7 @@ int SaveFile() {
     fputc(defspeed,sfile); // speed
     fputc(seqs,sfile); // sequences
     fputc(125,sfile); // tempo
-    fputs(name,sfile); // name
+    fputs(name.c_str(),sfile); // name
     printf("%d ",ftell(sfile));
     fseek(sfile,48,SEEK_SET); // seek to 0x30
     printf("%d ",ftell(sfile));
@@ -3617,8 +3618,8 @@ int SaveFile() {
     printf("%d ",ftell(sfile));
     // write comments
     commentpointer=ftell(sfile);
-    fwrite(comments,1,strlen(comments),sfile);
-    fseek(sfile,strlen(comments)+2,SEEK_CUR);
+    fwrite(comments.c_str(),1,comments.size(),sfile);
+    fseek(sfile,comments.size()+2,SEEK_CUR);
     printf("%d ",ftell(sfile));
     // write PCM data
     pcmpointer=ftell(sfile);
@@ -3733,7 +3734,13 @@ int LoadFile(const char* filename) {
     seqs=fgetc(sfile); // sequences
     //fputc(sfile,125); // tempo
     fseek(sfile,16,SEEK_SET);
-    fgets(name,32,sfile); // name
+    name="";
+    int ncache;
+    for (int i=0; i<32; i++) {
+      ncache=fgetc(sfile);
+      if (ncache==0) break;
+      name+=ncache;
+    }
     //printf("%d ",ftell(sfile));
     fseek(sfile,48,SEEK_SET); // seek to 0x30
     //printf("%d ",ftell(sfile));
@@ -3755,11 +3762,16 @@ int LoadFile(const char* filename) {
       patid[ii]=fgetc(sfile); // order list
     }
     fseek(sfile,0x3a,SEEK_SET); // seek to 0x3a
-    memset(comments,0,65536); // clean comments
+    comments=""; // clean comments
     commentpointer=fgeti(sfile);
     if (commentpointer!=0) {
-    fseek(sfile,commentpointer,SEEK_SET);
-    fgets(comments,65536,sfile);
+      int v;
+      fseek(sfile,commentpointer,SEEK_SET);
+      while (1) {
+        v=fgetc(sfile);
+        if (v==0 || v==EOF) break;
+        comments+=v;
+      }
     }
     fseek(sfile,0x36,SEEK_SET); // seek to 0x36
     memset(chip[0].pcm,0,65280); // clean PCM memory
@@ -3924,10 +3936,10 @@ int LoadFile(const char* filename) {
     printf("done\n");
     if (!playermode && !fileswitch) {curpat=0;}
     if (oplaymode==1) {Play();}
-    if (strcmp(name,"")==0) {
+    if (name=="") {
       g.setTitle(PROGRAM_NAME);
     } else {
-      g.setTitle(S(name)+S(" - ")+S(PROGRAM_NAME));
+      g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
     }
     return 0;
   } else {
@@ -4006,7 +4018,6 @@ void LoadRawSample(const char* filename,int position) {
   }
   fclose(sfile);
 }
-
 
 void ClickEvents() {
   reversemode=false;
@@ -4149,7 +4160,10 @@ void ClickEvents() {
       if (PIR((scrW/2)+21,13,(scrW/2)+61,37,mstate.x,mstate.y)) {playmode=0;}
     }
     if (leftpress) {
-      inputvar=NULL;inputcurpos=0;maxinputsize=32;inputwhere=0;
+      inputvar=NULL;
+      inputcurpos=0;
+      maxinputsize=32;
+      inputwhere=0;
       if (PIR(272,24,279,36,mstate.x,mstate.y)) {curoctave--; if (curoctave<0) {curoctave=0;}}
       if (PIR(280,24,288,36,mstate.x,mstate.y)) {curoctave++; if (curoctave>8) {curoctave=8;}}
       if (PIR(160,12,167,23,mstate.x,mstate.y)) {speed--; if (speed<1) {speed=1;}}
@@ -4295,7 +4309,8 @@ void ClickEvents() {
     }
     // change envelopes
     if (leftpress) {
-      if (PIR(528,132,784,144,mstate.x,mstate.y)) {inputvar=instrument[CurrentIns].name;inputcurpos=minval((mstate.x-524)/8,strlen(inputvar));maxinputsize=32;inputwhere=2;}
+      // TODO this
+      if (PIR(528,132,784,144,mstate.x,mstate.y)) {inputvar=&tempInsName;inputcurpos=minval((mstate.x-524)/8,inputvar->size());maxinputsize=32;inputwhere=2;}
       if (PIR(24,72,72,84,mstate.x,mstate.y)) {CurrentEnv=0;}
       if (PIR(80,72,128,84,mstate.x,mstate.y)) {CurrentEnv=1;}
       if (PIR(136,72,176,84,mstate.x,mstate.y)) {CurrentEnv=2;}
@@ -4314,7 +4329,7 @@ void ClickEvents() {
         bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][254]=255;
         bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][255]=255;}
       if (PIR(192,60,199,72,mstate.x,mstate.y)) {CurrentIns++;}
-      if (PIR(200,60,207,72,mstate.x,mstate.y)) {CurrentIns--;}
+      if (PIR(200,60,207,72,mstate.x,mstate.y)) {CurrentIns--; if (CurrentIns<1) CurrentIns=255;}
       // the right pane buttons
       if (PIR(scrW-184,84,scrW-177,96,mstate.x,mstate.y)) {instrument[CurrentIns].noteOffset++;}
       if (PIR(scrW-176,84,scrW-169,96,mstate.x,mstate.y)) {instrument[CurrentIns].noteOffset--;}
@@ -4399,6 +4414,14 @@ void ClickEvents() {
   // events only in diskop view
   if (screen==2) {
     if (leftpress) {
+      // filename input
+      if (PIR(72,scrH-16,scrW,scrH,mstate.x,mstate.y)) {
+        inputvar=&curfname;
+        inputcurpos=minval((mstate.x-104)/8,inputvar->size());
+        maxinputsize=4095;
+        inputwhere=5;
+      }
+      
       if (PIR(168,60,200,72,mstate.x,mstate.y)) {
         printf("\nplease write filename? ");
         char rfn[256];
@@ -4440,7 +4463,7 @@ void ClickEvents() {
               strcat(curdir,filenames[ii].name.c_str());
               diskopscrollpos=0;
               selectedfileindex=-1;
-              strcpy(curfname,"");
+              curfname="";
               if (!print_entry(curdir)) {
                 popbox=PopupBox("Error","can't read directory!");
                 triggerfx(1);
@@ -4448,11 +4471,11 @@ void ClickEvents() {
               }
             } else {
               int success;
-              success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+S(curfname)).c_str());
+              success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
             }
           } else {
             selectedfileindex=ii+1;
-            strcpy(curfname,filenames[ii].name.c_str());
+            curfname=filenames[ii].name;
           }
         }
       }
@@ -4472,7 +4495,7 @@ void ClickEvents() {
   // events only in song view
   if (screen==3) {
     if (leftpress) {
-    if (PIR(88,84,344,96,mstate.x,mstate.y)) {inputvar=&name[0];inputcurpos=minval((mstate.x-84)/8,strlen(inputvar));maxinputsize=32;inputwhere=1;}
+    if (PIR(88,84,344,96,mstate.x,mstate.y)) {inputvar=&name;inputcurpos=minval((mstate.x-84)/8,inputvar->size());maxinputsize=32;inputwhere=1;}
     if (PIR(760,60,767,72,mstate.x,mstate.y)) {defspeed--;if (defspeed<1) {defspeed=1;};speed=defspeed;}
     if (PIR(768,60,776,72,mstate.x,mstate.y)) {defspeed++;if (defspeed<1) {defspeed=1;};speed=defspeed;}
     if (PIR(456,60,463,72,mstate.x,mstate.y)) {songdf--;}
@@ -4540,7 +4563,7 @@ void ClickEvents() {
   // events only in comments view
   if (screen==8) {
     if (leftpress) {
-      if (PIR(0,60,scrW,scrH,mstate.x,mstate.y)) {inputvar=comments;inputcurpos=minval(mstate.x/8,strlen(inputvar));maxinputsize=65535;inputwhere=4;}
+      if (PIR(0,60,scrW,scrH,mstate.x,mstate.y)) {inputvar=&comments;inputcurpos=minval(mstate.x/8,inputvar->size());maxinputsize=65535;inputwhere=4;}
     }
   }
   // events only in sound effect editor
@@ -5046,7 +5069,7 @@ void drawdisp() {
                           g._WRAP_get_bitmap_width(patternbitmap),
                           scrH*dpiScale-maxval(60,252-(curpatrow*12)),
                           (scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2,
-                          /*maxval(60*dpiScale,*/((252)-(curpatrow*12))*curzoom/*)*/,
+                          ((60+((scrH*(dpiScale/curzoom))-60)/2)-(curpatrow*12))*curzoom/*)*/,
                           curzoom,
                           0);
     g._WRAP_reset_clipping_rectangle();
@@ -5338,8 +5361,6 @@ int main(int argc, char **argv) {
   printf("soundtracker (r%d)\n",ver);
   framecounter=0;
   playermode=false;
-  comments=new char[65536];
-  memset(comments,0,65536);
   int filearg=0;
   
   // new variables
@@ -5423,9 +5444,7 @@ DETUNE_FACTOR_GLOBAL=1;
    }
    
    curdir=new char[4096];
-   curfname=new char[4096];
    memset(curdir,0,4096);
-   memset(curfname,0,4096);
 #ifdef ANDROID
    // TODO: find the actual path
    strcpy(curdir,"/storage/emulated/0");
@@ -5446,7 +5465,6 @@ DETUNE_FACTOR_GLOBAL=1;
    dpiScale=g._getScale();
    curzoom=dpiScale;
    maxTSize=g.maxTexSize();
-   popbox=PopupBox("Warning","texSize: "+std::to_string(maxTSize.x)+"x"+std::to_string(maxTSize.y));
    }
    patternbitmap=g._WRAP_create_bitmap(scrW,scrH);
    piano=g._WRAP_create_bitmap(700,60);
@@ -5505,7 +5523,7 @@ DETUNE_FACTOR_GLOBAL=1;
    if (playermode || fileswitch) {
      if (LoadFile(argv[filearg])) {return 1;}
      if (playermode) {Play();
-     printf("playing: %s\n",name);}
+     printf("playing: %s\n",name.c_str());}
    }
    printf("run\n");
    // run timer
@@ -5579,12 +5597,15 @@ DETUNE_FACTOR_GLOBAL=1;
           }
         }
       } else if (ev.type == SDL_KEYDOWN) {
+        
       //printf("event, %c\n",ev.keyboard.unichar);
-      if (screen==1) {
-        RunTestNote(ev.key.keysym.sym);
-      }
+    } else if (ev.type == SDL_TEXTEDITING) {
+      printf("Text Editing Event!\n");
     } else if (ev.type == SDL_TEXTINPUT) {
       printf("the input would be %c.\n",ev.text.text[0]);
+      if (inputvar!=NULL) {
+        
+      }
       /*
       if (inputvar!=NULL) {
       if (ev.key.keysym.sym==SDLK_BACKSPACE) {inputcurpos--; if (inputcurpos<0) {inputcurpos=0;}; inputvar[inputcurpos]=0;}
@@ -5659,7 +5680,6 @@ DETUNE_FACTOR_GLOBAL=1;
    
    printf("destroying some buffers\n");
    delete[] patlength;
-   delete[] comments;
    printf("finished\n");
    return 0;
 }
