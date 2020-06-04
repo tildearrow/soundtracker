@@ -414,6 +414,7 @@ int chantoplayfx=0;
 string* inputvar=NULL;
 int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
 int maxinputsize=0;
+SDL_FRect inputRefRect;
 char* curdir;
 string curfname;
 int pcmeditscale=0;
@@ -4161,10 +4162,15 @@ void ClickEvents() {
       if (PIR((scrW/2)+21,13,(scrW/2)+61,37,mstate.x,mstate.y)) {playmode=0;}
     }
     if (leftpress) {
-      inputvar=NULL;
-      inputcurpos=0;
-      maxinputsize=32;
-      inputwhere=0;
+      if (!PIR(inputRefRect.x,inputRefRect.y,inputRefRect.x+inputRefRect.w,inputRefRect.y+inputRefRect.h,mstate.x,mstate.y)) {
+        if (inputvar!=NULL) {
+          inputvar=NULL;
+          inputcurpos=0;
+          maxinputsize=32;
+          inputwhere=0;
+          SDL_StopTextInput();
+        }
+      }
       if (PIR(272,24,279,36,mstate.x,mstate.y)) {curoctave--; if (curoctave<0) {curoctave=0;}}
       if (PIR(280,24,288,36,mstate.x,mstate.y)) {curoctave++; if (curoctave>8) {curoctave=8;}}
       if (PIR(160,12,167,23,mstate.x,mstate.y)) {speed--; if (speed<1) {speed=1;}}
@@ -4311,7 +4317,13 @@ void ClickEvents() {
     // change envelopes
     if (leftpress) {
       // TODO this
-      if (PIR(528,132,784,144,mstate.x,mstate.y)) {inputvar=&tempInsName;inputcurpos=minval((mstate.x-524)/8,inputvar->size());maxinputsize=32;inputwhere=2;}
+      if (PIR(528,132,784,144,mstate.x,mstate.y)) {
+        inputvar=&tempInsName;
+        inputcurpos=minval((mstate.x-524)/8,inputvar->size());
+        maxinputsize=32;
+        inputwhere=2;
+        SDL_StartTextInput();
+      }
       if (PIR(24,72,72,84,mstate.x,mstate.y)) {CurrentEnv=0;}
       if (PIR(80,72,128,84,mstate.x,mstate.y)) {CurrentEnv=1;}
       if (PIR(136,72,176,84,mstate.x,mstate.y)) {CurrentEnv=2;}
@@ -4421,6 +4433,7 @@ void ClickEvents() {
         inputcurpos=minval((mstate.x-104)/8,inputvar->size());
         maxinputsize=4095;
         inputwhere=5;
+        SDL_StartTextInput();
       }
       
       if (PIR(168,60,200,72,mstate.x,mstate.y)) {
@@ -4496,7 +4509,13 @@ void ClickEvents() {
   // events only in song view
   if (screen==3) {
     if (leftpress) {
-    if (PIR(88,84,344,96,mstate.x,mstate.y)) {inputvar=&name;inputcurpos=minval((mstate.x-84)/8,inputvar->size());maxinputsize=32;inputwhere=1;}
+    if (PIR(88,84,344,96,mstate.x,mstate.y)) {
+      inputvar=&name;
+      inputcurpos=minval((mstate.x-84)/8,inputvar->size());
+      maxinputsize=32;
+      inputwhere=1;
+      SDL_StartTextInput();
+    }
     if (PIR(760,60,767,72,mstate.x,mstate.y)) {defspeed--;if (defspeed<1) {defspeed=1;};speed=defspeed;}
     if (PIR(768,60,776,72,mstate.x,mstate.y)) {defspeed++;if (defspeed<1) {defspeed=1;};speed=defspeed;}
     if (PIR(456,60,463,72,mstate.x,mstate.y)) {songdf--;}
@@ -4564,7 +4583,13 @@ void ClickEvents() {
   // events only in comments view
   if (screen==8) {
     if (leftpress) {
-      if (PIR(0,60,scrW,scrH,mstate.x,mstate.y)) {inputvar=&comments;inputcurpos=minval(mstate.x/8,inputvar->size());maxinputsize=65535;inputwhere=4;}
+      if (PIR(0,60,scrW,scrH,mstate.x,mstate.y)) {
+        inputvar=&comments;
+        inputcurpos=minval(mstate.x/8,inputvar->size());
+        maxinputsize=65535;
+        inputwhere=4;
+        SDL_StartTextInput();
+      }
     }
   }
   // events only in sound effect editor
