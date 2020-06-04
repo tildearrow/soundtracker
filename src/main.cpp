@@ -5646,15 +5646,26 @@ DETUNE_FACTOR_GLOBAL=1;
       } else if (ev.type == SDL_KEYDOWN) {
         
       //printf("event, %c\n",ev.keyboard.unichar);
+      if (inputvar!=NULL) {
+        switch (ev.key.keysym.sym) {
+          case SDLK_BACKSPACE:
+            popbox=PopupBox("Text Input","Backspace Handling.");
+            break;
+          default:
+            break;
+        }
+      }
     } else if (ev.type == SDL_TEXTEDITING) {
       printf("Text Editing Event!\n");
       popbox=PopupBox("Text Edit","IME detected. Handle this.");
     } else if (ev.type == SDL_TEXTINPUT) {
-      popbox=PopupBox("Text Input",S("the input would be ")+S(ev.text.text));
 
       printf("the input would be %c.\n",ev.text.text[0]);
       if (inputvar!=NULL) {
-        
+        if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
+          inputvar->insert(inputcurpos,ev.text.text);
+          inputcurpos+=strlen(ev.text.text);
+        }
       }
       /*
       if (inputvar!=NULL) {
