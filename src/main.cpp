@@ -2347,6 +2347,12 @@ void EditSkip() {
 }
 void ParentDir(char *thedir) {
   // set thedir to parent directory
+#ifdef _WIN32
+  if (strcmp(thedir+1,":\\")==0 && thedir[0]>='A' && thedir[0]<='Z') {
+    strcpy(thedir,"");
+    return;
+  }
+#endif
   if (strrchr(thedir,DIR_SEPARATOR)!=NULL) {
     memset(strrchr(thedir,DIR_SEPARATOR),0,1);
     if (strchr(thedir,DIR_SEPARATOR)==NULL) {
@@ -2489,7 +2495,11 @@ void drawdiskop() {
   g.printf("v");
   
   g.tPos(9,7);
-  g.printf("%s",curdir);
+  if (strcmp(curdir,"")==0) {
+    g.printf("(???)");
+  } else {
+    g.printf("%s",curdir);
+  }
   if (selectedfileindex>(diskopscrollpos)) {
   g._WRAP_draw_filled_rectangle(0,111+((selectedfileindex-diskopscrollpos)*12),scrW,123+((selectedfileindex-diskopscrollpos)*12),g._WRAP_map_rgb(128,128,128));
   }
@@ -3386,12 +3396,28 @@ bool print_entry(const char* filepath) {
   HANDLE flist;
   WIN32_FIND_DATAA next;
   string actualfp;
+  FileInList neext;
+  int increment=0;
+  if (strcmp(filepath,"")==0) {
+    unsigned int drivemask;
+    drivemask=GetLogicalDrives();
+    filenames.clear();
+    for (int i=0; i<26; i++) {
+      if ((drivemask>>i)&1) {
+        neext.name="";
+        neext.name+='A'+i;
+	neext.name+=":\\";
+        neext.isdir=true;
+        filenames.push_back(neext);
+        increment++;
+      }
+    }
+    return true;
+  }
   actualfp=filepath;
   actualfp+="\\*";
   flist=FindFirstFileA(actualfp.c_str(),&next);
   printf("listing dir...\n");
-  int increment=0;
-  FileInList neext;
   neext.name="";
   neext.isdir=false;
   // clean file list
@@ -4485,8 +4511,10 @@ void ClickEvents() {
         if (PIR(0,120+(ii*12)-(diskopscrollpos*12),scrW-8,131+(ii*12)-(diskopscrollpos*12),mstate.x,mstate.y)) {
           if (selectedfileindex==ii+1) {
             if (filenames[ii].isdir) {
-              if (curdir[strlen(curdir)-1]!=DIR_SEPARATOR) {
-                strcat(curdir,SDIR_SEPARATOR);
+              if (strcmp(curdir,"")!=0) {
+                if (curdir[strlen(curdir)-1]!=DIR_SEPARATOR) {
+                  strcat(curdir,SDIR_SEPARATOR);
+                }
               }
               strcat(curdir,filenames[ii].name.c_str());
               diskopscrollpos=0;
