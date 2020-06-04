@@ -2496,7 +2496,7 @@ void drawdiskop() {
   
   g.tPos(9,7);
   if (strcmp(curdir,"")==0) {
-    g.printf("(???)");
+    g.printf("(?)");
   } else {
     g.printf("%s",curdir);
   }
