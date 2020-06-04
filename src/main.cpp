@@ -6,6 +6,8 @@
 //             2014-2015.              //
 //>++++++++++-+-++-*.*-++-+-++++++++++<//
 
+// add 2016, 2017, 2018, 2019 and 2020 to the list.
+
 #define PROGRAM_NAME "soundtracker"
 float rt1=0;
 float rt2=0;
@@ -64,7 +66,6 @@ uint32_t jacksr;
 soundchip chip[4]; // up to 4 soundchips
 #define soundchips 2
 
-using namespace std;
 const bool verbose=false; // change this to turn on verbose mode
 signed char songdf=0;
 double FPS=50;
@@ -450,8 +451,8 @@ struct FileInList {
   string name;
   bool isdir;
 };
-vector<FileInList> filenames;
-vector<FileInList> filessorted;
+std::vector<FileInList> filenames;
+std::vector<FileInList> filessorted;
 int scrW,scrH;
 SDL_Texture* patternbitmap = NULL;
 SDL_Texture* pianoroll=NULL;
