@@ -40,16 +40,17 @@ xxxx│ pointers to patterns, 4 bytes per pointer                     │
     ┌───────────────────────────────────────────────────────────────┐
   00│ instrument name, 32 bytes, padded with 0x00s                  │
     ├───────────────────────────────────────────────────┬───┬───┬───┤
-  20│Ins│PCm│Env│Unu|   FuncSize!   │  Unused!  |Off│FPt│FPR│DFM│LFO│
+  20│Ins│PCm│Env│Fun|               │  Unused!  |Off│FPt│FPR│DFM│LFO│
     ├───────────────────────────────────────────────────┴───┴───┴───┤
   30│Vol│Pit│PCMSlen|FilterH|Res|PCMSptr│PCMloop│FTm│Version│flg│RMF│
     ├───────────────────────────────────────────────────────┴───┴───┤
-  40│ Function data; see ssformat.md for details... FuncSize bytes  │
+  40│ Function data; see ssformat.md for details...                 │
     └───────────────────────────────────────────────────────────────┘
     
-FuncSize is a 32-bit size value.
+Fun determines the number of ssinter functions in the instrument.
 
 NOTE: Version must have MSB set. otherwise treated as legacy instrument.
+NOTE 2: Function data is a chain of Fun null-terminated strings.
 
 3. Instruments, legacy (pre-r144) format, Ins*64
 ---- -0- -1- -2- -3- -4- -5- -6- -7- -8- -9- -A- -B- -C- -D- -E- -F-
