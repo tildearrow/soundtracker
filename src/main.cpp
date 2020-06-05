@@ -2520,6 +2520,9 @@ void drawdiskop() {
   g.tPos(9,((scrH-8.0f)/12.0f)-1.0f);
   g.tColor((inputwhere==5)?11:15);
   g.printf("%s",curfname.c_str());
+  if (inputwhere==5) {
+      g._WRAP_draw_line(73+(inputcurpos*8),scrH-20,73+(inputcurpos*8),scrH-4,g._WRAP_map_rgb(255,255,0),1);
+  }
 }
 
 void drawmemory() {
@@ -4049,6 +4052,16 @@ void LoadRawSample(const char* filename,int position) {
   fclose(sfile);
 }
 
+void setInputRect() {
+  SDL_Rect finalRect;
+  finalRect=inputRefRect;
+  finalRect.x*=dpiScale;
+  finalRect.y*=dpiScale;
+  finalRect.w*=dpiScale;
+  finalRect.h*=dpiScale;
+  SDL_SetTextInputRect(&finalRect);
+}
+
 void ClickEvents() {
   reversemode=false;
   // click events
@@ -4195,10 +4208,18 @@ void ClickEvents() {
           inputvar=NULL;
           inputcurpos=0;
           maxinputsize=32;
-          inputwhere=0;
           
           SDL_StopTextInput();
           SDL_SetTextInputRect(NULL);
+          
+          if (inputwhere==1) {
+            if (name=="") {
+              g.setTitle(PROGRAM_NAME);
+            } else {
+              g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
+            }
+          }
+          inputwhere=0;
         }
       }
       if (PIR(272,24,279,36,mstate.x,mstate.y)) {curoctave--; if (curoctave<0) {curoctave=0;}}
@@ -4357,7 +4378,7 @@ void ClickEvents() {
         inputRefRect.y=132;
         inputRefRect.w=784-528;
         inputRefRect.h=144-132;
-        SDL_SetTextInputRect(&inputRefRect);
+        setInputRect();
         SDL_StartTextInput();
       }
       if (PIR(24,72,72,84,mstate.x,mstate.y)) {CurrentEnv=0;}
@@ -4464,17 +4485,17 @@ void ClickEvents() {
   if (screen==2) {
     if (leftpress) {
       // filename input
-      if (PIR(72,scrH-16,scrW,scrH,mstate.x,mstate.y)) {
+      if (PIR(72,scrH-24,scrW,scrH,mstate.x,mstate.y)) {
         inputvar=&curfname;
-        inputcurpos=minval((mstate.x-104)/8,inputvar->size());
+        inputcurpos=minval((mstate.x-72)/8,inputvar->size());
         maxinputsize=4095;
         inputwhere=5;
 
         inputRefRect.x=72;
-        inputRefRect.y=scrH-16;
+        inputRefRect.y=scrH-24;
         inputRefRect.w=scrW-72;
-        inputRefRect.h=16;
-        SDL_SetTextInputRect(&inputRefRect);
+        inputRefRect.h=24;
+        setInputRect();
         SDL_StartTextInput();
       }
       
@@ -4588,7 +4609,7 @@ void ClickEvents() {
       inputRefRect.y=84;
       inputRefRect.w=344-88;
       inputRefRect.h=96-84;
-      SDL_SetTextInputRect(&inputRefRect);
+      setInputRect();
       SDL_StartTextInput();
     }
     if (PIR(760,60,767,72,mstate.x,mstate.y)) {defspeed--;if (defspeed<1) {defspeed=1;};speed=defspeed;}
@@ -5563,7 +5584,12 @@ DETUNE_FACTOR_GLOBAL=1;
      return 1;
    }
    dpiScale=g._getScale();
+#ifdef ANDROID
+   curzoom=dpiScale-1;
+   if (curzoom<1) curzoom=1;
+#else
    curzoom=dpiScale;
+#endif
    maxTSize=g.maxTexSize();
    }
    patternbitmap=g._WRAP_create_bitmap(scrW,scrH);
