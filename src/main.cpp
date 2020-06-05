@@ -5175,11 +5175,16 @@ void drawdisp() {
   int lastChan, lastMode;
   int selTop, selBottom;
   static int pointsToDraw=735;
+  
+  float patStartY, patOffY;
+  
   if (playermode) {return;}
   ClickEvents();
   KeyboardEvents();
   // -(int)((((float)speed-(float)curtick)/(float)speed)*12.0f)
   if (screen==0) {
+    patStartY=(60+((scrH*dpiScale)-60)/2);
+    patOffY=(curpatrow*12)*curzoom;
 #ifdef SMOOTH_SCROLL
     g._WRAP_draw_bitmap_region(patternbitmap,0,-minval(0,189-(curpatrow*12)+(int)(((float)curtick/(float)speed)*12.0)),g._WRAP_get_bitmap_width(patternbitmap),g._WRAP_get_bitmap_height(patternbitmap),0,60+maxval(0,189-(curpatrow*12)+(int)(((float)curtick/(float)speed)*12.0)),0);
 #else
@@ -5190,44 +5195,49 @@ void drawdisp() {
                           g._WRAP_get_bitmap_width(patternbitmap),
                           scrH*dpiScale-maxval(60,252-(curpatrow*12)),
                           (scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2,
-                          ((60+((scrH*(dpiScale/curzoom))-60)/2)-(curpatrow*12))*curzoom/*)*/,
+                          patStartY-patOffY,
                           curzoom,
                           0);
     g._WRAP_reset_clipping_rectangle();
     #endif
-  firstChan=curedchan; firstMode=curedmode;
-  lastChan=curselchan; lastMode=curselmode;
-  selTop=selStart; selBottom=selEnd;
-  if (lastChan<firstChan) {
-    lastChan^=firstChan;
-    firstChan^=lastChan;
-    lastChan^=firstChan;
+    firstChan=curedchan; firstMode=curedmode;
+    lastChan=curselchan; lastMode=curselmode;
+    selTop=selStart; selBottom=selEnd;
+    if (lastChan<firstChan) {
+      lastChan^=firstChan;
+      firstChan^=lastChan;
+      lastChan^=firstChan;
     
-    lastMode^=firstMode;
-    firstMode^=lastMode;
-    lastMode^=firstMode;
-  } else if (lastChan==firstChan) {
-    if (lastMode<firstMode) {
       lastMode^=firstMode;
       firstMode^=lastMode;
       lastMode^=firstMode;
+    } else if (lastChan==firstChan) {
+      if (lastMode<firstMode) {
+        lastMode^=firstMode;
+        firstMode^=lastMode;
+        lastMode^=firstMode;
+      }
     }
-  }
-  if (selBottom<selTop) {
-    selBottom^=selTop;
-    selTop^=selBottom;
-    selBottom^=selTop;
-  }
-  for (int i=firstChan; i<=lastChan; i++) {
-    for (int j=(i==firstChan)?firstMode:0; (j<5 && (i<lastChan || j<=lastMode)); j++) {
-      g._WRAP_draw_filled_rectangle(((scrW/2)-400)+modeOff[j]+(i*96)+((8-chanstodisplay)*45),
+    if (selBottom<selTop) {
+      selBottom^=selTop;
+      selTop^=selBottom;
+      selBottom^=selTop;
+    }
+    for (int i=firstChan; i<=lastChan; i++) {
+      for (int j=(i==firstChan)?firstMode:0; (j<5 && (i<lastChan || j<=lastMode)); j++) {
+        /*g._WRAP_draw_filled_rectangle(((scrW/2)-400)+modeOff[j]+(i*96)+((8-chanstodisplay)*45),
                                maxval(60,255-(curpatrow-selTop)*12),
                                ((scrW/2)-400)+modeOff[j+1]+(i*96)+((8-chanstodisplay)*45),
                                maxval(60,266-(curpatrow-selBottom)*12),
-                               g._WRAP_map_rgba(128,128,128,128));
+                               g._WRAP_map_rgba(128,128,128,128));*/
+      }
     }
-  }
-  g._WRAP_draw_filled_rectangle(0,(follow)?(255):(fmax(60,255+(maxval(0,curstep)-curpatrow)*12)),scrW+1,((follow)?(266):(fmax(60,(255+(maxval(0,curstep)-curpatrow)*12)+11))),g._WRAP_map_rgba(64,64,64,128));
+    g._WRAP_draw_filled_rectangle(
+      0,
+      ((patStartY+(3*curzoom)+((follow)?(0):(12*(maxval(0,curstep)-curpatrow)*curzoom)))/dpiScale),
+      scrW+1,
+      ((patStartY+(15*curzoom)+((follow)?(0):(12*(maxval(0,curstep)-curpatrow)*curzoom)))/dpiScale),
+      g._WRAP_map_rgba(64,64,64,128));
   }
   // grid markers
   #ifdef MOUSE_GRID
