@@ -325,6 +325,8 @@ const char* sfxdata[32]={
   "$x!S4f4000V7fM3v04000100k01000000RRRRRRRRRRRRRRRRRRR!",
   // jump
   "$x!S0Y1ff0c00V7fM3v01800100k030081ffRRRRRRRRRRRRR!",
+  // success
+  "$x!O5V7fGM1v02000100RRRV7fO5BRRRV7fO6DRRRV7fO6GRRRRRRRRRRR!",
   NULL
 }; // sound effect data
 int cursfx=0; // current effect
@@ -416,7 +418,7 @@ int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=fi
 int maxinputsize=0;
 SDL_Rect inputRefRect;
 char* curdir;
-string curfname;
+string curfname, loadedfname;
 int pcmeditscale=0;
 int pcmeditseek=0;
 int pcmeditoffset=0;
@@ -2008,6 +2010,7 @@ void CleanupPatterns() {
   }
   // default variables
   defspeed=6;
+  songdf=0;
 }
 
 Color mapHSV(float hue,float saturation,float value) {
@@ -2484,7 +2487,7 @@ void drawdiskop() {
   // draws the file dialog
   g.tPos(0,5);
   g.tColor(15);
-  g.printf("Disk Operations|Open|Load|Save                                      |LoadSample|LoadRawSample\n\n");
+  g.printf("Disk Operations| New|Open|Save                                      |LoadSample|LoadRawSample\n\n");
   g._WRAP_draw_line(0,80,scrW,80,g._WRAP_map_rgb(255,255,255),1);
   g.printf("FilePath\n\n");
   g._WRAP_draw_line(0,104,scrW,104,g._WRAP_map_rgb(255,255,255),1);
@@ -3506,8 +3509,7 @@ int SaveFile() {
   
   // temporary, gonna get replaced by a better thing soon
   // just for the sake of linux
-  strcpy(rfn,"savefile");
-  popbox=PopupBox("Warning","work in progress! saving to savefile");
+  strcpy(rfn,(S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
   
   sfile=fopen(rfn,"wb");
   if (sfile!=NULL) { // write the file
@@ -4477,11 +4479,33 @@ void ClickEvents() {
       }
       
       if (PIR(168,60,200,72,mstate.x,mstate.y)) {
-        printf("\nplease write filename? ");
-        char rfn[256];
-        //gets(rfn);
-        int success=LoadFile(rfn);}
-      if (PIR(208,60,240,72,mstate.x,mstate.y)) {int success=SaveFile();}
+        int success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
+        if (success==0) {
+          loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
+        }
+      }
+      if (PIR(208,60,240,72,mstate.x,mstate.y)) {
+        int success;
+        if (loadedfname==(S(curdir)+S(SDIR_SEPARATOR)+curfname)) {
+          success=SaveFile();
+          if (success==0) triggerfx(4);
+        } else {
+          bool ffound;
+          ffound=false;
+          for (int i=0; i<filenames.size(); i++) {
+            if (curfname==filenames[i].name) {
+              popbox=PopupBox("Warning","overwrite file "+curfname+"? click on Save again to confirm.");
+              triggerfx(1);
+              ffound=true;
+              break;
+            }
+          }
+          if (!ffound) {
+            success=SaveFile();
+            if (success==0) triggerfx(4);
+          }
+        }
+      }
       /*if (PIR(248,60,320,72,mstate.x,mstate.y)) {int success=ImportMOD(filenames[selectedfileindex-1].name.c_str());}*/
       //if (PIR(328,60,400,72,mstate.x,mstate.y)) {int success=ImportS3M();}
       //if (PIR(408,60,472,72,mstate.x,mstate.y)) {int success=ImportIT();}
@@ -4528,6 +4552,9 @@ void ClickEvents() {
             } else {
               int success;
               success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
+              if (success==0) {
+                loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
+              }
             }
           } else {
             selectedfileindex=ii+1;
@@ -4769,9 +4796,9 @@ void FastTracker() {
   }
   if (curedmode==0) {
   // silences and stuff
-  if (kbpressed[71]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0d;EditSkip();}
-  if (kbpressed[70]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0f;EditSkip();}
-  if (kbpressed[28]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0e;EditSkip();}
+  if (kbpressed[SDL_SCANCODE_EQUALS]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0d;EditSkip();}
+  if (kbpressed[SDL_SCANCODE_1]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0f;EditSkip();}
+  if (kbpressed[SDL_SCANCODE_BACKSLASH]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0e;EditSkip();}
   // notes, main octave
   if (kbpressed[SDL_SCANCODE_Z]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x01+minval(curoctave<<4,0x90);EditSkip();}
   if (kbpressed[SDL_SCANCODE_X]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x03+minval(curoctave<<4,0x90);EditSkip();}
@@ -4785,10 +4812,6 @@ void FastTracker() {
   if (kbpressed[SDL_SCANCODE_G]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x07+minval(curoctave<<4,0x90);EditSkip();}
   if (kbpressed[SDL_SCANCODE_H]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x09+minval(curoctave<<4,0x90);EditSkip();}
   if (kbpressed[SDL_SCANCODE_J]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x0b+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[72]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[12]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x02+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[73]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[60]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x04+minval((curoctave+1)<<4,0x90);EditSkip();}
   // notes, 2nd octave
   if (kbpressed[SDL_SCANCODE_Q]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
   if (kbpressed[SDL_SCANCODE_W]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
@@ -4807,8 +4830,10 @@ void FastTracker() {
   if (kbpressed[SDL_SCANCODE_O]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x03+minval((curoctave+2)<<4,0x90);EditSkip();}
   if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x04+minval((curoctave+2)<<4,0x90);EditSkip();}
   if (kbpressed[SDL_SCANCODE_P]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x05+minval((curoctave+2)<<4,0x90);EditSkip();}
+  /*
   if (kbpressed[66]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x06+minval((curoctave+2)<<4,0x90);EditSkip();}
   if (kbpressed[65]) {pat[patid[curpat]][curstep][curedpage+curedchan][0]=0x07+minval((curoctave+2)<<4,0x90);EditSkip();}
+  */
   }
   if (curedmode==1) {
   if (kbpressed[SDL_SCANCODE_0]) {pat[patid[curpat]][curstep][curedpage+curedchan][1]=(pat[patid[curpat]][curstep][curedpage+curedchan][1]<<4);drawpatterns(true);}
