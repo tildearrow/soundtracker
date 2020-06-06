@@ -5176,13 +5176,14 @@ void drawdisp() {
   int selTop, selBottom;
   static int pointsToDraw=735;
   
-  float patStartY, patOffY;
+  float patStartX, patStartY, patOffY;
   
   if (playermode) {return;}
   ClickEvents();
   KeyboardEvents();
   // -(int)((((float)speed-(float)curtick)/(float)speed)*12.0f)
   if (screen==0) {
+    patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
     patStartY=(60+((scrH*dpiScale)-60)/2);
     patOffY=(curpatrow*12)*curzoom;
 #ifdef SMOOTH_SCROLL
@@ -5194,7 +5195,7 @@ void drawdisp() {
                           0,//maxval(0,curpatrow-16)*12,
                           g._WRAP_get_bitmap_width(patternbitmap),
                           scrH*dpiScale-maxval(60,252-(curpatrow*12)),
-                          (scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2,
+                          patStartX,
                           patStartY-patOffY,
                           curzoom,
                           0);
@@ -5225,11 +5226,11 @@ void drawdisp() {
     }
     for (int i=firstChan; i<=lastChan; i++) {
       for (int j=(i==firstChan)?firstMode:0; (j<5 && (i<lastChan || j<=lastMode)); j++) {
-        /*g._WRAP_draw_filled_rectangle(((scrW/2)-400)+modeOff[j]+(i*96)+((8-chanstodisplay)*45),
+        g._WRAP_draw_filled_rectangle((patStartX+modeOff[j]+(i*96))/dpiScale,
                                maxval(60,255-(curpatrow-selTop)*12),
-                               ((scrW/2)-400)+modeOff[j+1]+(i*96)+((8-chanstodisplay)*45),
+                               (patStartX+modeOff[j+1]+(i*96))/dpiScale,
                                maxval(60,266-(curpatrow-selBottom)*12),
-                               g._WRAP_map_rgba(128,128,128,128));*/
+                               g._WRAP_map_rgba(128,128,128,128));
       }
     }
     g._WRAP_draw_filled_rectangle(
