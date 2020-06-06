@@ -5105,22 +5105,22 @@ void KeyboardEvents() {
     #endif
     curedpage=0;
   };drawpatterns(true);drawmixerlayer();}
-  maxCTD=(scrW-24)/96;
-  if (maxCTD<1) maxCTD=1;
   if (kbpressed[SDL_SCANCODE_END]) {
     if (kb[SDL_SCANCODE_LSHIFT]) {
       curzoom++;
     } else {
       chanstodisplay++;
-      if (chanstodisplay>maxCTD) {
-        chanstodisplay=maxCTD;
-        #ifdef SOUNDS
+    }
+    maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+    if (maxCTD<1) maxCTD=1;
+    if (chanstodisplay>maxCTD) {
+      chanstodisplay=maxCTD;
+      if (!kb[SDL_SCANCODE_LSHIFT]) {
         triggerfx(1);
-        #endif
       }
-      if (curedpage>(32-chanstodisplay)) {
-        curedpage=(32-chanstodisplay);
-      }
+    }
+    if (curedpage>(32-chanstodisplay)) {
+      curedpage=(32-chanstodisplay);
     }
     drawpatterns(true);
     drawmixerlayer();
@@ -5724,14 +5724,14 @@ DETUNE_FACTOR_GLOBAL=1;
           scrW=g.getWSize().x;
           scrH=g.getWSize().y;
           mixer=g._WRAP_create_bitmap(scrW,scrH);
-          drawmixerlayer();
-          drawpatterns(true);
           // reduce channel count if needed
-          maxCTD=(scrW-24)/96;
+          maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
           if (maxCTD<1) maxCTD=1;
           if (chanstodisplay>maxCTD) {
             chanstodisplay=maxCTD;
           }
+          drawmixerlayer();
+          drawpatterns(true);
         }
       } else if (ev.type == SDL_KEYDOWN) {
         
