@@ -1361,7 +1361,7 @@ void NextRow() {
       }
       // finepitch
       if ((instrument[Mins[loop]].activeEnv&64)>>6) {
-      finepitch[loop]=(char)bytable[6][instrument[Mins[loop]].env[envHiPitch]][0];
+      finepitch[loop]=(signed char)bytable[6][instrument[Mins[loop]].env[envHiPitch]][0];
       cfreq[loop]=ProcessPitch(loop,0);
       EnvelopesRunning[loop][6]=true;}
       else {EnvelopesRunning[loop][6]=false;finepitch[loop]=0;}
@@ -1685,7 +1685,7 @@ void NextTick() {
       }
       // finepitch
       if ((instrument[Mins[loop2]].activeEnv&64)>>6) {
-      finepitch[loop2]=(char)bytable[6][instrument[Mins[loop2]].env[envHiPitch]][0];
+      finepitch[loop2]=(signed char)bytable[6][instrument[Mins[loop2]].env[envHiPitch]][0];
       cfreq[loop2]=ProcessPitch(loop2,0);
       EnvelopesRunning[loop2][6]=true;}
       else {EnvelopesRunning[loop2][6]=false;finepitch[loop2]=0;}
@@ -1797,7 +1797,7 @@ void NextTick() {
       UpdateEnvelope(loop2,6);
       // output
       if (EnvelopesRunning[loop2][6]) {
-      finepitch[loop2]+=(char)bytable[6][instrument[Mins[loop2]].env[envHiPitch]][inspos[loop2][6]];
+      finepitch[loop2]+=(signed char)bytable[6][instrument[Mins[loop2]].env[envHiPitch]][inspos[loop2][6]];
       cfreq[loop2]=ProcessPitch(loop2,0);
       }
     }
@@ -1953,7 +1953,7 @@ void NextTick() {
     if ((nfxvl[looper]%16)!=0) {curpandepth[looper]=nfxvl[looper]%16;}
     if ((nfxvl[looper]/16)!=0) {curpanspeed[looper]=nfxvl[looper]/16;}
     curpanpos[looper]++;
-    cpan[looper]=(char)((float)sine[(curpanpos[looper]*curpanspeed[looper]*4)%256]*((float)curpandepth[looper]/16));
+    cpan[looper]=(signed char)((float)sine[(curpanpos[looper]*curpanspeed[looper]*4)%256]*((float)curpandepth[looper]/16));
   }
   }
   AlreadySkipped=false;
@@ -2170,7 +2170,7 @@ void drawinsedit() {
     (CurrentEnv==7)?402-bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][ii]:
     (CurrentEnv==6)?interpolate(94,scrH-42,0.5):(scrH-42),
     ((ii-scrollpos)*valuewidth)+valuewidth,
-    (CurrentEnv==6)?interpolate(94,scrH-42,0.5)-(char)bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][ii]:
+    (CurrentEnv==6)?interpolate(94,scrH-42,0.5)-(signed char)bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][ii]:
     (scrH-43)-(bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][ii]*((scrH-128)/256)),
     (ii>bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][253])?g._WRAP_map_rgb(63,63,63): // out of range
     (ii>bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][255])?g._WRAP_map_rgb(192,0,192): // release
@@ -2183,7 +2183,7 @@ void drawinsedit() {
       (CurrentEnv==7)?402-bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][inspos[jj][CurrentEnv]]:
     (CurrentEnv==6)?interpolate(94,scrH-42,0.5):(scrH-42),
     ((inspos[jj][CurrentEnv]-scrollpos)*valuewidth)+valuewidth,
-    (CurrentEnv==6)?interpolate(94,scrH-42,0.5)-(char)bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][inspos[jj][CurrentEnv]]:
+    (CurrentEnv==6)?interpolate(94,scrH-42,0.5)-(signed char)bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][inspos[jj][CurrentEnv]]:
     (scrH-43)-(bytable[CurrentEnv][instrument[CurrentIns].env[CurrentEnv]][inspos[jj][CurrentEnv]]*((scrH-128)/256)),
     g._WRAP_map_rgb(0,255,0)); continue;
   }
@@ -4103,10 +4103,12 @@ void ClickEvents() {
   }
   
   if (popbox.isVisible()) {
-    if (leftpress) popbox.hide();
+    if (leftpress) {
+      popbox.hide();
 #ifdef ANDROID
-    if (noStoragePerm) quit=true;
+      if (noStoragePerm) quit=true;
 #endif
+    }
     return;
   }
 
@@ -5716,6 +5718,9 @@ DETUNE_FACTOR_GLOBAL=1;
      printf("playing: %s\n",name.c_str());}
    }
    printf("run\n");
+#ifdef ANDROID
+   if (noStoragePerm) triggerfx(1);
+#endif
    // run timer
 #ifndef JACK
    SDL_PauseAudioDevice(audioID,0);
