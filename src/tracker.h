@@ -3,6 +3,7 @@
 #define _TRACKER_H
 #include <stdio.h>
 #include <math.h>
+#include <errno.h>
 
 #if defined(ANDROID) || defined(_WIN32)
 #include <SDL.h>
