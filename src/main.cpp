@@ -4263,8 +4263,9 @@ void ClickEvents() {
         if (selStart<0) selStart=0;
         if (selStart>=patlength[patid[curpat]]) selStart=patlength[patid[curpat]]-1;
         
-        curedchan=minval(maxval(((400-(scrW/2))+mstate.x-16-((8-chanstodisplay)*44))/96,0),chanstodisplay-1);
-        switch ((((400-(scrW/2))+mstate.x-16-((8-chanstodisplay)*44))/8)%12) {
+        curedchan=(mstate.x*dpiScale-16*curzoom-patStartX)/(96*curzoom);
+        if (curedchan<0) curedchan=0;
+        switch ((int)((mstate.x*dpiScale-16*curzoom-patStartX)/(8*curzoom))%12) {
         case 0: curedmode=0; break;
         case 1: curedmode=0; break;
         case 2: curedmode=0; break;
@@ -4278,13 +4279,19 @@ void ClickEvents() {
         case 10: curedmode=4; break;
         case 11: curedmode=4; break;
         }
+        if (curedchan>=chanstodisplay) {
+          curedchan=chanstodisplay-1;
+          curedmode=4;
+        }
       }
       if (leftclick) {
         selEnd=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+curpatrow*12*curzoom)/(12*curzoom));
         if (selEnd<0) selEnd=0;
         if (selEnd>=patlength[patid[curpat]]) selEnd=patlength[patid[curpat]]-1;
-        curselchan=maxval(((400-(scrW/2))+mstate.x-16-((8-chanstodisplay)*44))/96,0);
-        switch ((((400-(scrW/2))+mstate.x-16-((8-chanstodisplay)*44))/8)%12) {
+        
+        curselchan=(mstate.x*dpiScale-16*curzoom-patStartX)/(96*curzoom);
+        if (curselchan<0) curselchan=0;
+        switch ((int)((mstate.x*dpiScale-16*curzoom-patStartX)/(8*curzoom))%12) {
         case 0: curselmode=0; break;
         case 1: curselmode=0; break;
         case 2: curselmode=0; break;
