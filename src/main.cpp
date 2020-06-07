@@ -5152,6 +5152,22 @@ void KeyboardEvents() {
     drawpatterns(true);
     drawmixerlayer();
   }
+  
+  // playback
+  if (kbpressed[SDL_SCANCODE_F5]) {
+    if (curtick==0) {
+      Play();
+    } else {
+      playmode=1;
+    }
+  }
+  if (kbpressed[SDL_SCANCODE_F6]) {
+    Play();
+  }
+  if (kbpressed[SDL_SCANCODE_F8]) {
+    playmode=0;
+  }
+  
   if (kbpressed[SDL_SCANCODE_TAB]) {MuteAllChannels();}
   if (kbpressed[SDL_SCANCODE_APPLICATION] || kbpressed[SDL_SCANCODE_GRAVE]) {ntsc=!ntsc; if (ntsc) {
     if (tempo==125) {
