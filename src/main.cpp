@@ -4254,11 +4254,15 @@ void ClickEvents() {
 
   // events only in pattern view
   if (screen==0) {
+    float patStartX, patStartY;
+    patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
+    patStartY=(60+((scrH*dpiScale)-60)/2);
     if (mstate.y>60) {
       if (leftpress) {
-        selStart=(int)((mstate.y-255+curpatrow*12)/12);
+        selStart=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+curpatrow*12*curzoom)/(12*curzoom));
         if (selStart<0) selStart=0;
         if (selStart>=patlength[patid[curpat]]) selStart=patlength[patid[curpat]]-1;
+        
         curedchan=minval(maxval(((400-(scrW/2))+mstate.x-16-((8-chanstodisplay)*44))/96,0),chanstodisplay-1);
         switch ((((400-(scrW/2))+mstate.x-16-((8-chanstodisplay)*44))/8)%12) {
         case 0: curedmode=0; break;
@@ -4276,7 +4280,7 @@ void ClickEvents() {
         }
       }
       if (leftclick) {
-        selEnd=(int)((mstate.y-255+curpatrow*12)/12);
+        selEnd=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+curpatrow*12*curzoom)/(12*curzoom));
         if (selEnd<0) selEnd=0;
         if (selEnd>=patlength[patid[curpat]]) selEnd=patlength[patid[curpat]]-1;
         curselchan=maxval(((400-(scrW/2))+mstate.x-16-((8-chanstodisplay)*44))/96,0);
