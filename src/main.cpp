@@ -4136,6 +4136,26 @@ void ClickEvents() {
   // screen event
   if (iface==UIMobile) {
     if (leftpress) {
+      // nullify input
+      if (!PIR(inputRefRect.x,inputRefRect.y,inputRefRect.x+inputRefRect.w,inputRefRect.y+inputRefRect.h,mstate.x,mstate.y)) {
+        if (inputvar!=NULL) {
+          inputvar=NULL;
+          inputcurpos=0;
+          maxinputsize=32;
+          
+          SDL_StopTextInput();
+          SDL_SetTextInputRect(NULL);
+          
+          if (inputwhere==1) {
+            if (name=="") {
+              g.setTitle(PROGRAM_NAME);
+            } else {
+              g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
+            }
+          }
+          inputwhere=0;
+        }
+      }
       if (pageSelectShow) {
         if (PIR(0,0,scrW,59,mstate.x,mstate.y)) {
           swX.setOut(&topScroll);
