@@ -5226,10 +5226,10 @@ void drawdisp() {
     }
     for (int i=firstChan; i<=lastChan; i++) {
       for (int j=(i==firstChan)?firstMode:0; (j<5 && (i<lastChan || j<=lastMode)); j++) {
-        g._WRAP_draw_filled_rectangle((patStartX+modeOff[j]+(i*96))/dpiScale,
-                               maxval(60,255-(curpatrow-selTop)*12),
-                               (patStartX+modeOff[j+1]+(i*96))/dpiScale,
-                               maxval(60,266-(curpatrow-selBottom)*12),
+        g._WRAP_draw_filled_rectangle((patStartX+(modeOff[j]+(i*96))*curzoom)/dpiScale,
+                               (patStartY+(3*curzoom)-(curpatrow-selTop)*12*curzoom)/dpiScale,
+                               (patStartX+(modeOff[j+1]+(i*96))*curzoom)/dpiScale,
+                               (patStartY+(15*curzoom)-(curpatrow-selBottom)*12*curzoom)/dpiScale,
                                g._WRAP_map_rgba(128,128,128,128));
       }
     }
