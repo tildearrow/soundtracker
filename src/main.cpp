@@ -509,6 +509,7 @@ bool mobAltView;
 float mobScroll;
 float topScroll;
 bool pageSelectShow;
+bool noStoragePerm;
 
 Swiper swX;
 Swiper swY;
@@ -2348,8 +2349,15 @@ void EditSkip() {
   }
   drawpatterns(true);
 }
-void ParentDir(char *thedir) {
+void ParentDir(char* thedir) {
   // set thedir to parent directory
+#ifdef ANDROID
+  // don't let the user escape device storage
+  if (strcmp(thedir,"/storage/emulated/0")==0) {
+    triggerfx(1);
+    return;
+  }
+#endif
 #ifdef _WIN32
   if (strcmp(thedir+1,":\\")==0 && thedir[0]>='A' && thedir[0]<='Z') {
     strcpy(thedir,"");
@@ -2491,11 +2499,17 @@ void drawdiskop() {
   g._WRAP_draw_line(0,80,scrW,80,g._WRAP_map_rgb(255,255,255),1);
   g.printf("FilePath\n\n");
   g._WRAP_draw_line(0,104,scrW,104,g._WRAP_map_rgb(255,255,255),1);
-  g.printf("<..>");
-  g.tPos((scrW/8.0f)-1,9);
-  g.printf("^");
-  g.tPos((scrW/8.0f)-1,((scrH-4)/12.0f)-3);
-  g.printf("v");
+  g.tColor(7);
+  g.printf("<go up>");
+  if (iface!=UIMobile) {
+    g.tPos((scrW/8.0f)-1,9);
+    g.printf("^");
+    g.tPos((scrW/8.0f)-1,((scrH-4)/12.0f)-3);
+    g.printf("v");
+    
+    // TODO: draw a scroll bar
+  }
+  g.tColor(15);
   
   g.tPos(9,7);
   if (strcmp(curdir,"")==0) {
@@ -3398,7 +3412,7 @@ int ImportS3M() {
 }
 
 #ifdef _WIN32
-bool print_entry(const char* filepath) {
+int print_entry(const char* filepath) {
   HANDLE flist;
   WIN32_FIND_DATAA next;
   string actualfp;
@@ -3439,20 +3453,20 @@ bool print_entry(const char* filepath) {
     } while (FindNextFileA(flist,&next));
     FindClose(flist);
   } else {
-    return false;
+    return -GetLastError();
   }
   printf("finish.\n");
   return true;
 }
 #else
-bool print_entry(const char* filepath) {
+int print_entry(const char* filepath) {
   DIR* flist;
   struct dirent* next;
   flist=opendir(filepath);
   // clean file list
   filenames.clear();
   if (flist==NULL) {
-    return false;
+    return -errno;
   }
   printf("listing dir...\n");
   int increment=0;
@@ -4090,6 +4104,9 @@ void ClickEvents() {
   
   if (popbox.isVisible()) {
     if (leftpress) popbox.hide();
+#ifdef ANDROID
+    if (noStoragePerm) quit=true;
+#endif
     return;
   }
 
@@ -4576,8 +4593,9 @@ void ClickEvents() {
               diskopscrollpos=0;
               selectedfileindex=-1;
               curfname="";
-              if (!print_entry(curdir)) {
-                popbox=PopupBox("Error","can't read directory!");
+              int peerrno;
+              if ((peerrno=print_entry(curdir))<0) {
+                popbox=PopupBox("Error","can't read directory! ("+S(strerror(-peerrno))+")");
                 triggerfx(1);
                 break;
               }
@@ -5530,6 +5548,7 @@ int main(int argc, char **argv) {
 #endif
   mobAltView=false;
   pageSelectShow=false;
+  noStoragePerm=false;
   mobScroll=0;
   topScroll=0;
   popbox=PopupBox(false);
@@ -5612,8 +5631,15 @@ DETUNE_FACTOR_GLOBAL=1;
 #else
    getcwd(curdir,4095);
 #endif
-   print_entry(curdir);
+   int peerrno=print_entry(curdir);
    unsigned char thenote=0;
+   
+#ifdef ANDROID
+   if (peerrno<0) {
+     popbox=PopupBox("Error","you need to grant Storage permission to this app.");
+     noStoragePerm=true;
+   }
+#endif
 
    if (!playermode) {
    printf("creating display\n");
