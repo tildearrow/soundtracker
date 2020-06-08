@@ -223,7 +223,7 @@ int chanstodisplay=8;
 int maxCTD=8;
 double patseek=0;
 int screen=0; // 0=patterns, 1=instruments 2=diskop 3=song 4=mixer 5=config 6=help 7=about
-int diskopscrollpos=0;
+float diskopscrollpos=0;
 bool kb[256]={false};
 bool kblast[256]={false};
 bool kbpressed[256]={false};
@@ -523,6 +523,7 @@ Button bdNew;
 Button bdOpen;
 Button bdSave;
 Swiper diskopSwiper;
+float doScroll;
 
 // NEW VARIABLES END //
 
@@ -2532,10 +2533,10 @@ void drawdiskop() {
   if (iface==UIMobile) {
     // more spacing
     if (selectedfileindex>(diskopscrollpos)) {
-      g._WRAP_draw_filled_rectangle(0,111+((selectedfileindex-diskopscrollpos)*36),scrW,123+24+((selectedfileindex-diskopscrollpos)*36),g._WRAP_map_rgb(128,128,128));
+      g._WRAP_draw_filled_rectangle(0,111+16+((selectedfileindex-1-diskopscrollpos)*36),scrW,123+24+16+((selectedfileindex-1-diskopscrollpos)*36),g._WRAP_map_rgb(128,128,128));
     }
-    for (int i=diskopscrollpos; i<minval(diskopscrollpos+(int(scrH/36)-9),filenames.size()); i++) {
-      g.tPos(0,10+i*3-diskopscrollpos);
+    for (int i=diskopscrollpos; i<minval(diskopscrollpos+((int(scrH/12)-9)/3),filenames.size()); i++) {
+      g.tPos(1,11.25+(i-diskopscrollpos)*3);
       g.tColor(filenames[i].isdir?14:15);
       g.printf(filenames[i].name.c_str());
     }
@@ -4623,10 +4624,9 @@ void ClickEvents() {
         int writeposition=0;
         //gets(rwpos);
         writeposition=0;//atoi(rwpos);
-        LoadRawSample(rfn,writeposition);}
-        if (PIR(0,scrH-24,scrW,scrH,mstate.x,mstate.y)) {
-          
-        } else for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+((int)(scrH/12)-12),filenames.size()); ii++) {
+        LoadRawSample(rfn,writeposition);
+      }
+      if (iface!=UIMobile && !PIR(0,scrH-24,scrW,scrH,mstate.x,mstate.y)) for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+((int)(scrH/12)-12),filenames.size()); ii++) {
         if (PIR(0,120+(ii*12)-(diskopscrollpos*12),scrW-8,131+(ii*12)-(diskopscrollpos*12),mstate.x,mstate.y)) {
           if (selectedfileindex==ii+1) {
             if (filenames[ii].isdir) {
@@ -4658,9 +4658,14 @@ void ClickEvents() {
           }
         }
       }
-    if (PIR(0,108,790,119,mstate.x,mstate.y)) {ParentDir(curdir);print_entry(curdir);diskopscrollpos=0;selectedfileindex=-1;}
+      if (iface!=UIMobile && PIR(0,108,790,119,mstate.x,mstate.y)) {
+        ParentDir(curdir);
+        print_entry(curdir);
+        diskopscrollpos=0;
+        selectedfileindex=-1;
+      }
     }
-    if (leftclick) {
+    if (iface!=UIMobile && leftclick) {
       if (PIR(scrW-8,108,scrW,119,mstate.x,mstate.y)) {diskopscrollpos--;if (diskopscrollpos<0) {diskopscrollpos=0;}}
       if (PIR(scrW-8,scrH-36,scrW,scrH-24,mstate.x,mstate.y)) {diskopscrollpos++;if (diskopscrollpos>maxval(0,(int)filenames.size()-((int)(scrH/12)-12))) {diskopscrollpos=maxval(0,(int)filenames.size()-((int)(scrH/12)-12));}}
     }
@@ -4669,6 +4674,31 @@ void ClickEvents() {
     }
     if ((mstate.z-prevZ)>0) {
       diskopscrollpos-=(mstate.z-prevZ)*4;if (diskopscrollpos<0) {diskopscrollpos=0;}
+    }
+
+    // mobile UI scroll thingy
+    if (iface==UIMobile) {
+      if (!PIR(0,scrH-24,scrW,scrH,mstate.x,mstate.y)) {
+        if (leftpress) {
+          diskopSwiper.setOut(&doScroll);
+          diskopSwiper.setRange(0,36*maxval(0,(int)filenames.size()-((int)(scrH/12)-12)/3));
+          diskopSwiper.setFrict(0.5);
+          diskopSwiper.start(mstate.y);
+        }
+        if (leftrelease) {
+          if (diskopSwiper.getStatus()!=swDragging) {
+            if (PIR(0,108,790,119,mstate.x,mstate.y)) {
+              ParentDir(curdir);
+              print_entry(curdir);
+              diskopscrollpos=0;
+              selectedfileindex=-1;
+            }
+          }
+          diskopSwiper.end(mstate.y);
+        }
+      }
+      diskopSwiper.update(mstate.y);
+      diskopscrollpos=doScroll/36;
     }
   }
   // events only in song view
