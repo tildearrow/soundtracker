@@ -522,6 +522,7 @@ Point maxTSize;
 Button bdNew;
 Button bdOpen;
 Button bdSave;
+Swiper diskopSwiper;
 
 // NEW VARIABLES END //
 
@@ -2502,12 +2503,22 @@ void drawdiskop() {
   g.tColor(7);
   g.printf("<go up>");
   if (iface!=UIMobile) {
+    // TODO: we don't need this if there's nothing to scroll
     g.tPos((scrW/8.0f)-1,9);
     g.printf("^");
     g.tPos((scrW/8.0f)-1,((scrH-4)/12.0f)-3);
     g.printf("v");
     
-    // TODO: draw a scroll bar
+    // draw scroll bar
+    if ((filenames.size()-(int(scrH/12)-12))>0) {
+      g._WRAP_draw_filled_rectangle(
+        scrW-7,
+        120+(scrH-130-38)*((float)diskopscrollpos/(float)(filenames.size()-(int(scrH/12)-12))),
+        scrW-1,
+        130+(scrH-130-38)*((float)diskopscrollpos/(float)(filenames.size()-(int(scrH/12)-12))),
+        g._WRAP_map_rgb(160,160,160)
+      );
+    }
   }
   g.tColor(15);
   
@@ -2517,13 +2528,26 @@ void drawdiskop() {
   } else {
     g.printf("%s",curdir);
   }
-  if (selectedfileindex>(diskopscrollpos)) {
-  g._WRAP_draw_filled_rectangle(0,111+((selectedfileindex-diskopscrollpos)*12),scrW,123+((selectedfileindex-diskopscrollpos)*12),g._WRAP_map_rgb(128,128,128));
-  }
-  for (int i=diskopscrollpos; i<minval(diskopscrollpos+(int(scrH/12)-9),filenames.size()); i++) {
-    g.tPos(0,10+i-diskopscrollpos);
-    g.tColor(filenames[i].isdir?14:15);
-    g.printf(filenames[i].name.c_str());
+
+  if (iface==UIMobile) {
+    // more spacing
+    if (selectedfileindex>(diskopscrollpos)) {
+      g._WRAP_draw_filled_rectangle(0,111+((selectedfileindex-diskopscrollpos)*36),scrW,123+24+((selectedfileindex-diskopscrollpos)*36),g._WRAP_map_rgb(128,128,128));
+    }
+    for (int i=diskopscrollpos; i<minval(diskopscrollpos+(int(scrH/36)-9),filenames.size()); i++) {
+      g.tPos(0,10+i*3-diskopscrollpos);
+      g.tColor(filenames[i].isdir?14:15);
+      g.printf(filenames[i].name.c_str());
+    }
+  } else {
+    if (selectedfileindex>(diskopscrollpos)) {
+      g._WRAP_draw_filled_rectangle(0,111+((selectedfileindex-diskopscrollpos)*12),scrW,123+((selectedfileindex-diskopscrollpos)*12),g._WRAP_map_rgb(128,128,128));
+    }
+    for (int i=diskopscrollpos; i<minval(diskopscrollpos+(int(scrH/12)-9),filenames.size()); i++) {
+      g.tPos(0,10+i-diskopscrollpos);
+      g.tColor(filenames[i].isdir?14:15);
+      g.printf(filenames[i].name.c_str());
+    }
   }
   
   g._WRAP_draw_filled_rectangle(0,scrH-24,scrW,scrH,g._WRAP_map_rgb(0,0,0));
