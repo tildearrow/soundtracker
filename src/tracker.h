@@ -363,7 +363,7 @@ class Graphics {
       SDL_RenderSetScale(sdlRend,dpiScale,dpiScale);
     }
     void _WRAP_draw_scaled_bitmap(SDL_Texture* bitmap, float sx, float sy, float sw, float sh, float dx, float dy, float dw, float dh, int flags) {
-      SDL_Rect sr, dr, tr;
+      SDL_Rect sr, dr;
       sr.x=sx;
       sr.y=sy;
       sr.w=sw;

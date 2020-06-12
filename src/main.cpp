@@ -415,7 +415,7 @@ int inputcurpos=0;
 int chantoplayfx=0;
 string* inputvar=NULL;
 int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
-int maxinputsize=0;
+size_t maxinputsize=string::npos;
 SDL_Rect inputRefRect;
 char* curdir;
 string curfname, loadedfname;
@@ -562,9 +562,11 @@ int nothing(jack_nframes_t nframes, void* arg) {
 static void nothing(void* userdata, Uint8* stream, int len) {
 #endif
   float* buf[2];
+#ifndef JACK
   signed char* buf8[2];
   short* buf16[2];
   int* buf32[2];
+#endif
   float temp[4];
 #ifdef JACK
   for (int i=0; i<2; i++) {
@@ -1090,7 +1092,7 @@ int noteperiod(unsigned char note) {
   return 300000/(440*(pow(2.0f,(float)((hscale(note)-57)/12))));
 }
 
-int mnoteperiod(float note, int chan) {
+unsigned int mnoteperiod(float note, int chan) {
   return (int)((6203.34-(songdf*2))*(pow(2.0f,(float)(((float)note-58)/12.0f))));
 }
 
@@ -2799,24 +2801,6 @@ void drawpiano() {
   }
 }
 
-// TO BE REPLACED
-void drawcomments() {
-  int DRAWCUR_X=0;
-  int DRAWCUR_Y=0;
-  for (int ii=0;ii<comments.size();ii++) {
-  if (comments[ii]==13) {DRAWCUR_X=0;DRAWCUR_Y++;continue;}
-  DRAWCUR_X++;
-  if (DRAWCUR_X>(scrW/8)) {DRAWCUR_X=0;DRAWCUR_Y++;}
-  if (DRAWCUR_Y>((scrH/12)-5)) {break;}
-  if (ii==(inputcurpos-1) && inputwhere==4) {
-    g._WRAP_draw_line(1+(DRAWCUR_X*8),60+(DRAWCUR_Y*12),1+(DRAWCUR_X*8),75+(DRAWCUR_Y*12),g._WRAP_map_rgb(255,255,0),1);
-  }
-  }
-  g.tPos(0,5);
-  g.tColor(15);
-  g.printf(comments.c_str());
-}
-
 void drawsfxpanel() {
   // TODO after the SDL port
 }
@@ -2939,7 +2923,6 @@ int ImportIT(FILE* it) {
     int64_t size;
   char * memblock;
   int sk;
-  bool istherenote=false;
   int samples;
   //string fn;
   int NextByte;
@@ -2960,7 +2943,7 @@ int ImportIT(FILE* it) {
   if (it!=NULL) { // read the file
   printf("loading IT file, ");
     size=fsize(it);
-  printf("%d bytes\n",size);
+  printf("%ld bytes\n",size);
     memblock=new char[size];
     fseek(it,0,SEEK_SET);
     fread(memblock,1,size,it);
@@ -3101,7 +3084,6 @@ int ImportMOD(FILE* mod) {
     int64_t size;
   char * memblock;
   int sk;
-  bool istherenote=false;
   //string fn;
   int chans;
   int CurrentSampleSeek=0;
@@ -3110,7 +3092,7 @@ int ImportMOD(FILE* mod) {
   printf("loading MOD file, ");
   CleanupPatterns();
     size=fsize(mod);
-  printf("%d bytes\n",size);
+  printf("%ld bytes\n",size);
     memblock=new char[size];
     fseek(mod,0,SEEK_SET);
     fread(memblock,1,size,mod);
@@ -3188,7 +3170,7 @@ int ImportMOD(FILE* mod) {
     printf("%d patterns\n",patterns);
     if (settings::samples) {
     printf("putting samples to PCM memory if possible\n");
-    printf("%d bytes",size-1084-(patterns*chans*64*4));
+    printf("%ld bytes",size-1084-(patterns*chans*64*4));
     memcpy(chip[0].pcm,memblock+1084+((patterns+1)*chans*64*4),minval(65280,size-1084-((patterns+1)*chans*64*4)));
     if (size-1084-((patterns+1)*chans*64*4)>65280) {
       popbox=PopupBox("Warning","out of PCM memory to load all samples!");
@@ -3214,7 +3196,6 @@ int ImportMOD(FILE* mod) {
         NFX=(unsigned char)memblock[sk+(importid*(chans*256))+(indxr*(chans*4))+(ichan*4)+2]%16;
         NFXVAL=(unsigned char)memblock[sk+(importid*(chans*256))+(indxr*(chans*4))+(ichan*4)+3];
         // conversion stuff
-        istherenote=true;
         switch(NPERIOD) {
           case 56: if (verbose) printf("B-7 "); pat[importid][indxr][ichan][0]=0x7c; break;
           case 60: if (verbose) printf("A#7 "); pat[importid][indxr][ichan][0]=0x7b; break;
@@ -3277,8 +3258,8 @@ int ImportMOD(FILE* mod) {
           case 1524: if (verbose) printf("D-3 "); pat[importid][indxr][ichan][0]=0x33; break;
           case 1616: if (verbose) printf("C#3 "); pat[importid][indxr][ichan][0]=0x32; break;
           case 1712: if (verbose) printf("C-3 "); pat[importid][indxr][ichan][0]=0x31; break;
-          case 0: if (verbose) printf("--- "); pat[importid][indxr][ichan][0]=0x00; istherenote=false; break;
-          default: if (verbose) printf("??? "); pat[importid][indxr][ichan][0]=0x00; istherenote=false; printf("invalid note! %d at row %d channel %d\n",NPERIOD,indxr,ichan); break;
+          case 0: if (verbose) printf("--- "); pat[importid][indxr][ichan][0]=0x00; break;
+          default: if (verbose) printf("??? "); pat[importid][indxr][ichan][0]=0x00; printf("invalid note! %d at row %d channel %d\n",NPERIOD,indxr,ichan); break;
         }
         //if (verbose) cout << gethnibble(NINS) << getlnibble(NINS) << " ";
         pat[importid][indxr][ichan][1]=NINS;
@@ -3287,16 +3268,16 @@ int ImportMOD(FILE* mod) {
           case 0: if (NFXVAL!=0) {pat[importid][indxr][ichan][3]=10;pat[importid][indxr][ichan][4]=NFXVAL;} else {pat[importid][indxr][ichan][3]=0;pat[importid][indxr][ichan][4]=0;}; break;
           case 1: pat[importid][indxr][ichan][3]=6;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 2: pat[importid][indxr][ichan][3]=5;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 3: pat[importid][indxr][ichan][3]=7;pat[importid][indxr][ichan][4]=NFXVAL;istherenote=false; break;
+          case 3: pat[importid][indxr][ichan][3]=7;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 4: pat[importid][indxr][ichan][3]=8;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 5: pat[importid][indxr][ichan][3]=12;pat[importid][indxr][ichan][4]=NFXVAL;istherenote=false; break;
+          case 5: pat[importid][indxr][ichan][3]=12;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 6: pat[importid][indxr][ichan][3]=11;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 7: pat[importid][indxr][ichan][3]=18;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 8: pat[importid][indxr][ichan][3]=24;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 9: pat[importid][indxr][ichan][3]=15;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 10: pat[importid][indxr][ichan][3]=4;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 11: pat[importid][indxr][ichan][3]=2;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 12: pat[importid][indxr][ichan][2]=0x40+minval(NFXVAL,0x3f);pat[importid][indxr][ichan][4]=0;istherenote=false; break;
+          case 12: pat[importid][indxr][ichan][2]=0x40+minval(NFXVAL,0x3f);pat[importid][indxr][ichan][4]=0; break;
           case 13: pat[importid][indxr][ichan][3]=3;pat[importid][indxr][ichan][4]=NFXVAL; break;
           case 14: pat[importid][indxr][ichan][3]=19;switch (NFXVAL>>4) {
             case 1: pat[importid][indxr][ichan][4]=0xf0+(NFXVAL%16); pat[importid][indxr][ichan][3]=6; break;
@@ -3312,7 +3293,6 @@ int ImportMOD(FILE* mod) {
             }; break;
           case 15: pat[importid][indxr][ichan][3]=1;pat[importid][indxr][ichan][4]=NFXVAL;if (NFXVAL>0x20) {pat[importid][indxr][ichan][3]=20;}; break;
         }
-        //if (istherenote) {pat[importid][indxr][ichan][2]=0x7f;}
       }
       //if (verbose) cout << "\n";
     }
@@ -3340,7 +3320,6 @@ int ImportS3M() {
   int NextByte;
   int NextChannel;
   int CurrentRow;
-  bool istherenote=false;
   FILE *s3m;
   int insparas[99];
   int patparas[256];
@@ -3352,7 +3331,7 @@ int ImportS3M() {
   if (s3m!=NULL) { // read the file
     printf("loading S3M file, ");
     size=fsize(s3m);
-    printf("%d bytes\n",size);
+    printf("%ld bytes\n",size);
     memblock=new char[size];
     fseek(s3m,0,SEEK_SET);
     fread(memblock,1,size,s3m);
@@ -3495,38 +3474,37 @@ int print_entry(const char* filepath) {
   }
   printf("listing dir...\n");
   int increment=0;
-      FileInList neext;
-      neext.name="";
-      neext.isdir=false;
-      
-      while ((next=readdir(flist))!=NULL) {
-        if (strcmp(next->d_name,".")==0) continue;
-        if (strcmp(next->d_name,"..")==0) continue;
-        neext.name=next->d_name;
-        //printf("%-36s\n",neext.name.c_str());
-        neext.isdir=next->d_type&DT_DIR;
-        filenames.push_back(neext);
-        increment++;
+  FileInList neext;
+  neext.name="";
+  neext.isdir=false;
+  
+  while ((next=readdir(flist))!=NULL) {
+    if (strcmp(next->d_name,".")==0) continue;
+    if (strcmp(next->d_name,"..")==0) continue;
+    neext.name=next->d_name;
+    neext.isdir=next->d_type&DT_DIR;
+    filenames.push_back(neext);
+    increment++;
+  }
+  closedir(flist);
+  // sort the files
+  string tempname;
+  bool tempisdir=false;
+  tempname="";
+  for (size_t ii=0; ii<filenames.size(); ii++) {
+    for (size_t j=0; j<filenames.size()-1; j++) {
+      if (strcmp(filenames[j].name.c_str(), filenames[j+1].name.c_str()) > 0) {
+        tempname=filenames[j].name;
+        tempisdir=filenames[j].isdir;
+        filenames[j].name=filenames[j+1].name;
+        filenames[j].isdir=filenames[j+1].isdir;
+        filenames[j+1].name=tempname;
+        filenames[j+1].isdir=tempisdir;
       }
-      closedir(flist);
-      // sort the files
-      string tempname;
-      bool tempisdir=false;
-      tempname="";
-      for (int ii=0; ii<filenames.size(); ii++) { // oooooohhhhhh ok it was the "i"
-      for (int j=0; j<filenames.size()-1; j++) {
-         if (strcmp(filenames[j].name.c_str(), filenames[j+1].name.c_str()) > 0) {
-      tempname=filenames[j].name;
-      tempisdir=filenames[j].isdir;
-      filenames[j].name=filenames[j+1].name;
-      filenames[j].isdir=filenames[j+1].isdir;
-      filenames[j+1].name=tempname;
-      filenames[j+1].isdir=tempisdir;
-         }
-      }
-      }
-      printf("finish.\n");
-      return true;
+    }
+  }
+  printf("finish.\n");
+  return true;
 }
 #endif
 
@@ -3557,11 +3535,8 @@ int SaveFile() {
   if (sfile!=NULL) { // write the file
     fseek(sfile,0,SEEK_SET); // seek to 0
     printf("writing headers...\n");
-    printf("%d ",ftell(sfile));
     fwrite("TRACK8BT",1,8,sfile); // magic number
-    printf("%d ",ftell(sfile));
     fwrite(&ver,2,1,sfile); // version
-    printf("%d ",ftell(sfile));
     fputc(instruments,sfile); // instruments
     fputc(patterns,sfile); // patterns
     fputc(orders,sfile); // orders
@@ -3569,9 +3544,7 @@ int SaveFile() {
     fputc(seqs,sfile); // sequences
     fputc(125,sfile); // tempo
     fputs(name.c_str(),sfile); // name
-    printf("%d ",ftell(sfile));
     fseek(sfile,48,SEEK_SET); // seek to 0x30
-    printf("%d ",ftell(sfile));
     fputc(0,sfile); // default filter mode
     fputc(32,sfile); // channels
     fwrite("\0\0",2,1,sfile); // flags
@@ -3582,12 +3555,10 @@ int SaveFile() {
     fwrite("\0\0",2,1,sfile); // reserved
     fseek(sfile,0x3e,SEEK_SET); // seek to 0x3e
     fputc(songdf,sfile); // detune factor
-    printf("%d ",ftell(sfile));
     fseek(sfile,0x40,SEEK_SET); // seek to 0x40
     fwrite(defchanvol,1,32,sfile); // channel volume
     fwrite(defchanpan,1,32,sfile); // channel panning
     fseek(sfile,0x80,SEEK_SET); // seek to 0x80
-    printf("%d ",ftell(sfile));
     for (int ii=0; ii<256; ii++) {
       fputc(patid[ii],sfile); // order list
     }
@@ -3687,12 +3658,10 @@ int SaveFile() {
       fwrite(&CPL,4,1,sfile);
       fseek(sfile,oldseek,SEEK_SET);
     }
-    printf("%d ",ftell(sfile));
     // write comments
     commentpointer=ftell(sfile);
     fwrite(comments.c_str(),1,comments.size(),sfile);
     fseek(sfile,comments.size()+2,SEEK_CUR);
-    printf("%d ",ftell(sfile));
     // write PCM data
     pcmpointer=ftell(sfile);
     bool IS_PCM_DATA_BLANK=true;
@@ -3732,10 +3701,8 @@ int LoadFile(const char* filename) {
   FILE *sfile;
   int sk=0;
   int CurrentRow=0;
-  int maskdata=0; // mask byte
   int NextByte=0;
   int NextChannel=0;
-  int CPL=0; // current pattern packlength
   int insparas[256];
   int patparas[256];
   int seqparas[256];
@@ -4034,7 +4001,6 @@ void SaveInstrument() {
   if (sfile!=NULL) { // write the file
     fseek(sfile,0,SEEK_SET); // seek to 0
     printf("writing header...\n");
-    printf("%d ",ftell(sfile));
     fwrite("TRACKINS",1,8,sfile); // magic number
     fwrite(&instrument[CurrentIns],1,64,sfile);
     printf("writing envelopes...\n");
@@ -4166,7 +4132,7 @@ void ClickEvents() {
         if (inputvar!=NULL) {
           inputvar=NULL;
           inputcurpos=0;
-          maxinputsize=32;
+          maxinputsize=0;
           
           SDL_StopTextInput();
           SDL_SetTextInputRect(NULL);
@@ -4271,7 +4237,7 @@ void ClickEvents() {
         if (inputvar!=NULL) {
           inputvar=NULL;
           inputcurpos=0;
-          maxinputsize=32;
+          maxinputsize=0;
           
           SDL_StopTextInput();
           SDL_SetTextInputRect(NULL);
@@ -4445,7 +4411,7 @@ void ClickEvents() {
       // TODO this
       if (PIR(528,132,784,144,mstate.x,mstate.y)) {
         inputvar=&tempInsName;
-        inputcurpos=minval((mstate.x-524)/8,inputvar->size());
+        inputcurpos=minval((mstate.x-524)/8,(signed)inputvar->size());
         maxinputsize=32;
         inputwhere=2;
         
@@ -4562,7 +4528,7 @@ void ClickEvents() {
       // filename input
       if (PIR(72,scrH-24,scrW,scrH,mstate.x,mstate.y)) {
         inputvar=&curfname;
-        inputcurpos=minval((mstate.x-72)/8,inputvar->size());
+        inputcurpos=minval((mstate.x-72)/8,(signed)inputvar->size());
         maxinputsize=4095;
         inputwhere=5;
 
@@ -4588,7 +4554,7 @@ void ClickEvents() {
         } else {
           bool ffound;
           ffound=false;
-          for (int i=0; i<filenames.size(); i++) {
+          for (size_t i=0; i<filenames.size(); i++) {
             if (curfname==filenames[i].name) {
               popbox=PopupBox("Warning","overwrite file "+curfname+"? click on Save again to confirm.");
               triggerfx(1);
@@ -4608,22 +4574,16 @@ void ClickEvents() {
       if (PIR(552,60,632,72,mstate.x,mstate.y)) {
         printf("\nplease write filename? ");
         char rfn[256];
-        char rwpos[256];
-        //gets(rfn);
         printf("\nwrite position? ");
         int writeposition=0;
-        //gets(rwpos);
-        writeposition=0;//atoi(rwpos);
+        writeposition=0;
         LoadSample(rfn,writeposition);}
       if (PIR(640,60,744,72,mstate.x,mstate.y)) {
         printf("\nplease write filename? ");
         char rfn[256];
-        char rwpos[256];
-        //gets(rfn);
         printf("\nwrite position? ");
         int writeposition=0;
-        //gets(rwpos);
-        writeposition=0;//atoi(rwpos);
+        writeposition=0;
         LoadRawSample(rfn,writeposition);
       }
       if (iface!=UIMobile && !PIR(0,scrH-24,scrW,scrH,mstate.x,mstate.y)) for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+((int)(scrH/12)-12),filenames.size()); ii++) {
@@ -4639,8 +4599,8 @@ void ClickEvents() {
               diskopscrollpos=0;
               selectedfileindex=-1;
               curfname="";
-              int peerrno;
-              if ((peerrno=print_entry(curdir))<0) {
+              int peerrno=print_entry(curdir);
+              if (peerrno<0) {
                 popbox=PopupBox("Error","can't read directory! ("+S(strerror(-peerrno))+")");
                 triggerfx(1);
                 break;
@@ -4706,7 +4666,7 @@ void ClickEvents() {
     if (leftpress) {
     if (PIR(88,84,344,96,mstate.x,mstate.y)) {
       inputvar=&name;
-      inputcurpos=minval((mstate.x-84)/8,inputvar->size());
+      inputcurpos=minval((mstate.x-84)/8,(signed)inputvar->size());
       maxinputsize=32;
       inputwhere=1;
 
@@ -4786,7 +4746,7 @@ void ClickEvents() {
     if (leftpress) {
       if (PIR(0,60,scrW,scrH,mstate.x,mstate.y)) {
         inputvar=&comments;
-        inputcurpos=minval(mstate.x/8,inputvar->size());
+        inputcurpos=minval(mstate.x/8,(signed)inputvar->size());
         maxinputsize=65535;
         inputwhere=4;
 
@@ -5579,7 +5539,6 @@ void drawdisp() {
     case 5: drawconfig(); break;
     case 6: drawhelp(); break;
     case 7: drawabout(); break;
-    case 8: drawcomments(); break;
     case 9: drawsfxpanel(); break;
     case 10: drawmemory(); break;
     case 11: drawpcmeditor(); break;
@@ -5673,8 +5632,6 @@ DETUNE_FACTOR_GLOBAL=1;
    filessorted.resize(1024);
    filenames.resize(1024);
    //int success=0;
-   bool is_audio_inited=false;
-   int helpfilesize;
    if (iface==UIMobile) {
      scrW=360;
      scrH=640;
@@ -5686,10 +5643,6 @@ DETUNE_FACTOR_GLOBAL=1;
    patlength=new unsigned char[256];
     helptext=new char[18];
     strcpy(helptext,"help.txt not found");
-  // allocate memory for files
-  /*for (int ii=0;ii<1024;ii++) {
-  filenames[ii].name=new char[257];
-  }*/
 
    printf("initializing SDL\n");
    if (!g.preinit()) {
@@ -5708,12 +5661,15 @@ DETUNE_FACTOR_GLOBAL=1;
    getcwd(curdir,4095);
 #endif
    int peerrno=print_entry(curdir);
-   unsigned char thenote=0;
    
 #ifdef ANDROID
    if (peerrno<0) {
      popbox=PopupBox("Error","you need to grant Storage permission to this app.");
      noStoragePerm=true;
+   }
+#else
+   if (peerrno<0) {
+     popbox=PopupBox("Error","you need to grant Storage permission to this app.");
    }
 #endif
 
@@ -5879,8 +5835,8 @@ DETUNE_FACTOR_GLOBAL=1;
             break;
           case SDLK_RIGHT:
             inputcurpos++;
-            if (inputcurpos>inputvar->size()) {
-              inputcurpos=inputvar->size();
+            if (inputcurpos>(signed)inputvar->size()) {
+              inputcurpos=(signed)inputvar->size();
               triggerfx(1);
             }
             break;
@@ -5916,24 +5872,6 @@ DETUNE_FACTOR_GLOBAL=1;
           triggerfx(1);
         }
       }
-      /*
-      if (inputvar!=NULL) {
-      if (ev.key.keysym.sym==SDLK_BACKSPACE) {inputcurpos--; if (inputcurpos<0) {inputcurpos=0;}; inputvar[inputcurpos]=0;}
-      else if (ev.key.keysym.sym==SDLK_RIGHT) {
-        inputcurpos++; if (inputcurpos>(int)strlen(inputvar)) {inputcurpos=strlen(inputvar);}
-      } else if (ev.key.keysym.sym==SDLK_LEFT) {
-        inputcurpos--; if (inputcurpos<0) {inputcurpos=0;}
-      } else if (ev.key.keysym.sym==SDLK_HOME) {
-        inputcurpos=0;
-      } else if (ev.key.keysym.sym==SDLK_END) {
-        inputcurpos=strlen(inputvar);
-      } else { if (maxinputsize>inputcurpos) {
-      memmove(inputvar+1+inputcurpos,inputvar+inputcurpos,maxinputsize-inputcurpos);
-      //inputvar[inputcurpos]=ev.keyboard.unichar;
-      inputcurpos++;} else {sfxpos=0;}
-      //printf("new inputvar value: %s\n",inputvar);
-      }
-      */
     }
       }
       if (true) {
