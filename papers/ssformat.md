@@ -2,6 +2,8 @@
 
 the format is very similar to the one used in family BASIC for the play command.
 
+every property may take a value from a Lisp expression if it contains parentheses (e.g. `f(* 256 4)`.
+
 ## proper format
 
 + $: select channel.
@@ -32,6 +34,7 @@ the format is very similar to the one used in family BASIC for the play command.
 
 - /: go to line.
 
+- =: execute Lisp expression/ignore value.
 
 ## sweep config format
 
