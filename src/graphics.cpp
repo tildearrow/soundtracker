@@ -1,6 +1,9 @@
 #include "tracker.h"
 #include "unifont.h"
 
+extern const unsigned char unifont_bin[2097152];
+extern const unsigned char unifont_siz[8192];
+
 float intens[6]={
   0, 0.37, 0.53, 0.68, 0.84, 1
 };
