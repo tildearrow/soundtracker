@@ -20,6 +20,7 @@ every property may take a value from a Lisp expression if it contains parenthese
 - g: reset filter.
 - h: set ring/sync flags.
 + R: finish tick, then rest for a number of ticks.
++ ;: finish tick.
 
 - [#]CDEFGAB: notes. appending a number will add that number of octaves to the base one.
 
@@ -35,6 +36,7 @@ every property may take a value from a Lisp expression if it contains parenthese
 - /: go to line.
 
 - =: execute Lisp expression/ignore value.
+- ?: go to line if expression is true.
 
 ## sweep config format
 

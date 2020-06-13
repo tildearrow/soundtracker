@@ -1173,6 +1173,101 @@ int FreeChannel() {
   }
   return candidate;
 }
+
+string strFormat(const char* format, ...) {
+  va_list va;
+  char str[4096];
+  string ret;
+  va_start(va,format);
+  if (vsnprintf(str,4095,format,va)<0) {
+    va_end(va);
+    return string("");
+  }
+  va_end(va);
+  ret=str;
+  return ret;
+}
+
+// convert sequence into ssinter format
+string seqToSS(int insid, int seqid) {
+  string ret;
+  if (!(instrument[insid].activeEnv&(1<<seqid))) return "";
+  int iseq=instrument[insid].env[seqid];
+  int len=bytable[seqid][iseq][253];
+  ret="$~";
+  switch (seqid) {
+    case 0: // volume
+      for (int i=0; i<=len; i++) {
+        ret+=strFormat("V%.2x;",bytable[seqid][iseq][i]>>1);
+      }
+      break;
+    case 1: // cutoff
+      ret+=strFormat("I%d",instrument[insid].DFM&7);
+      if (!(instrument[insid].activeEnv&4)) {
+        ret+="r30";
+      }
+      for (int i=0; i<=len; i++) {
+        ret+=strFormat("c%.4x;",(bytable[seqid][iseq][i]*(65535-instrument[insid].filterH))/255);
+      }
+      break;
+    case 2: // resonance
+      for (int i=0; i<=len; i++) {
+        ret+=strFormat("r%.2x;",bytable[seqid][iseq][i]);
+      }
+      break;
+    case 3: // duty
+      for (int i=0; i<=len; i++) {
+        ret+=strFormat("Y%.2x;",bytable[seqid][iseq][i]>>1);
+      }
+      break;
+    case 4: // shape
+      for (int i=0; i<=len; i++) {
+        ret+=strFormat("S%d;",bytable[seqid][iseq][i]>>5);
+      }
+      break;
+    case 5: // pitch
+      for (int i=0; i<=len; i++) {
+        if (instrument[insid].activeEnv&64) {
+          if (bytable[seqid][iseq][i]<0x40) { // up
+            ret+=strFormat("f(* xf (trans (+ f %d));",bytable[seqid][iseq][i]);
+          } else if (bytable[seqid][iseq][i]<0x80) { // down
+            ret+=strFormat("f(* xf (trans (+ f -%d)));",bytable[seqid][iseq][i]-0x40);
+          } else { // note
+            ret+=strFormat("f(note (+ f %d));",bytable[seqid][iseq][i]-0x80);
+          }
+        } else {
+          if (bytable[seqid][iseq][i]<0x40) { // up
+            ret+=strFormat("f(* xf (trans %d));",bytable[seqid][iseq][i]);
+          } else if (bytable[seqid][iseq][i]<0x80) { // down
+            ret+=strFormat("f(* xf (trans -%d));",bytable[seqid][iseq][i]-0x40);
+          } else { // note
+            ret+=strFormat("f(note %d);",bytable[seqid][iseq][i]-0x80);
+          }
+        }
+      }
+      break;
+    case 6: // fine pitch
+      ret+="=(setq f 0)";
+      for (int i=0; i<=len; i++) {
+        ret+=strFormat("=(setq f (+ f %d))",(signed char)bytable[seqid][iseq][i]);
+        if (instrument[insid].activeEnv&32) {
+          ret+=";";
+        } else {
+          ret+="f(* xf (trans f))";
+        }
+      }
+      break;
+    case 7: // pan
+      for (int i=0; i<=len; i++) {
+        ret+=strFormat("P%d;",bytable[seqid][iseq][i]);
+      }
+      break;
+    default: // invalid
+      return "";
+  }
+  return ret;
+}
+
 void NextRow() {
   //// PROCESS NEXT ROW ////
   // forward code
@@ -3980,6 +4075,22 @@ int LoadFile(const char* filename) {
     } else {
       g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
     }
+    
+    // debug conversion
+    for (int i=1; i<255; i++) {
+      if (instrument[i].activeEnv) {
+        printf("--INSTRUMENT %d--\n",i);
+        printf("vol: %s\n",seqToSS(i,0).c_str());
+        printf("cut: %s\n",seqToSS(i,1).c_str());
+        printf("res: %s\n",seqToSS(i,2).c_str());
+        printf("duty: %s\n",seqToSS(i,3).c_str());
+        printf("shape: %s\n",seqToSS(i,4).c_str());
+        printf("finepitch: %s\n",seqToSS(i,6).c_str());
+        printf("pitch: %s\n",seqToSS(i,5).c_str());
+        printf("pan: %s\n",seqToSS(i,7).c_str());
+      }
+    }
+    
     return 0;
   } else {
     perror("can't open file");
