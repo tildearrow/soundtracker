@@ -115,7 +115,7 @@ void Graphics::tColor(unsigned char color) {
   //fprintf(stderr,"\x1b[38;5;%dm",color);
 }
 
-int decodeUTF8(char* data, char& len) {
+int decodeUTF8(unsigned char* data, char& len) {
   int ret=0xfffd;
   if (data[0]<0x80) {
     ret=data[0];
@@ -173,7 +173,7 @@ int Graphics::printf(const char* format, ...) {
   
   clen=0;
   for (int i=0; i<ret; i+=clen) {
-    ch=decodeUTF8(&putBuf[i],clen);
+    ch=decodeUTF8((unsigned char*)&putBuf[i],clen);
     //fputc(putBuf[i],stderr);
     if (ch=='\n' || ch=='\r') {
       textPos.x=nlPos;
