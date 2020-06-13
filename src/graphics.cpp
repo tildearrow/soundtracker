@@ -115,6 +115,50 @@ void Graphics::tColor(unsigned char color) {
   //fprintf(stderr,"\x1b[38;5;%dm",color);
 }
 
+int decodeUTF8(char* data, char& len) {
+  int ret=0xfffd;
+  if (data[0]<0x80) {
+    ret=data[0];
+    len=1;
+  } else if (data[0]<0xc0) {
+    ret=0xfffd; // invalid
+    len=1;
+  } else if (data[0]<0xe0) {
+    if (data[1]>=0x80 && data[1]<0xc0) {
+      len=2;
+      ret=((data[0]&31)<<6)|
+          (data[1]&63);
+    } else len=1;
+  } else if (data[0]<0xf0) {
+    if (data[1]>=0x80 && data[1]<0xc0) {
+      if (data[2]>=0x80 && data[2]<0xc0) {
+        len=3;
+        ret=((data[0]&15)<<12)|
+            ((data[1]&63)<<6)|
+            (data[2]&63);
+      } else len=2;
+    } else len=1;
+  } else if (data[0]<0xf5) {
+    if (data[1]>=0x80 && data[1]<0xc0) {
+      if (data[2]>=0x80 && data[2]<0xc0) {
+        if (data[3]>=0x80 && data[3]<0xc0) {
+          len=4;
+          ret=((data[0]&7)<<18)|
+              ((data[1]&63)<<12)|
+              ((data[2]&63)<<6)|
+              (data[3]&63);
+        } else len=3;
+      } else len=2;
+    } else len=1;
+  } else {
+    len=1;
+    return 0xfffd;
+  }
+
+  if ((ret>=0xd800 && ret<=0xdfff) || ret>=0x110000) return 0xfffd;
+  return ret;
+}
+
 int Graphics::printf(const char* format, ...) {
   va_list va;
   SDL_Rect sr, dr;
