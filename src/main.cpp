@@ -414,6 +414,7 @@ string comments;
 int inputcurpos=0;
 int chantoplayfx=0;
 string* inputvar=NULL;
+string candInput;
 int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
 size_t maxinputsize=string::npos;
 SDL_Rect inputRefRect;
@@ -4661,7 +4662,9 @@ void ClickEvents() {
         int success;
         if (loadedfname==(S(curdir)+S(SDIR_SEPARATOR)+curfname)) {
           success=SaveFile();
-          if (success==0) triggerfx(4);
+          if (success==0) {
+            triggerfx(4);
+          }
         } else {
           bool ffound;
           ffound=false;
@@ -4675,6 +4678,7 @@ void ClickEvents() {
           }
           if (!ffound) {
             success=SaveFile();
+            loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
             if (success==0) triggerfx(4);
           }
         }
@@ -4756,16 +4760,56 @@ void ClickEvents() {
           diskopSwiper.setFrict(0.5);
           diskopSwiper.start(mstate.y);
         }
+        if (diskopSwiper.getStatus()==swHolding) {
+          // selection check here
+          for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+((int)(scrH/12)-12)/3,filenames.size()); ii++) {
+            if (PIR(0,125+(ii*36)-(diskopscrollpos*36),scrW-8,136+24+(ii*36)-(diskopscrollpos*36),mstate.x,mstate.y)) {
+              selectedfileindex=ii+1;
+            }
+          }
+        } else {
+          selectedfileindex=-1;
+        }
         if (leftrelease) {
           if (diskopSwiper.getStatus()!=swDragging) {
+            diskopSwiper.end(mstate.y);
             if (PIR(0,108,790,119,mstate.x,mstate.y)) {
               ParentDir(curdir);
               print_entry(curdir);
+              diskopSwiper.setRange(0,36*maxval(0,(int)filenames.size()-((int)(scrH/12)-12)/3));
               diskopscrollpos=0;
               selectedfileindex=-1;
             }
+            if (selectedfileindex>=0) {
+              curfname=filenames[selectedfileindex-1].name;
+              if (filenames[selectedfileindex-1].isdir) {
+                if (strcmp(curdir,"")!=0) {
+                  if (curdir[strlen(curdir)-1]!=DIR_SEPARATOR) {
+                    strcat(curdir,SDIR_SEPARATOR);
+                  }
+                }
+                strcat(curdir,curfname.c_str());
+                diskopscrollpos=0;
+                selectedfileindex=-1;
+                curfname="";
+                int peerrno=print_entry(curdir);
+                diskopSwiper.setRange(0,36*maxval(0,(int)filenames.size()-((int)(scrH/12)-12)/3));
+                if (peerrno<0) {
+                  popbox=PopupBox("Error","can't read directory! ("+S(strerror(-peerrno))+")");
+                  triggerfx(1);
+                }
+              } else {
+                int success;
+                selectedfileindex=-1;
+                success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
+                if (success==0) {
+                  loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
+                }
+              }
+            }
+          } else {
+            diskopSwiper.end(mstate.y);
           }
-          diskopSwiper.end(mstate.y);
         }
       }
       diskopSwiper.update(mstate.y);
@@ -5655,7 +5699,13 @@ void drawdisp() {
     case 11: drawpcmeditor(); break;
     case 12: drawpiano(); break;
   }
-  
+
+  if (candInput!="") {
+    g.tPos(scrW/8-candInput.size(),0);
+    g.tColor(10);
+    g.printf("%s",candInput.c_str());
+  }  
+
   if (popbox.isVisible()) popbox.draw();
 }
 int playfx(const char* fxdata,int fxpos,int achan) {
@@ -5971,9 +6021,10 @@ DETUNE_FACTOR_GLOBAL=1;
       }
     } else if (ev.type == SDL_TEXTEDITING) {
       printf("Text Editing Event!\n");
+      candInput=ev.text.text;
       //popbox=PopupBox("Text Edit","IME detected. Handle this.");
     } else if (ev.type == SDL_TEXTINPUT) {
-
+      candInput="";
       printf("the input would be %c.\n",ev.text.text[0]);
       if (inputvar!=NULL) {
         if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
