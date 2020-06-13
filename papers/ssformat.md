@@ -46,3 +46,20 @@ every property may take a value from a Lisp expression if it contains parenthese
 - volume:
   - SSSSaabb
     - S: speed. a: amount/dir/loop/loopi. b: bound.
+    
+## Lisp symbols
+
+the SSLisp interpreter is minimalistic, and therefore only supports one or two-letter symbol names.
+
+the following symbols are set by ssinter:
+
+- `xf`: frequency
+- `xv`: volume
+- `xc`: cutoff
+
+- `xl`: current frame
+
+## Lisp functions
+
+- `(note x)`: calculate note frequency for `x`
+- `(trans x)`: calculate transpose for `x` semitones
