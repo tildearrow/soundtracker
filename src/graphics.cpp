@@ -162,7 +162,8 @@ int decodeUTF8(char* data, char& len) {
 int Graphics::printf(const char* format, ...) {
   va_list va;
   SDL_Rect sr, dr;
-  int ret;
+  int ret, ch;
+  char clen;
   va_start(va,format);
   ret=vsnprintf(putBuf,4095,format,va);
   
@@ -170,17 +171,19 @@ int Graphics::printf(const char* format, ...) {
     tPos(textPos.x-(float)ret*align,textPos.y);
   }
   
-  for (int i=0; i<ret; i++) {
+  clen=0;
+  for (int i=0; i<ret; i+=clen) {
+    ch=decodeUTF8(&putBuf[i],clen);
     //fputc(putBuf[i],stderr);
-    if (putBuf[i]=='\n' || putBuf[i]=='\r') {
+    if (ch=='\n' || ch=='\r') {
       textPos.x=nlPos;
       textPos.y++;
       if (nlPos!=0) {
         //fprintf(stderr,"\x1b[%d;%dH",(int)textPos.y+1,(int)textPos.x+1);
       }
     } else {
-      sr.x=(putBuf[i]&15)*16;
-      sr.y=(putBuf[i]>>4)*16;
+      sr.x=(ch&15)*16;
+      sr.y=((ch>>4)&15)*16;
       sr.w=16;
       sr.h=16;
       dr.x=textPos.x*8;
