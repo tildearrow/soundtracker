@@ -64,7 +64,6 @@ uint32_t jacksr;
 
 #include "soundchip.h"
 soundchip chip[4]; // up to 4 soundchips
-#define soundchips 2
 
 const bool verbose=false; // change this to turn on verbose mode
 signed char songdf=0;
@@ -406,8 +405,9 @@ bool leftclickprev=false;
 bool rightclick=false;  
 bool rightclickprev=false;
 int prevZ=0;
+int channels=8;
 int hover[16]={}; // hover time per button
-int16_t ver=145; // version number
+int16_t ver=146; // version number
 unsigned char chs0[5000];
 char* helptext;
 string comments;
@@ -624,7 +624,7 @@ static void nothing(void* userdata, Uint8* stream, int len) {
       for (int updateindex1=0;updateindex1<32;updateindex1++) {
         if (muted[updateindex1]) {
           cvol[updateindex1]=0;
-          if (updateindex1<(8*soundchips)) {
+          if (updateindex1<(8*(1+((channels-1)>>3)))) {
             chip[updateindex1>>3].chan[updateindex1&7].vol=0;
           }
         }
@@ -632,7 +632,7 @@ static void nothing(void* userdata, Uint8* stream, int len) {
       ASC::currentclock+=ASC::interval;
     }
     temp[2]=0; temp[3]=0;
-    for (int j=0; j<soundchips; j++) {
+    for (int j=0; j<(1+((channels-1)>>3)); j++) {
       chip[j].NextSample(&temp[0],&temp[1]);
       temp[2]+=temp[0]; temp[3]+=temp[1];
     }
@@ -2063,7 +2063,7 @@ void NextTick() {
 }
 void Playback() {
   NextTick();
-  for (int i=0; i<8*soundchips; i++) {
+  for (int i=0; i<8*(1+((channels-1)>>3)); i++) {
     if (sfxplaying && i==chantoplayfx) continue;
     chip[i>>3].chan[i&7].vol=(cvol[i]*chanvol[i])>>7;
     chip[i>>3].chan[i&7].pan=cpan[i];
@@ -2112,6 +2112,7 @@ void CleanupPatterns() {
   // default variables
   defspeed=6;
   songdf=0;
+  channels=8;
 }
 
 Color mapHSV(float hue,float saturation,float value) {
@@ -2701,7 +2702,7 @@ void drawsong() {
   // draws the disk operations dialog
   g.tColor(15);
   g.tPos(0,5);
-  g.printf("DefSpeed   v^|Channels  v^|beat   v^|bar   v^|detune   v^-+|length   v^-+|tempo   v^-+|speed   v^\n");
+  g.printf("Tuning     v^|Channels   v^|beat   v^|bar   v^|detune   v^-+|length   v^-+|tempo    v^-+|speed   v^\n");
   g.printf("---------------------------------------------------------------------------------------------------\n");
   g.printf("|Song Name\n");
   g.printf("---------------------------------------------------------------------------------------------------\n");
@@ -2723,11 +2724,29 @@ void drawsong() {
     inputCursor(89,85,97);
   }
   g.tColor(11);
-  g.tPos(53,5);
+  
+  // tuning
+  g.tPos(7,5);
+  g.printf(" PAL");
+  
+  // channels
+  g.tPos(22,5);
+  g.printf("%2d",channels);
+  
+  // detune
+  g.tPos(54,5);
   g.printf("%.2x",(unsigned char)songdf);
-  g.tPos(67,5);
+  
+  // length
+  g.tPos(68,5);
   g.printf("%.2x",songlength);
-  g.tPos(93,5);
+  
+  // tempo
+  g.tPos(81,5);
+  g.printf("%d",125);
+  
+  // speed
+  g.tPos(95,5);
   g.printf("%.2X",defspeed);
 }
 void drawhelp() {
@@ -3097,6 +3116,7 @@ int ImportIT(FILE* it) {
     printf("%d\n",patparas[sk]);
     }
     // load/unpack patterns
+    channels=1;
     for (int pointer=0;pointer<patterns;pointer++) {
     printf("-unpacking pattern %d-\n",pointer);
     CurrentRow=0;
@@ -3114,6 +3134,10 @@ int ImportIT(FILE* it) {
       continue;
     }
     NextChannel=(NextByte-1)&31;
+    if (NextChannel>=channels) {
+      channels=NextChannel+1;
+      if (channels>32) channels=32;
+    }
     if ((NextByte&128)==128) {
       a++;
       NextMask[NextChannel]=(unsigned char)memblock[sk+a];
@@ -3411,6 +3435,7 @@ int ImportMOD(FILE* mod) {
   } else {
     g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
   }
+  channels=chans;
   return 0;
 }
 int ImportS3M() {
@@ -3647,7 +3672,7 @@ int SaveFile() {
     fputs(name.c_str(),sfile); // name
     fseek(sfile,48,SEEK_SET); // seek to 0x30
     fputc(0,sfile); // default filter mode
-    fputc(32,sfile); // channels
+    fputc(channels,sfile); // channels
     fwrite("\0\0",2,1,sfile); // flags
     fputc(128,sfile); // global volume
     fputc(0,sfile); // global panning
@@ -3813,6 +3838,7 @@ int LoadFile(const char* filename) {
   int TVER;
   int oplaymode;
   bool IS_SEQ_BLANK[256];
+  bool detectChans=false;
   char *checkstr=new char[8];
   sfile=fopen(filename,"rb");
   if (sfile!=NULL) { // LOAD the file
@@ -3865,6 +3891,7 @@ int LoadFile(const char* filename) {
     if (TVER<143) {printf("-applying old sequence format compatibility\n");}
     if (TVER<144) {printf("-applying endianness compatibility\n");}
     if (TVER<145) {printf("-applying channel pan/vol compatibility\n");}
+    if (TVER<146) {printf("-applying no channel count compatibility\n");}
     //if (TVER<??) {printf("-applying legacy instrument compatibility\n");}
     //printf("%d ",ftell(sfile));
     instruments=fgetc(sfile); // instruments
@@ -3882,10 +3909,15 @@ int LoadFile(const char* filename) {
       name+=ncache;
     }
     //printf("%d ",ftell(sfile));
-    fseek(sfile,48,SEEK_SET); // seek to 0x30
+    fseek(sfile,49,SEEK_SET); // seek to 0x31
     //printf("%d ",ftell(sfile));
     //fputc(sfile,0); // default filter mode
-    //fputc(sfile,32); // channels
+    if (TVER<146) {
+      detectChans=true;
+      channels=1;
+    } else {
+      channels=fgetc(sfile); // channels
+    }
     //fputsh(sfile,0); // flags
     //fputc(sfile,128); // global volume
     //fputc(sfile,0); // global panning
@@ -4049,6 +4081,11 @@ int LoadFile(const char* filename) {
       continue;
     }
     NextChannel=NextByte%32;
+    if (detectChans) {
+      if (NextChannel>=channels) {
+        channels=NextChannel+1;
+      }
+    }
     if ((NextByte>>5)%2) {
       a++;
       pat[pointer][CurrentRow][NextChannel][0]=fgetc(sfile);
@@ -4730,6 +4767,12 @@ void ClickEvents() {
               success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
               if (success==0) {
                 loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
+                // adjust channel count if needed
+                maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+                if (maxCTD>channels) maxCTD=channels;
+                if (maxCTD<1) maxCTD=1;
+                chanstodisplay=maxCTD;
+                drawmixerlayer();
               }
             }
           } else {
@@ -4809,6 +4852,12 @@ void ClickEvents() {
                 success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
                 if (success==0) {
                   loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
+                  // adjust channel count if needed
+                  maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+                  if (maxCTD>channels) maxCTD=channels;
+                  if (maxCTD<1) maxCTD=1;
+                  chanstodisplay=maxCTD;
+                  drawmixerlayer();
                 }
               }
             }
@@ -5237,7 +5286,7 @@ void MuteControls() {
   if (kbpressed[SDL_SCANCODE_COMMA]) {muted[31]=!muted[31];}
 }
 void MuteAllChannels() {
-  for (int su=0;su<8*soundchips;su++) {
+  for (int su=0;su<8*(1+((channels-1)>>3));su++) {
     if (sfxplaying && su==chantoplayfx) continue;
     cvol[su]=0;
     chip[su>>3].chan[su&7].vol=0;
@@ -5306,7 +5355,7 @@ void KeyboardEvents() {
   // main code here
   if (edittype && screen==0) {FastTracker();} else {ModPlug();}
   if (screen==4) {MuteControls();}
-  if (kbpressed[SDL_SCANCODE_PAGEDOWN]) {curedpage++; if (curedpage>(32-chanstodisplay)) {curedpage=(32-chanstodisplay);
+  if (kbpressed[SDL_SCANCODE_PAGEDOWN]) {curedpage++; if (curedpage>(channels-chanstodisplay)) {curedpage=(channels-chanstodisplay);
     #ifdef SOUNDS
     triggerfx(1);
     #endif
@@ -5320,38 +5369,36 @@ void KeyboardEvents() {
   if (kbpressed[SDL_SCANCODE_END]) {
     if (kb[SDL_SCANCODE_LSHIFT]) {
       curzoom++;
-    } else {
-      chanstodisplay++;
-    }
-    maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
-    if (maxCTD<1) maxCTD=1;
-    if (chanstodisplay>maxCTD) {
-      chanstodisplay=maxCTD;
-      if (!kb[SDL_SCANCODE_LSHIFT]) {
-        triggerfx(1);
+      maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+      if (maxCTD<1) maxCTD=1;
+      if (chanstodisplay>maxCTD) {
+        chanstodisplay=maxCTD;
       }
+      if (curedpage>(channels-chanstodisplay)) {
+        curedpage=(channels-chanstodisplay);
+      }
+      drawpatterns(true);
+      drawmixerlayer();
     }
-    if (curedpage>(32-chanstodisplay)) {
-      curedpage=(32-chanstodisplay);
-    }
-    drawpatterns(true);
-    drawmixerlayer();
   }
   if (kbpressed[SDL_SCANCODE_HOME]) {
     if (kb[SDL_SCANCODE_LSHIFT]) {
       curzoom--;
-      if (curzoom<1) curzoom=1;
-    } else {
-      chanstodisplay--;
-      if (chanstodisplay<1) {
-        chanstodisplay=1;
-        #ifdef SOUNDS
+      if (curzoom<1) {
         triggerfx(1);
-        #endif
+        curzoom=1;
+      } else {
+        maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+        if (maxCTD<1) maxCTD=1;
+        if (maxCTD>=channels) maxCTD=channels;
+        chanstodisplay=maxCTD;
+        if (curedpage>(channels-chanstodisplay)) {
+          curedpage=(channels-chanstodisplay);
+        }
+        drawpatterns(true);
+        drawmixerlayer();
       }
     }
-    drawpatterns(true);
-    drawmixerlayer();
   }
   
   // playback
@@ -5409,16 +5456,30 @@ void drawdisp() {
   if (playermode) {return;}
   ClickEvents();
   KeyboardEvents();
-  // -(int)((((float)speed-(float)curtick)/(float)speed)*12.0f)
   if (screen==0) {
     patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
     patStartY=(60+((scrH*dpiScale)-60)/2);
     patOffY=(curpatrow*12)*curzoom;
+    
+    // top bar
+    for (int i=0; i<chanstodisplay; i++) {
+      g.tPos(patStartX/(8*dpiScale)+(3+5.5+(12*i))*(float(curzoom)/float(dpiScale)),5);
+      if (!muted[i+curedpage]) {
+        g.tColor(14);
+      } else {
+        g.tColor(8);
+      }
+      g.tAlign(0.5);
+      g.printf("%d",i+curedpage);
+      g.tAlign(0);
+    }
+    g._WRAP_draw_line(0,80,scrW,80,g._WRAP_map_rgb(255,255,255),1);
+    
 #ifdef SMOOTH_SCROLL
     g._WRAP_draw_bitmap_region(patternbitmap,0,-minval(0,189-(curpatrow*12)+(int)(((float)curtick/(float)speed)*12.0)),g._WRAP_get_bitmap_width(patternbitmap),g._WRAP_get_bitmap_height(patternbitmap),0,60+maxval(0,189-(curpatrow*12)+(int)(((float)curtick/(float)speed)*12.0)),0);
 #else
     //g._WRAP_draw_bitmap(patternbitmap,0,0,0);
-    g._WRAP_set_clipping_rectangle(0,60,scrW,scrH-60);
+    g._WRAP_set_clipping_rectangle(0,81,scrW,scrH-81);
     g._WRAP_disregard_scale_draw(patternbitmap,0,
                           0,//maxval(0,curpatrow-16)*12,
                           g._WRAP_get_bitmap_width(patternbitmap),
@@ -5427,7 +5488,6 @@ void drawdisp() {
                           patStartY-patOffY,
                           curzoom,
                           0);
-    g._WRAP_reset_clipping_rectangle();
     #endif
     firstChan=curedchan; firstMode=curedmode;
     lastChan=curselchan; lastMode=curselmode;
@@ -5467,6 +5527,7 @@ void drawdisp() {
       scrW+1,
       ((patStartY+(15*curzoom)+((follow)?(0):(12*(maxval(0,curstep)-curpatrow)*curzoom)))/dpiScale),
       g._WRAP_map_rgba(64,64,64,128));
+    g._WRAP_reset_clipping_rectangle();
   }
   // grid markers
   #ifdef MOUSE_GRID
@@ -5965,12 +6026,11 @@ DETUNE_FACTOR_GLOBAL=1;
           scrW=g.getWSize().x;
           scrH=g.getWSize().y;
           mixer=g._WRAP_create_bitmap(scrW,scrH);
-          // reduce channel count if needed
+          // adjust channel count if needed
           maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+          if (maxCTD>channels) maxCTD=channels;
           if (maxCTD<1) maxCTD=1;
-          if (chanstodisplay>maxCTD) {
-            chanstodisplay=maxCTD;
-          }
+          chanstodisplay=maxCTD;
           drawmixerlayer();
           drawpatterns(true);
         }
