@@ -1013,9 +1013,9 @@ unsigned char getVFXColor(int fxval) {
   if (fxval<128 && fxval>63) {return 27;} // 64-127
   if (fxval<193 && fxval>127) {return 6;} // 128-192
   switch((fxval-1)/10) {
-  case 0: return 1; break; // 1-10
-  case 1: return 1; break; // 11-20
-  case 2: return 1; break; // 21-30
+  case 0: return 2; break; // 1-10
+  case 1: return 2; break; // 11-20
+  case 2: return 2; break; // 21-30
   case 3: return 2; break; // 31-40
   case 4: return 3; break; // 41-50
   case 5: return 3; break; // 51-60
@@ -5479,9 +5479,25 @@ void drawdisp() {
     patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
     patStartY=(60+((scrH*dpiScale)-60)/2);
     patOffY=(curpatrow*12)*curzoom;
+    Color barcol;
     
     // top bar
+    int rectX;
     for (int i=0; i<chanstodisplay; i++) {
+      if (cshape[i+curedpage]==0) {
+        barcol=mapHSV(250-(cduty[i+curedpage]),0.67,1);
+      } else {
+        barcol=g._WRAP_map_rgb(
+          (cshape[i+curedpage]==4 || cshape[i+curedpage]==1 || cshape[i+curedpage]==5)?(255):(0),
+          (cshape[i+curedpage]!=5)?(255):(0),
+          (cshape[i+curedpage]!=1 && cshape[i+curedpage]!=2)?(255):(0)
+        );
+      }
+      barcol.a=0.1+float(cvol[i+curedpage])/200.0f;
+      rectX=patStartX/dpiScale+(3+5.5+(12*i))*8*(float(curzoom)/float(dpiScale));
+      g._WRAP_draw_filled_rectangle(rectX+6,67,rectX+6+38*(float(curzoom)/float(dpiScale))*(float((cvol[i+curedpage]*(127-maxval(0,-cpan[i+curedpage])))>>7)/127.0f),73,barcol);
+      g._WRAP_draw_filled_rectangle(rectX-6,67,rectX-6-38*(float(curzoom)/float(dpiScale))*(float((cvol[i+curedpage]*(127-maxval(0,cpan[i+curedpage])))>>7)/127.0f),73,barcol);
+      
       g.tPos(patStartX/(8*dpiScale)+(3+5.5+(12*i))*(float(curzoom)/float(dpiScale)),5);
       if (!muted[i+curedpage]) {
         g.tColor(14);
