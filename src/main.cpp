@@ -417,6 +417,7 @@ string* inputvar=NULL;
 string candInput;
 int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
 size_t maxinputsize=string::npos;
+bool imeActive=false;
 SDL_Rect inputRefRect;
 char* curdir;
 string curfname, loadedfname;
@@ -5986,6 +5987,8 @@ DETUNE_FACTOR_GLOBAL=1;
    if (!playermode) {g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
    // flip buffers
    g._WRAP_flip_display();
+   SDL_StopTextInput();
+   SDL_SetTextInputRect(NULL);
    drawpatterns(true);
 }
    //printf("%d",argc);
@@ -6069,7 +6072,7 @@ DETUNE_FACTOR_GLOBAL=1;
         }
       } else if (ev.type == SDL_KEYDOWN) {
       //printf("event, %c\n",ev.keyboard.unichar);
-      if (inputvar!=NULL) {
+      if (inputvar!=NULL && !imeActive) {
         switch (ev.key.keysym.sym) {
           case SDLK_LEFT:
             inputcurpos--;
@@ -6104,14 +6107,19 @@ DETUNE_FACTOR_GLOBAL=1;
         }
       }
     } else if (ev.type == SDL_TEXTEDITING) {
-      printf("Text Editing Event!\n");
-      candInput=ev.text.text;
+      candInput=ev.edit.text;
+      if (ev.edit.start>0) {
+        imeActive=true;
+      } else {
+        imeActive=false;
+      }
     } else if (ev.type == SDL_TEXTINPUT) {
+      imeActive=false;
       candInput="";
       if (inputvar!=NULL) {
         if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
           inputvar->insert(utf8pos(inputvar->c_str(),inputcurpos),ev.text.text);
-          inputcurpos++;
+          inputcurpos+=utf8len(ev.text.text);;
         } else {
           triggerfx(1);
         }
