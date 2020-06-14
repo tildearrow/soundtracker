@@ -190,11 +190,19 @@ class Graphics {
   float align;
   float dpiScale;
   
+  // texture pages are 512x512 each and contain 1024 characters
+  bool loadedPage[64];
+  
   SDL_Window* sdlWin;
   SDL_Renderer* sdlRend;
   //TTF_Font* sdlFont;
   SDL_Surface* fontCache;
   SDL_Texture* sdlText;
+  
+  SDL_Surface* uCache;
+  SDL_Texture* uText[64];
+  
+  void loadPage(int num);
   public:
     Point getTPos();
     Point getWSize();

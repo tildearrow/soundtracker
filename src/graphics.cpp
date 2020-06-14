@@ -4,6 +4,8 @@
 extern const unsigned char unifont_bin[2097152];
 extern const unsigned char unifont_siz[8192];
 
+#define CHAR_WIDTH(x) ((unifont_siz[x>>3]&(1<<(x&7)))?2:1)
+
 float intens[6]={
   0, 0.37, 0.53, 0.68, 0.84, 1
 };
@@ -115,6 +117,29 @@ void Graphics::tColor(unsigned char color) {
   //fprintf(stderr,"\x1b[38;5;%dm",color);
 }
 
+void Graphics::loadPage(int num) {
+  ::printf("loading page %d\n",num);
+  uCache=SDL_CreateRGBSurfaceWithFormat(0,32*16,32*16,32,SDL_PIXELFORMAT_RGBA32);
+  for (int h=0; h<32; h++) {
+    for (int i=0; i<32; i++) {
+      for (int j=0; j<16; j++) {
+        for (int k=0; k<16; k++) {
+          ((unsigned char*)uCache->pixels)[(h<<15)+(i<<6)+(j<<11)+(k<<2)]=255;
+          ((unsigned char*)uCache->pixels)[(h<<15)+(i<<6)+(j<<11)+(k<<2)+1]=255;
+          ((unsigned char*)uCache->pixels)[(h<<15)+(i<<6)+(j<<11)+(k<<2)+2]=255;
+          ((unsigned char*)uCache->pixels)[(h<<15)+(i<<6)+(j<<11)+(k<<2)+3]=
+            (unifont_bin[(num<<15)+(h<<10)+(i<<5)+(j<<1)+(k>>3)]&(1<<((15-k)&7)))?255:0;
+        }
+      }
+    }
+  }
+  
+  uText[num]=SDL_CreateTextureFromSurface(sdlRend,uCache);
+  loadedPage[num]=true;
+  
+  SDL_FreeSurface(uCache);
+}
+
 int decodeUTF8(unsigned char* data, char& len) {
   int ret=0xfffd;
   if (data[0]<0x80) {
@@ -159,6 +184,10 @@ int decodeUTF8(unsigned char* data, char& len) {
   return ret;
 }
 
+size_t utf8len(const char* s) {
+  return 0;
+}
+
 int Graphics::printf(const char* format, ...) {
   va_list va;
   SDL_Rect sr, dr;
@@ -182,18 +211,34 @@ int Graphics::printf(const char* format, ...) {
         //fprintf(stderr,"\x1b[%d;%dH",(int)textPos.y+1,(int)textPos.x+1);
       }
     } else {
-      sr.x=(ch&15)*16;
-      sr.y=((ch>>4)&15)*16;
-      sr.w=16;
-      sr.h=16;
-      dr.x=textPos.x*8;
-      dr.y=textPos.y*12;
-      dr.w=16;
-      dr.h=16;
-      SDL_SetTextureColorMod(sdlText,textCol.r*255,textCol.g*255,textCol.b*255);
-      SDL_SetTextureAlphaMod(sdlText,textCol.a*255);
-      SDL_RenderCopy(sdlRend,sdlText,&sr,&dr);
-      textPos.x++;
+      if (ch<256) {
+        sr.x=(ch&15)*16;
+        sr.y=((ch>>4)&15)*16;
+        sr.w=16;
+        sr.h=16;
+        dr.x=textPos.x*8;
+        dr.y=textPos.y*12;
+        dr.w=16;
+        dr.h=16;
+        SDL_SetTextureColorMod(sdlText,textCol.r*255,textCol.g*255,textCol.b*255);
+        SDL_SetTextureAlphaMod(sdlText,textCol.a*255);
+        SDL_RenderCopy(sdlRend,sdlText,&sr,&dr);
+      } else {
+        if (!loadedPage[ch>>10]) loadPage(ch>>10);
+        
+        sr.x=(ch&31)*16;
+        sr.y=((ch>>5)&31)*16;
+        sr.w=16;
+        sr.h=16;
+        dr.x=textPos.x*8;
+        dr.y=textPos.y*12;
+        dr.w=16;
+        dr.h=16;
+        SDL_SetTextureColorMod(uText[ch>>10],textCol.r*255,textCol.g*255,textCol.b*255);
+        SDL_SetTextureAlphaMod(uText[ch>>10],textCol.a*255);
+        SDL_RenderCopy(sdlRend,uText[ch>>10],&sr,&dr);
+      }
+      textPos.x+=CHAR_WIDTH(ch);
     }
   }
   va_end(va);
@@ -207,7 +252,6 @@ void Graphics::setTarget(SDL_Texture* where) {
 void Graphics::setTitle(string t) {
   SDL_SetWindowTitle(sdlWin,t.c_str());
 }
-
 
 void Graphics::trigResize(int tx, int ty) {
   scrSize.x=tx/dpiScale;
@@ -241,6 +285,8 @@ bool Graphics::preinit() {
 bool Graphics::init(int width, int height) {
   tPos(0,0);
   tColor(15);
+  
+  for (int i=0; i<64; i++) loadedPage[i]=false;
 
   if (SDL_InitSubSystem(SDL_INIT_VIDEO)==-1) return false;
   

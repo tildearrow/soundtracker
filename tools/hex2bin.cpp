@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
       break;
     }
     memset(glyph,0,32);
+    h++;
     do {
       if (str[h]=='\n' || str[h]==0) break;
       glyph[glyphSize>>1]<<=4;
