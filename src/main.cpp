@@ -824,50 +824,50 @@ float lengthdir_x(float len,float dir) {
 float lengthdir_y(float len,float dir) {
   return len*sin(dir*(M_PI/180));
 }
-const char* gethnibble(int nval) {
+char gethnibble(int nval) {
   switch(nval>>4) {
-    case 0: return "0"; break;
-    case 1: return "1"; break;
-    case 2: return "2"; break;
-    case 3: return "3"; break;
-    case 4: return "4"; break;
-    case 5: return "5"; break;
-    case 6: return "6"; break;
-    case 7: return "7"; break;
-    case 8: return "8"; break;
-    case 9: return "9"; break;
-    case 10: return "A"; break;
-    case 11: return "B"; break;
-    case 12: return "C"; break;
-    case 13: return "D"; break;
-    case 14: return "E"; break;
-    case 15: return "F"; break;
+    case 0: return '0'; break;
+    case 1: return '1'; break;
+    case 2: return '2'; break;
+    case 3: return '3'; break;
+    case 4: return '4'; break;
+    case 5: return '5'; break;
+    case 6: return '6'; break;
+    case 7: return '7'; break;
+    case 8: return '8'; break;
+    case 9: return '9'; break;
+    case 10: return 'A'; break;
+    case 11: return 'B'; break;
+    case 12: return 'C'; break;
+    case 13: return 'D'; break;
+    case 14: return 'E'; break;
+    case 15: return 'F'; break;
   }
-  return "?";
+  return '?';
 }
-const char* getlnibble(int nval) {
-  switch(nval%16) {
-    case 0: return "0"; break;
-    case 1: return "1"; break;
-    case 2: return "2"; break;
-    case 3: return "3"; break;
-    case 4: return "4"; break;
-    case 5: return "5"; break;
-    case 6: return "6"; break;
-    case 7: return "7"; break;
-    case 8: return "8"; break;
-    case 9: return "9"; break;
-    case 10: return "A"; break;
-    case 11: return "B"; break;
-    case 12: return "C"; break;
-    case 13: return "D"; break;
-    case 14: return "E"; break;
-    case 15: return "F"; break;
+char getlnibble(int nval) {
+  switch(nval&15) {
+    case 0: return '0'; break;
+    case 1: return '1'; break;
+    case 2: return '2'; break;
+    case 3: return '3'; break;
+    case 4: return '4'; break;
+    case 5: return '5'; break;
+    case 6: return '6'; break;
+    case 7: return '7'; break;
+    case 8: return '8'; break;
+    case 9: return '9'; break;
+    case 10: return 'A'; break;
+    case 11: return 'B'; break;
+    case 12: return 'C'; break;
+    case 13: return 'D'; break;
+    case 14: return 'E'; break;
+    case 15: return 'F'; break;
   }
-  return "?";
+  return '?';
 }
 const char* getnote(int nval) {
-  switch(nval%16) {
+  switch(nval&15) {
     case 0: return ".."; break;
     case 1: return "C-"; break;
     case 2: return "C#"; break;
@@ -926,15 +926,15 @@ const char* getoctavetransp(int nval) {
   return "?";
 }
 const char* getoctave(int nval) {
-  if ((nval%16)==0) {return ".";}
+  if ((nval&15)==0) {return ".";}
   if (nval>12) {
-    switch(nval%16) {
+    switch (nval&15) {
       case 13: return "="; break;
       case 14: return "~"; break;
       case 15: return "^"; break;
     }
   }
-  switch(nval/16) {
+  switch (nval>>4) {
     case 0: return "0"; break;
     case 1: return "1"; break;
     case 2: return "2"; break;
@@ -954,12 +954,12 @@ const char* getoctave(int nval) {
   }
   return "?";
 }
-const char* getinsL(int nval) {
-  if (nval==0) {return ".";}
+char getinsL(int nval) {
+  if (nval==0) {return '.';}
   else{return getlnibble(nval);}
 }
-const char* getinsH(int nval) {
-  if (nval==0) {return ".";}
+char getinsH(int nval) {
+  if (nval==0) {return '.';}
   else{return gethnibble(nval);}
 }
 const char* getVFX(int fxval) {
@@ -1000,12 +1000,12 @@ unsigned char getVFXval(int nval) {
   }
   return 254;
 }
-const char* getVFXL(int nval) {
-  if (nval==0) {return ".";}
+char getVFXL(int nval) {
+  if (nval==0) {return '.';}
   else{return getlnibble(nval&0x3f);}
 }
-const char* getVFXH(int nval) {
-  if (nval==0) {return ".";}
+char getVFXH(int nval) {
+  if (nval==0) {return '.';}
   else{return gethnibble(nval&0x3f);}
 }
 unsigned char getVFXColor(int fxval) {
@@ -1108,10 +1108,10 @@ unsigned char getmixerposcol(int channel,int envid) {
   return 14;
 }
 
-int noteperiod(unsigned char note) {
-  return 300000/(440*(pow(2.0f,(float)((hscale(note)-57)/12))));
-}
-
+// formula to calculate 6203.34:
+// - 65536*440/(chipClock/64)
+// chipClock is 297500 (PAL)
+// or 309000 (NTSC)
 unsigned int mnoteperiod(float note, int chan) {
   return (int)((6203.34-(songdf*2))*(pow(2.0f,(float)(((float)note-58)/12.0f))));
 }
@@ -2190,17 +2190,17 @@ void drawpatterns(bool force) {
       g.tColor(250);
       g.printf("%s%s",getnote(pat[patid[curpat]][i][j+curedpage][0]),getoctave(pat[patid[curpat]][i][j+curedpage][0]));
       g.tColor(81);
-      g.printf("%s%s",getinsH(pat[patid[curpat]][i][j+curedpage][1]),getinsL(pat[patid[curpat]][i][j+curedpage][1]));
+      g.printf("%c%c",getinsH(pat[patid[curpat]][i][j+curedpage][1]),getinsL(pat[patid[curpat]][i][j+curedpage][1]));
       // instrument
       if (pat[patid[curpat]][i][j+curedpage][2]==0 && pat[patid[curpat]][i][j+curedpage][0]!=0) {
         g.printf("v40");
       } else {
         g.tColor(getVFXColor(pat[patid[curpat]][i][j+curedpage][2]));
-        g.printf("%s%s%s",getVFX(pat[patid[curpat]][i][j+curedpage][2]),getVFXH(pat[patid[curpat]][i][j+curedpage][2]),getVFXL(pat[patid[curpat]][i][j+curedpage][2]));
+        g.printf("%s%c%c",getVFX(pat[patid[curpat]][i][j+curedpage][2]),getVFXH(pat[patid[curpat]][i][j+curedpage][2]),getVFXL(pat[patid[curpat]][i][j+curedpage][2]));
       }
       // effect
       g.tColor(GetFXColor(pat[patid[curpat]][i][j+curedpage][3]));
-      g.printf("%s%s%s",getFX(pat[patid[curpat]][i][j+curedpage][3]),getinsH(pat[patid[curpat]][i][j+curedpage][4]),getinsL(pat[patid[curpat]][i][j+curedpage][4]));
+      g.printf("%s%c%c",getFX(pat[patid[curpat]][i][j+curedpage][3]),getinsH(pat[patid[curpat]][i][j+curedpage][4]),getinsL(pat[patid[curpat]][i][j+curedpage][4]));
     }
     g.tColor(15);
     g.printf("|");
@@ -3405,9 +3405,7 @@ int ImportMOD(FILE* mod) {
           case 0: if (verbose) printf("--- "); pat[importid][indxr][ichan][0]=0x00; break;
           default: if (verbose) printf("??? "); pat[importid][indxr][ichan][0]=0x00; printf("invalid note! %d at row %d channel %d\n",NPERIOD,indxr,ichan); break;
         }
-        //if (verbose) cout << gethnibble(NINS) << getlnibble(NINS) << " ";
         pat[importid][indxr][ichan][1]=NINS;
-        //if (verbose) cout << getlnibble(NFX) << gethnibble(NFXVAL) << getlnibble(NFXVAL) << " ";
         switch(NFX) {
           case 0: if (NFXVAL!=0) {pat[importid][indxr][ichan][3]=10;pat[importid][indxr][ichan][4]=NFXVAL;} else {pat[importid][indxr][ichan][3]=0;pat[importid][indxr][ichan][4]=0;}; break;
           case 1: pat[importid][indxr][ichan][3]=6;pat[importid][indxr][ichan][4]=NFXVAL; break;
@@ -3459,7 +3457,7 @@ int ImportMOD(FILE* mod) {
 }
 int ImportS3M() {
   // import S3M file
-    int64_t size;
+  int64_t size;
   char * memblock;
   int sk;
   int NextByte;
