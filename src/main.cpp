@@ -4523,7 +4523,7 @@ void ClickEvents() {
       // TODO this
       if (PIR(528,132,784,144,mstate.x,mstate.y)) {
         inputvar=&tempInsName;
-        inputcurpos=minval((mstate.x-524)/8,(signed)inputvar->size());
+        inputcurpos=minval((mstate.x-524)/8,(signed)utf8len(inputvar->c_str()));
         maxinputsize=32;
         inputwhere=2;
         
@@ -4640,7 +4640,7 @@ void ClickEvents() {
       // filename input
       if (PIR(72,scrH-24,scrW,scrH,mstate.x,mstate.y)) {
         inputvar=&curfname;
-        inputcurpos=minval((mstate.x-72)/8,(signed)inputvar->size());
+        inputcurpos=minval((mstate.x-72)/8,(signed)utf8len(inputvar->c_str()));
         maxinputsize=4095;
         inputwhere=5;
 
@@ -4821,7 +4821,7 @@ void ClickEvents() {
     if (leftpress) {
     if (PIR(88,84,344,96,mstate.x,mstate.y)) {
       inputvar=&name;
-      inputcurpos=minval((mstate.x-84)/8,(signed)inputvar->size());
+      inputcurpos=minval((mstate.x-84)/8,(signed)utf8len(inputvar->c_str()));
       maxinputsize=32;
       inputwhere=1;
 
@@ -4901,7 +4901,7 @@ void ClickEvents() {
     if (leftpress) {
       if (PIR(0,60,scrW,scrH,mstate.x,mstate.y)) {
         inputvar=&comments;
-        inputcurpos=minval(mstate.x/8,(signed)inputvar->size());
+        inputcurpos=minval(mstate.x/8,(signed)utf8len(inputvar->c_str()));
         maxinputsize=65535;
         inputwhere=4;
 
@@ -5996,8 +5996,8 @@ DETUNE_FACTOR_GLOBAL=1;
             break;
           case SDLK_RIGHT:
             inputcurpos++;
-            if (inputcurpos>(signed)inputvar->size()) {
-              inputcurpos=(signed)inputvar->size();
+            if (inputcurpos>(signed)utf8len(inputvar->c_str())) {
+              inputcurpos=(signed)utf8len(inputvar->c_str());
               triggerfx(1);
             }
             break;
@@ -6005,14 +6005,14 @@ DETUNE_FACTOR_GLOBAL=1;
             inputcurpos=0;
             break;
           case SDLK_END:
-            inputcurpos=inputvar->size();
+            inputcurpos=utf8len(inputvar->c_str());
             break;
           case SDLK_BACKSPACE:
             if (--inputcurpos<0) {
               inputcurpos=0;
               triggerfx(1);
             } else {
-              inputvar->erase(inputcurpos,1);
+              inputvar->erase(utf8pos(inputvar->c_str(),inputcurpos),utf8csize((const unsigned char*)inputvar->c_str()+utf8pos(inputvar->c_str(),inputcurpos)));
             }
             break;
           default:
@@ -6022,14 +6022,12 @@ DETUNE_FACTOR_GLOBAL=1;
     } else if (ev.type == SDL_TEXTEDITING) {
       printf("Text Editing Event!\n");
       candInput=ev.text.text;
-      //popbox=PopupBox("Text Edit","IME detected. Handle this.");
     } else if (ev.type == SDL_TEXTINPUT) {
       candInput="";
-      printf("the input would be %c.\n",ev.text.text[0]);
       if (inputvar!=NULL) {
         if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
-          inputvar->insert(inputcurpos,ev.text.text);
-          inputcurpos+=strlen(ev.text.text);
+          inputvar->insert(utf8pos(inputvar->c_str(),inputcurpos),ev.text.text);
+          inputcurpos++;
         } else {
           triggerfx(1);
         }

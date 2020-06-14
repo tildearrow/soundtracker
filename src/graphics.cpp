@@ -140,7 +140,7 @@ void Graphics::loadPage(int num) {
   SDL_FreeSurface(uCache);
 }
 
-int decodeUTF8(unsigned char* data, char& len) {
+int decodeUTF8(const unsigned char* data, char& len) {
   int ret=0xfffd;
   if (data[0]<0x80) {
     ret=data[0];
@@ -185,7 +185,46 @@ int decodeUTF8(unsigned char* data, char& len) {
 }
 
 size_t utf8len(const char* s) {
-  return 0;
+  size_t p=0;
+  size_t r=0;
+  char cl;
+  while (s[p]!=0) {
+    r++;
+    decodeUTF8((const unsigned char*)&s[p],cl);
+    p+=cl;
+  }
+  return r;
+}
+
+size_t utf8clen(const char* s) {
+  size_t p=0;
+  size_t r=0;
+  char cl;
+  while (s[p]!=0) {
+    r+=CHAR_WIDTH(decodeUTF8((const unsigned char*)&s[p],cl));
+    p+=cl;
+  }
+  return r;
+}
+
+size_t utf8pos(const char* s, size_t inpos) {
+  size_t p=0;
+  size_t r=0;
+  char cl;
+  if (inpos==0) return 0;
+  while (s[p]!=0) {
+    r++;
+    decodeUTF8((const unsigned char*)&s[p],cl);
+    p+=cl;
+    if (r==inpos) return p;
+  }
+  return p;
+}
+
+char utf8csize(const unsigned char* c) {
+  char ret;
+  decodeUTF8(c,ret);
+  return ret;
 }
 
 int Graphics::printf(const char* format, ...) {

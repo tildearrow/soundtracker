@@ -36,6 +36,11 @@ extern "C" {
 typedef std::string string;
 #define S(x) string(x)
 
+size_t utf8len(const char* s);
+size_t utf8clen(const char* s);
+size_t utf8pos(const char* s, size_t inpos);
+char utf8csize(const unsigned char* c);
+
 bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky);
 
 struct Point {
