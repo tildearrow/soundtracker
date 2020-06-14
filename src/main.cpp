@@ -1008,6 +1008,25 @@ const char* getVFXH(int nval) {
   if (nval==0) {return ".";}
   else{return gethnibble(nval&0x3f);}
 }
+unsigned char getVFXColor(int fxval) {
+  if (fxval==0) {return 81;} // 0
+  if (fxval<128 && fxval>63) {return 27;} // 64-127
+  if (fxval<193 && fxval>127) {return 6;} // 128-192
+  switch((fxval-1)/10) {
+  case 0: return 1; break; // 1-10
+  case 1: return 1; break; // 11-20
+  case 2: return 1; break; // 21-30
+  case 3: return 2; break; // 31-40
+  case 4: return 3; break; // 41-50
+  case 5: return 3; break; // 51-60
+  }
+  switch((fxval-193)/10) {
+  case 0: return 3; break; // 193-202
+  case 1: return 3; break; // 203-212
+  case 2: return 56; break; // 213-222
+  }
+  return 15;
+}
 const char* getFX(int fxval) {
   switch(fxval) {
   case 0: return "."; break;
@@ -2176,7 +2195,7 @@ void drawpatterns(bool force) {
       if (pat[patid[curpat]][i][j+curedpage][2]==0 && pat[patid[curpat]][i][j+curedpage][0]!=0) {
         g.printf("v40");
       } else {
-        g.tColor(27);
+        g.tColor(getVFXColor(pat[patid[curpat]][i][j+curedpage][2]));
         g.printf("%s%s%s",getVFX(pat[patid[curpat]][i][j+curedpage][2]),getVFXH(pat[patid[curpat]][i][j+curedpage][2]),getVFXL(pat[patid[curpat]][i][j+curedpage][2]));
       }
       // effect
@@ -4499,13 +4518,13 @@ void ClickEvents() {
     if ((mstate.z-prevZ)<0) {
       if (follow) {
         curstep-=(mstate.z-prevZ);
-        if (curstep>(patlength[patid[curpat]]-1)) {
+        if (curstep>(getpatlen(patid[curpat])-1)) {
           curstep-=patlength[patid[curpat]];
           curpat++;
         }
       } else {
         curpatrow-=(mstate.z-prevZ)*3;
-        curpatrow=fmin(curpatrow,(unsigned char)(patlength[patid[curpat]]-1));
+        curpatrow=fmin(curpatrow,getpatlen(patid[curpat])-1);
       }
       drawpatterns(true);
     }
