@@ -4464,7 +4464,7 @@ void ClickEvents() {
       if (leftpress) {
         selStart=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+curpatrow*12*curzoom)/(12*curzoom));
         if (selStart<0) selStart=0;
-        if (selStart>=patlength[patid[curpat]]) selStart=patlength[patid[curpat]]-1;
+        if (selStart>=getpatlen(patid[curpat])) selStart=getpatlen(patid[curpat])-1;
         
         curedchan=(mstate.x*dpiScale-16*curzoom-patStartX)/(96*curzoom);
         if (curedchan<0) curedchan=0;
@@ -4490,7 +4490,7 @@ void ClickEvents() {
       if (leftclick) {
         selEnd=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+curpatrow*12*curzoom)/(12*curzoom));
         if (selEnd<0) selEnd=0;
-        if (selEnd>=patlength[patid[curpat]]) selEnd=patlength[patid[curpat]]-1;
+        if (selEnd>=getpatlen(patid[curpat])) selEnd=getpatlen(patid[curpat])-1;
         
         curselchan=(mstate.x*dpiScale-16*curzoom-patStartX)/(96*curzoom);
         if (curselchan<0) curselchan=0;
