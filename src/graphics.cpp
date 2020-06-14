@@ -1,8 +1,6 @@
 #include "tracker.h"
 #include "unifont.h"
-
-extern const unsigned char unifont_bin[2097152];
-extern const unsigned char unifont_siz[8192];
+#include "unifontfull.h"
 
 #define CHAR_WIDTH(x) ((unifont_siz[x>>3]&(1<<(x&7)))?2:1)
 

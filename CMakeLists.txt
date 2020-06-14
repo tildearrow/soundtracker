@@ -3,8 +3,6 @@ project(soundtracker)
 if (WIN32)
   add_subdirectory(SDL)
   set(HAVE_SDL2 SDL2-static)
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 else (WIN32)
   find_library(HAVE_SDL2 SDL2)
 endif (WIN32)
@@ -15,7 +13,7 @@ else (APPLE)
 endif (APPLE)
 add_executable(ssinter src/soundchip.cpp src/ssinter.cpp src/ssmain.cpp)
 add_executable(ssbench src/soundchip.cpp src/ssinter.cpp src/ssbench.cpp)
-set(TRACKER_SRC src/unifontfull.c
+set(TRACKER_SRC src/unifontfull.cpp
                 src/soundchip.cpp
                 src/graphics.cpp
                 src/ssinter.cpp
