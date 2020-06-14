@@ -221,6 +221,36 @@ size_t utf8pos(const char* s, size_t inpos) {
   return p;
 }
 
+size_t utf8cpos(const char* s, size_t inpos) {
+  size_t p=0;
+  size_t r=0;
+  size_t i=0;
+  char cl;
+  if (inpos==0) return 0;
+  while (s[p]!=0) {
+    r+=CHAR_WIDTH(decodeUTF8((const unsigned char*)&s[p],cl));
+    p+=cl;
+    i++;
+    if (i==inpos) return r;
+  }
+  return r;
+}
+
+size_t utf8findcpos(const char* s, float inpos) {
+  size_t p=0;
+  size_t r=0;
+  size_t i=0;
+  char cl;
+  if (inpos<0.5) return 0;
+  while (s[p]!=0) {
+    r+=CHAR_WIDTH(decodeUTF8((const unsigned char*)&s[p],cl));
+    p+=cl;
+    i++;
+    if (r>=round(inpos)) return i;
+  }
+  return i;
+}
+
 char utf8csize(const unsigned char* c) {
   char ret;
   decodeUTF8(c,ret);

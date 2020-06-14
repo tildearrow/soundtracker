@@ -39,6 +39,8 @@ typedef std::string string;
 size_t utf8len(const char* s);
 size_t utf8clen(const char* s);
 size_t utf8pos(const char* s, size_t inpos);
+size_t utf8cpos(const char* s, size_t inpos);
+size_t utf8findcpos(const char* s, float inpos);
 char utf8csize(const unsigned char* c);
 
 bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky);

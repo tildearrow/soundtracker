@@ -2127,6 +2127,12 @@ Color mapHSV(float hue,float saturation,float value) {
   else if (hue<360) {r=c;gR=0;b=x;}
   return g._WRAP_map_rgba_f(r+m,gR+m,b+m,64);
 }
+
+void inputCursor(float x, float y1, float y2) {
+  size_t ad=utf8cpos(inputvar->c_str(),inputcurpos);
+  g._WRAP_draw_line(x+(ad*8),y1,x+(ad*8),y2,g._WRAP_map_rgb(255,255,0),1);
+}
+
 void drawpatterns(bool force) {
   if (playermode) {return;}
   if (follow) {curpatrow=curstep; if (curpatrow<0) curpatrow=0;}
@@ -2135,7 +2141,6 @@ void drawpatterns(bool force) {
   if ((!UPDATEPATTERNS || playmode==0 || playmode==1) && !force && oldpat==curpat) {oldpat=curpat;return;}
   oldpat=curpat;
   UPDATEPATTERNS=true;
-  printf("update.\n");
   g._WRAP_destroy_bitmap(patternbitmap);
   patternbitmap=g._WRAP_create_bitmap(24+chanstodisplay*96,(((patlength[patid[curpat]]==0)?(256):(patlength[patid[curpat]]))*12)+4);
   //popbox=PopupBox("Bitmap Size","bitmap size: "+std::to_string(24+chanstodisplay*96)+"x"+std::to_string((((patlength[patid[curpat]]==0)?(256):(patlength[patid[curpat]]))*12)+4));
@@ -2300,7 +2305,7 @@ void drawinsedit() {
   g.tColor((inputwhere==2)?11:15);
   g.printf("%s",instrument[CurrentIns].name);
   if (inputwhere==2) {
-    g._WRAP_draw_line((scrW-272)+(inputcurpos*8),133,(scrW-272)+(inputcurpos*8),145,g._WRAP_map_rgb(255,255,0),1);
+    inputCursor((scrW-272),133,145);
   }
   
   g.tPos(55,6);
@@ -2658,7 +2663,7 @@ void drawdiskop() {
   g.tColor((inputwhere==5)?11:15);
   g.printf("%s",curfname.c_str());
   if (inputwhere==5) {
-      g._WRAP_draw_line(73+(inputcurpos*8),scrH-20,73+(inputcurpos*8),scrH-4,g._WRAP_map_rgb(255,255,0),1);
+      inputCursor(73,scrH-20,scrH-4);
   }
 }
 
@@ -2698,7 +2703,7 @@ void drawsong() {
   g.tPos(0,5);
   g.printf("DefSpeed   v^|Channels  v^|beat   v^|bar   v^|detune   v^-+|length   v^-+|tempo   v^-+|speed   v^\n");
   g.printf("---------------------------------------------------------------------------------------------------\n");
-  g.printf("|Song Name ________________________________________________________\n");
+  g.printf("|Song Name\n");
   g.printf("---------------------------------------------------------------------------------------------------\n");
   g.printf(comments.c_str());
   
@@ -2715,7 +2720,7 @@ void drawsong() {
   g.tPos(11,7);
   g.printf(name.c_str());
   if (inputwhere==1) {
-      g._WRAP_draw_line(89+(inputcurpos*8),85,89+(inputcurpos*8),97,g._WRAP_map_rgb(255,255,0),1);
+    inputCursor(89,85,97);
   }
   g.tColor(11);
   g.tPos(53,5);
@@ -4523,7 +4528,7 @@ void ClickEvents() {
       // TODO this
       if (PIR(528,132,784,144,mstate.x,mstate.y)) {
         inputvar=&tempInsName;
-        inputcurpos=minval((mstate.x-524)/8,(signed)utf8len(inputvar->c_str()));
+        inputcurpos=utf8findcpos(inputvar->c_str(),float(mstate.x-524)/8);
         maxinputsize=32;
         inputwhere=2;
         
@@ -4640,7 +4645,7 @@ void ClickEvents() {
       // filename input
       if (PIR(72,scrH-24,scrW,scrH,mstate.x,mstate.y)) {
         inputvar=&curfname;
-        inputcurpos=minval((mstate.x-72)/8,(signed)utf8len(inputvar->c_str()));
+        inputcurpos=utf8findcpos(inputvar->c_str(),float(mstate.x-72)/8);
         maxinputsize=4095;
         inputwhere=5;
 
@@ -4821,7 +4826,7 @@ void ClickEvents() {
     if (leftpress) {
     if (PIR(88,84,344,96,mstate.x,mstate.y)) {
       inputvar=&name;
-      inputcurpos=minval((mstate.x-84)/8,(signed)utf8len(inputvar->c_str()));
+      inputcurpos=utf8findcpos(inputvar->c_str(),float(mstate.x-84)/8);
       maxinputsize=32;
       inputwhere=1;
 
@@ -4894,19 +4899,6 @@ void ClickEvents() {
       if (PIR(280,132,368,143,mstate.x,mstate.y)) {settings::cubicspline=!settings::cubicspline;}
       if (PIR(280,240,368,251,mstate.x,mstate.y)) {settings::nofilters=!settings::nofilters;}
       if (PIR(280,252,368,264,mstate.x,mstate.y)) {settings::muffle=!settings::muffle;}
-    }
-  }
-  // events only in comments view
-  if (screen==8) {
-    if (leftpress) {
-      if (PIR(0,60,scrW,scrH,mstate.x,mstate.y)) {
-        inputvar=&comments;
-        inputcurpos=minval(mstate.x/8,(signed)utf8len(inputvar->c_str()));
-        maxinputsize=65535;
-        inputwhere=4;
-
-        SDL_StartTextInput();
-      }
     }
   }
   // events only in sound effect editor
@@ -5983,7 +5975,6 @@ DETUNE_FACTOR_GLOBAL=1;
           drawpatterns(true);
         }
       } else if (ev.type == SDL_KEYDOWN) {
-        
       //printf("event, %c\n",ev.keyboard.unichar);
       if (inputvar!=NULL) {
         switch (ev.key.keysym.sym) {
