@@ -413,7 +413,7 @@ bool rightclickprev=false;
 int prevZ=0;
 int channels=8;
 int hover[16]={}; // hover time per button
-int16_t ver=148; // version number
+int16_t ver=149; // version number
 unsigned char chs0[5000];
 char* helptext;
 string comments;
@@ -1128,6 +1128,26 @@ unsigned char getmixerposcol(int channel,int envid) {
   return 14;
 }
 
+string strFormat(const char* format, ...) {
+  va_list va;
+  char str[4096];
+  string ret;
+  va_start(va,format);
+  if (vsnprintf(str,4095,format,va)<0) {
+    va_end(va);
+    return string("");
+  }
+  va_end(va);
+  ret=str;
+  return ret;
+}
+
+string getVisPat(unsigned char p) {
+  if (p==254) return "--";
+  if (p==255) return "==";
+  return strFormat("%.2X",p);
+}
+
 // formula to calculate 6203.34:
 // - 65536*440/(chipClock/64)
 // chipClock is 297500 (PAL)
@@ -1212,20 +1232,6 @@ int FreeChannel() {
     if (cvol[candidate]>cvol[ii]) {candidate=ii;}
   }
   return candidate;
-}
-
-string strFormat(const char* format, ...) {
-  va_list va;
-  char str[4096];
-  string ret;
-  va_start(va,format);
-  if (vsnprintf(str,4095,format,va)<0) {
-    va_end(va);
-    return string("");
-  }
-  va_end(va);
-  ret=str;
-  return ret;
 }
 
 // convert sequence into ssinter format
@@ -5799,21 +5805,21 @@ void drawdisp() {
     g.tNLPos(23);
     g.tPos(-fmod(patseek,1));
     if (((int)patseek-1)>0) {
-      g.tColor(244-delta); g.printf("%.2X\n",patid[maxval((int)patseek-2,0)]);
+      g.tColor(244-delta); g.printf("%s\n",getVisPat(patid[maxval((int)patseek-2,0)]).c_str());
     } else {
       g.printf("\n");
     }
     if (((int)patseek)>0) {
-      g.tColor(250-delta); g.printf("%.2X\n",patid[maxval((int)patseek-1,0)]);
+      g.tColor(250-delta); g.printf("%s\n",getVisPat(patid[maxval((int)patseek-1,0)]).c_str());
     } else {
       g.printf("\n");
     }
-    g.tColor(255-delta); g.printf("%.2X\n",patid[(int)patseek]);
+    g.tColor(255-delta); g.printf("%s\n",getVisPat(patid[(int)patseek]).c_str());
     if (((int)patseek)<songlength) {
-      g.tColor(249+delta); g.printf("%.2X\n",patid[minval((int)patseek+1,255)]);
+      g.tColor(249+delta); g.printf("%s\n",getVisPat(patid[minval((int)patseek+1,255)]).c_str());
     }
     if (((int)patseek+1)<songlength) {
-      g.tColor(244+delta); g.printf("%.2X",patid[maxval((int)patseek+2,0)]);
+      g.tColor(244+delta); g.printf("%s",getVisPat(patid[maxval((int)patseek+2,0)]).c_str());
     }
     g._WRAP_reset_clipping_rectangle();
     g.tNLPos(0);
