@@ -663,13 +663,13 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   
   for (size_t i=0; i<nframes; i++) {
 #ifdef JACK
-    buf[0][i]=float(bbOut[0][i])/32768;
-    buf[1][i]=float(bbOut[1][i])/32768;
+    buf[0][i]=float(bbOut[0][i])/16384;
+    buf[1][i]=float(bbOut[1][i])/16384;
 #else
     switch (ar.format) {
         case AUDIO_F32:
-          buf[0][i*ar.channels]=float(bbOut[0][i])/32768;
-          buf[0][1+(i*ar.channels)]=float(bbOut[1][i])/32768;
+          buf[0][i*ar.channels]=float(bbOut[0][i])/16384;
+          buf[0][1+(i*ar.channels)]=float(bbOut[1][i])/16384;
           break;
         case AUDIO_S16:
           buf16[0][i*ar.channels]=bbOut[0][i];
@@ -688,8 +688,8 @@ static void nothing(void* userdata, Uint8* stream, int len) {
           break;
     }
 #endif
-    oscbuf[oscbufWPos]=float(bbOut[0][i])/32768;
-    oscbuf2[oscbufWPos]=float(bbOut[1][i])/32768;
+    oscbuf[oscbufWPos]=float(bbOut[0][i])/16384;
+    oscbuf2[oscbufWPos]=float(bbOut[1][i])/16384;
     oscbufWPos++;
   }
 #ifdef JACK

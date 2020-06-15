@@ -216,8 +216,8 @@ void soundchip::NextSample(short* l, short* r) {
       chan[i].flags.resosc=0;
     }
   }
-  tnsL=(nsL[0]+nsL[1]+nsL[2]+nsL[3]+nsL[4]+nsL[5]+nsL[6]+nsL[7])>>1;///256;
-  tnsR=(nsR[0]+nsR[1]+nsR[2]+nsR[3]+nsR[4]+nsR[5]+nsR[6]+nsR[7])>>1;///256;
+  tnsL=(nsL[0]+nsL[1]+nsL[2]+nsL[3]+nsL[4]+nsL[5]+nsL[6]+nsL[7])>>2;///256;
+  tnsR=(nsR[0]+nsR[1]+nsR[2]+nsR[3]+nsR[4]+nsR[5]+nsR[6]+nsR[7])>>2;///256;
   
   *l=minval(32767,maxval(-32767,tnsL));//(2047*(pnsL+tnsL-ppsL))>>11;
   *r=minval(32767,maxval(-32767,tnsR));//(2047*(pnsR+tnsR-ppsR))>>11;
