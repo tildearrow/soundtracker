@@ -3231,6 +3231,7 @@ int ImportIT(FILE* it) {
   } else {
     g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
   }
+  songlength--;
   return 0;
 }
 int ImportMOD(FILE* mod) {
