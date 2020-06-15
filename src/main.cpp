@@ -608,6 +608,8 @@ static void nothing(void* userdata, Uint8* stream, int len) {
     targetSR=297500;
     noProc=sr/targetSR;
   }
+  blip_set_rates(bb[0],targetSR,jacksr);
+  blip_set_rates(bb[1],targetSR,jacksr);
   if (kb[SDL_SCANCODE_ESCAPE] || (PIR((scrW/2)+21,37,(scrW/2)+61,48,mstate.x,mstate.y) && leftclick && iface!=UIMobile)) {
     ASC::interval=16384;
   }
