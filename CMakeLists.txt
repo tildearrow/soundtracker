@@ -13,7 +13,8 @@ else (APPLE)
 endif (APPLE)
 add_executable(ssinter src/soundchip.cpp src/ssinter.cpp src/ssmain.cpp)
 add_executable(ssbench src/soundchip.cpp src/ssinter.cpp src/ssbench.cpp)
-set(TRACKER_SRC src/unifontfull.cpp
+set(TRACKER_SRC src/blip_buf.c
+                src/unifontfull.cpp
                 src/soundchip.cpp
                 src/hlesoundchip.cpp
                 src/graphics.cpp

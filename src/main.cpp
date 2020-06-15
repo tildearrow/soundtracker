@@ -63,7 +63,13 @@ uint32_t jacksr;
 #endif
 
 #include "soundchip.h"
+#include "blip_buf.h"
 soundchip chip[4]; // up to 4 soundchips
+
+blip_buffer_t* bb[2];
+float prevSample[2]={0,0};
+
+short bbOut[2][32768];
 
 const bool verbose=false; // change this to turn on verbose mode
 signed char songdf=0;
@@ -605,8 +611,11 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   if (kb[SDL_SCANCODE_ESCAPE] || (PIR((scrW/2)+21,37,(scrW/2)+61,48,mstate.x,mstate.y) && leftclick && iface!=UIMobile)) {
     ASC::interval=16384;
   }
-  int numit=0;
-  for (size_t i=0; i<nframes;) {
+  
+  // high quality rewrite
+  int runtotal=blip_clocks_needed(bb[0],nframes);
+  
+  for (int i=0; i<runtotal; i++) {
     ASC::currentclock-=20; // 20 CPU cycles per sound output cycle
     if (ASC::currentclock<=0) {
       for (int ii=0;ii<32;ii++) {
@@ -638,40 +647,26 @@ static void nothing(void* userdata, Uint8* stream, int len) {
       chip[j].NextSample(&temp[0],&temp[1]);
       temp[2]+=temp[0]; temp[3]+=temp[1];
     }
-    if (settings::muffle) {
-      resa0[0]=resa0[0]+resaf*(temp[2]-resa0[0]);
-      resa1[0]=resa1[0]+resaf*(resa0[0]-resa1[0]);
-      resa1[0]=resa1[0]+resaf*(resa0[0]-resa1[0]);
-      resa1[0]=resa1[0]+resaf*(resa0[0]-resa1[0]);
+    blip_add_delta(bb[0],i,(temp[2]-prevSample[0])*16383);
+    blip_add_delta(bb[1],i,(temp[3]-prevSample[1])*16383);
+    prevSample[0]=temp[2];
+    prevSample[1]=temp[3];
+  }
   
-      resa0[1]=resa0[1]+resaf*(temp[3]-resa0[1]);
-      resa1[1]=resa1[1]+resaf*(resa0[1]-resa1[1]);
-      resa1[1]=resa1[1]+resaf*(resa0[1]-resa1[1]);
-      resa1[1]=resa1[1]+resaf*(resa0[1]-resa1[1]);
-
-      resa2[0]+=resa1[0];
-      resa2[1]+=resa1[1];
-    } else {
-      resa2[0]=temp[2];
-      resa2[1]=temp[3];
-    }
-
-    procPos+=noProc;
-    numit++;
-    if (procPos>=1) {
-      procPos-=1;
-
-      if (settings::muffle) {
-        resa2[0]/=numit;
-        resa2[1]/=numit;
-      }
+  blip_end_frame(bb[0],runtotal);
+  blip_end_frame(bb[1],runtotal);
+  
+  blip_read_samples(bb[0],bbOut[0],nframes,0);
+  blip_read_samples(bb[1],bbOut[1],nframes,0);
+  
+  for (size_t i=0; i<nframes; i++) {
 #ifdef JACK
-      buf[0][i]=0.5*resa2[0];
-      buf[1][i]=0.5*resa2[1];
+    buf[0][i]=float(bbOut[0][i])/32768;
+    buf[1][i]=float(bbOut[1][i])/32768;
 #else
-      resa2[0]=fmin(fmax(resa2[0],-2),2);
-      resa2[1]=fmin(fmax(resa2[1],-2),2);
-      switch (ar.format) {
+    resa2[0]=fmin(fmax(resa2[0],-2),2);
+    resa2[1]=fmin(fmax(resa2[1],-2),2);
+    switch (ar.format) {
         case AUDIO_F32:
           buf[0][i*ar.channels]=0.5*resa2[0];
           buf[0][1+(i*ar.channels)]=0.5*resa2[1];
@@ -691,17 +686,11 @@ static void nothing(void* userdata, Uint8* stream, int len) {
         case AUDIO_U8:
         case AUDIO_U16:
           break;
-      }
-#endif
-
-      i++;
-      oscbuf[oscbufWPos]=resa2[0];
-      oscbuf2[oscbufWPos]=resa2[1];
-      resa2[0]=0;
-      resa2[1]=0;
-      oscbufWPos++;
-      numit=0;
     }
+#endif
+    oscbuf[oscbufWPos]=float(bbOut[0][i])/32768;
+    oscbuf2[oscbufWPos]=float(bbOut[1][i])/32768;
+    oscbufWPos++;
   }
 #ifdef JACK
   return 0;
@@ -710,7 +699,11 @@ static void nothing(void* userdata, Uint8* stream, int len) {
 
 void initaudio() {
   //cout << "\npreparing audio system... ";
-  printf("ok\n");
+  printf("initializing audio...\n");
+  
+  bb[0]=blip_new(32768);
+  bb[1]=blip_new(32768);
+  
   procPos=0;
 #ifdef JACK
   const char** jports;
@@ -729,10 +722,10 @@ void initaudio() {
   if (jstatus & JackNameNotUnique) {
     fprintf (stderr, "boom\n");
   }
-  jack_set_process_callback (jclient, nothing, 0);
+  jack_set_process_callback(jclient,nothing,0);
   printf ("engine sample rate: %" PRIu32 "\n",
-    jack_get_sample_rate (jclient));
-  jacksr=jack_get_sample_rate (jclient);
+  jack_get_sample_rate(jclient));
+  jacksr=jack_get_sample_rate(jclient);
   sr=jacksr;
   ao[0] = jack_port_register (jclient, "outL",
             JACK_DEFAULT_AUDIO_TYPE,
@@ -790,6 +783,10 @@ void initaudio() {
 #else
   //////////////// SDL CODE HERE ////////////////
 #endif
+  
+  blip_set_rates(bb[0],297500,jacksr);
+  blip_set_rates(bb[1],297500,jacksr);
+  
   printf("done\n");
 }
 

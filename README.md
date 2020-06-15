@@ -7,3 +7,7 @@ this tool emulates/implements a fictitious soundchip that I thought of years ago
 # and what is this "ssinter" thing?
 
 ssinter is an interpreter for the soundchip dump format. check [ssformat.md](papers/ssformat.md) for more information.
+
+# notes
+
+this project uses blip-buf, which is under the same license.
