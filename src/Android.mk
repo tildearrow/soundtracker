@@ -8,7 +8,7 @@ SDL_PATH := ../SDL
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include
 
-LOCAL_SRC_FILES := unifontfull.c soundchip.cpp graphics.cpp ssinter.cpp fextra.cpp main.cpp
+LOCAL_SRC_FILES := unifontfull.cpp soundchip.cpp hlesoundchip.cpp graphics.cpp ssinter.cpp fextra.cpp main.cpp
 
 LOCAL_SHARED_LIBRARIES := SDL2
 

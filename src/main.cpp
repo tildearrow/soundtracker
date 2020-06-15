@@ -407,7 +407,7 @@ bool rightclickprev=false;
 int prevZ=0;
 int channels=8;
 int hover[16]={}; // hover time per button
-int16_t ver=146; // version number
+int16_t ver=147; // version number
 unsigned char chs0[5000];
 char* helptext;
 string comments;

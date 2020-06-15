@@ -100,3 +100,10 @@ class soundchip {
     void Init();
     void Reset();
 };
+
+class HLESoundchip: public soundchip {
+  public:
+    void NextSample(float* l, float* r);
+    void Init();
+    void Reset();
+};
