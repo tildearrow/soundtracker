@@ -67,7 +67,7 @@ uint32_t jacksr;
 soundchip chip[4]; // up to 4 soundchips
 
 blip_buffer_t* bb[2];
-float prevSample[2]={0,0};
+short prevSample[2]={0,0};
 
 short bbOut[2][32768];
 
@@ -441,7 +441,6 @@ float *buf;
 int pitch = 0x20;
 int val = 0;
 int i;
-float resa0[2], resa1[2], resa2[2];
 int sr;
 double targetSR;
 double noProc;
@@ -575,7 +574,7 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   short* buf16[2];
   int* buf32[2];
 #endif
-  float temp[4];
+  short temp[4];
 #ifdef JACK
   for (int i=0; i<2; i++) {
     buf[i]=(float*)jack_port_get_buffer(ao[i],nframes);
@@ -649,8 +648,8 @@ static void nothing(void* userdata, Uint8* stream, int len) {
       chip[j].NextSample(&temp[0],&temp[1]);
       temp[2]+=temp[0]; temp[3]+=temp[1];
     }
-    blip_add_delta(bb[0],i,(temp[2]-prevSample[0])*16383);
-    blip_add_delta(bb[1],i,(temp[3]-prevSample[1])*16383);
+    blip_add_delta(bb[0],i,temp[2]-prevSample[0]);
+    blip_add_delta(bb[1],i,temp[3]-prevSample[1]);
     prevSample[0]=temp[2];
     prevSample[1]=temp[3];
   }
@@ -666,24 +665,22 @@ static void nothing(void* userdata, Uint8* stream, int len) {
     buf[0][i]=float(bbOut[0][i])/32768;
     buf[1][i]=float(bbOut[1][i])/32768;
 #else
-    resa2[0]=fmin(fmax(resa2[0],-2),2);
-    resa2[1]=fmin(fmax(resa2[1],-2),2);
     switch (ar.format) {
         case AUDIO_F32:
-          buf[0][i*ar.channels]=0.5*resa2[0];
-          buf[0][1+(i*ar.channels)]=0.5*resa2[1];
+          buf[0][i*ar.channels]=float(bbOut[0][i])/32768;
+          buf[0][1+(i*ar.channels)]=float(bbOut[1][i])/32768;
           break;
         case AUDIO_S16:
-          buf16[0][i*ar.channels]=fmin(fmax(-1,0.5*resa2[0]),1)*32767;
-          buf16[0][1+(i*ar.channels)]=fmin(fmax(-1,0.5*resa2[1]),1)*32767;
+          buf16[0][i*ar.channels]=bbOut[0][i];
+          buf16[0][1+(i*ar.channels)]=bbOut[1][i];
           break;
         case AUDIO_S32:
-          buf32[0][i*ar.channels]=int(fmin(fmax(-1,0.5*resa2[0]),1)*8388607)<<8;
-          buf32[0][1+(i*ar.channels)]=int(fmin(fmax(-1,0.5*resa2[1]),1)*8388607)<<8;
+          buf32[0][i*ar.channels]=bbOut[0][i]<<16;
+          buf32[0][1+(i*ar.channels)]=bbOut[1][i]<<16;
           break;
         case AUDIO_S8:
-          buf8[0][i*ar.channels]=fmin(fmax(-1,0.5*resa2[0]),1)*127;
-          buf8[0][1+(i*ar.channels)]=fmin(fmax(-1,0.5*resa2[1]),1)*127;
+          buf8[0][i*ar.channels]=bbOut[0][i]>>8;
+          buf8[0][1+(i*ar.channels)]=bbOut[1][i]>>8;
           break;
         case AUDIO_U8:
         case AUDIO_U16:

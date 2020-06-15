@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
     sc.chan[i].duty=0x3f;
   }
 
-  float temp[2];
+  short temp[2];
   int wc;
   int writable;
   while (!quit) {

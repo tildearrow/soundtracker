@@ -5,7 +5,7 @@
 #define M_PI 3.141592653589793238
 #endif
 
-void HLESoundchip::NextSample(float* l, float* r) {
+void HLESoundchip::NextSample(short* l, short* r) {
   *l=0;
   *r=0;
 }

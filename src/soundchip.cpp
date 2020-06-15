@@ -5,7 +5,7 @@
 #define M_PI 3.141592653589793238
 #endif
 
-void soundchip::NextSample(float* l, float* r) {
+void soundchip::NextSample(short* l, short* r) {
   for (int i=0; i<8; i++) {
     if (chan[i].vol==0 && !chan[i].flags.swvol) {fns[i]=0; continue;}
     if (chan[i].flags.pcm) {
@@ -213,12 +213,10 @@ void soundchip::NextSample(float* l, float* r) {
       chan[i].flags.resosc=0;
     }
   }
-  tnsL=((nsL[0]+nsL[1]+nsL[2]+nsL[3]+nsL[4]+nsL[5]+nsL[6]+nsL[7]));///256;
-  tnsR=((nsR[0]+nsR[1]+nsR[2]+nsR[3]+nsR[4]+nsR[5]+nsR[6]+nsR[7]));///256;
-  tnsL/=32768;
-  tnsR/=32768;
-  *l=0.9997*(pnsL+tnsL-ppsL);
-  *r=0.9997*(pnsR+tnsR-ppsR);
+  tnsL=(nsL[0]+nsL[1]+nsL[2]+nsL[3]+nsL[4]+nsL[5]+nsL[6]+nsL[7])>>1;///256;
+  tnsR=(nsR[0]+nsR[1]+nsR[2]+nsR[3]+nsR[4]+nsR[5]+nsR[6]+nsR[7])>>1;///256;
+  *l=(2047*(pnsL+tnsL-ppsL))>>11;
+  *r=(2047*(pnsR+tnsR-ppsR))>>11;
   pnsL=*l;
   pnsR=*r;
   ppsL=tnsL;

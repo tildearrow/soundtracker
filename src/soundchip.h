@@ -23,7 +23,7 @@ class soundchip {
   int nslow[8];
   int nshigh[8];
   int nsband[8];
-  float pnsL, pnsR, ppsL, ppsR, tnsL, tnsR;
+  int pnsL, pnsR, ppsL, ppsR, tnsL, tnsR;
   //char (*ShapeFunctions[8])(int theduty, float value);
   signed char* ShapeFunctions[8];
   unsigned short oldfreq[8];
@@ -96,14 +96,14 @@ class soundchip {
       unsigned short restimer;
     } chan[8];
     signed char pcm[65280];
-    void NextSample(float* l, float* r);
+    void NextSample(short* l, short* r);
     void Init();
     void Reset();
 };
 
 class HLESoundchip: public soundchip {
   public:
-    void NextSample(float* l, float* r);
+    void NextSample(short* l, short* r);
     void Init();
     void Reset();
 };

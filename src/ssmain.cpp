@@ -60,7 +60,7 @@ int process(jack_nframes_t nframes, void* arg) {
 static void process(void* userdata, Uint8* stream, int len) {
 #endif
   float* buf[2];
-  float temp[2];
+  short temp[2];
   int wc;
   int writable;
 #ifdef JACK
