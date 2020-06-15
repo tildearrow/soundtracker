@@ -255,6 +255,37 @@ char utf8csize(const unsigned char* c) {
   return ret;
 }
 
+wstring utf8To16(const char* s) {
+  wstring ret;
+  int ch, p;
+  char chs;
+  p=0;
+  while (s[p]!=0) {
+    ch=decodeUTF8((const unsigned char*)&s[p],chs);
+    ret+=(unsigned short)ch;
+    p+=chs;
+  }
+  return ret;
+}
+
+string utf16To8(const wchar_t* s) {
+  string ret;
+  for (size_t i=0; i<wcslen(s); i++) {
+    if (s[i]<0x80) {
+      ret+=s[i];
+    } else if (s[i]<0x800) {
+      ret+=(0xc0+((s[i]>>6)&31));
+      ret+=(0x80+((s[i])&63));
+    } else {
+      ret+=(0xe0+((s[i]>>12)&15));
+      ret+=(0x80+((s[i]>>6)&63));
+      ret+=(0x80+((s[i])&63));
+
+    }
+  }
+   return ret;
+}
+
 int Graphics::printf(const char* format, ...) {
   va_list va;
   SDL_Rect sr, dr;

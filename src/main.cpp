@@ -790,6 +790,14 @@ void initaudio() {
   printf("done\n");
 }
 
+FILE* ps_fopen(const char* fn, const char* mo) {
+#ifdef _WIN32
+  return _wfopen(utf8To16(fn).c_str(),utf8To16(mo).c_str());
+#else
+  return fopen(fn,mo);
+#endif
+}
+
 unsigned short bswapu16(unsigned short x) {
   return ((x&0xff)<<8)|((x&0xff00)>>8);
 }
@@ -3493,7 +3501,7 @@ int ImportS3M() {
   printf("\nplease write filename? ");
   char rfn[256];
   //gets(rfn);
-  s3m=fopen(rfn,"rb");
+  s3m=ps_fopen(rfn,"rb");
   if (s3m!=NULL) { // read the file
     printf("loading S3M file, ");
     size=fsize(s3m);
@@ -3585,7 +3593,7 @@ int ImportS3M() {
 #ifdef _WIN32
 int print_entry(const char* filepath) {
   HANDLE flist;
-  WIN32_FIND_DATAA next;
+  WIN32_FIND_DATAW next;
   string actualfp;
   FileInList neext;
   int increment=0;
@@ -3607,7 +3615,7 @@ int print_entry(const char* filepath) {
   }
   actualfp=filepath;
   actualfp+="\\*";
-  flist=FindFirstFileA(actualfp.c_str(),&next);
+  flist=FindFirstFileW(utf8To16(actualfp.c_str()).c_str(),&next);
   printf("listing dir...\n");
   neext.name="";
   neext.isdir=false;
@@ -3615,13 +3623,13 @@ int print_entry(const char* filepath) {
   filenames.clear();
   if (flist!=INVALID_HANDLE_VALUE) {
     do {
-      if (strcmp(next.cFileName,".")==0) continue;
-      if (strcmp(next.cFileName,"..")==0) continue;
-      neext.name=next.cFileName;
+      if (wcscmp(next.cFileName,L".")==0) continue;
+      if (wcscmp(next.cFileName,L"..")==0) continue;
+      neext.name=utf16To8(next.cFileName);
       neext.isdir=next.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY;
       filenames.push_back(neext);
       increment++;
-    } while (FindNextFileA(flist,&next));
+    } while (FindNextFileW(flist,&next));
     FindClose(flist);
   } else {
     return -GetLastError();
@@ -3698,7 +3706,7 @@ int SaveFile() {
   // just for the sake of linux
   strcpy(rfn,(S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
   
-  sfile=fopen(rfn,"wb");
+  sfile=ps_fopen(rfn,"wb");
   if (sfile!=NULL) { // write the file
     fseek(sfile,0,SEEK_SET); // seek to 0
     printf("writing headers...\n");
@@ -3881,7 +3889,7 @@ int LoadFile(const char* filename) {
   bool IS_SEQ_BLANK[256];
   bool detectChans=false;
   char *checkstr=new char[8];
-  sfile=fopen(filename,"rb");
+  sfile=ps_fopen(filename,"rb");
   if (sfile!=NULL) { // LOAD the file
     fseek(sfile,0,SEEK_SET); // seek to 0
     printf("loading file...\n");
@@ -4212,7 +4220,7 @@ void SaveInstrument() {
   printf("\nplease write filename? ");
   char rfn[256];
   //gets(rfn);
-  sfile=fopen(rfn,"wb");
+  sfile=ps_fopen(rfn,"wb");
   if (sfile!=NULL) { // write the file
     fseek(sfile,0,SEEK_SET); // seek to 0
     printf("writing header...\n");
@@ -4235,7 +4243,7 @@ void LoadInstrument() {
   char rfn[256];
   int NextFree=0;
   //gets(rfn);
-  sfile=fopen(rfn,"rb");
+  sfile=ps_fopen(rfn,"rb");
   if (sfile!=NULL) { // read the file
     fseek(sfile,8,SEEK_SET); // seek to 8
     printf("reading header...\n");
@@ -4258,7 +4266,7 @@ void LoadSample(const char* filename,int position) {
 void LoadRawSample(const char* filename,int position) {
   FILE *sfile;
   int samplelength=0;
-  sfile=fopen(filename,"rb");
+  sfile=ps_fopen(filename,"rb");
   samplelength=fsize(sfile);
   printf("%x bytes",samplelength);
   if (samplelength<(65280-position)) {
