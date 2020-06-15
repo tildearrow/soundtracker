@@ -435,7 +435,7 @@ float *buf;
 int pitch = 0x20;
 int val = 0;
 int i;
-float resa0[2], resa1[2];
+float resa0[2], resa1[2], resa2[2];
 int sr;
 double targetSR;
 double noProc;
@@ -605,6 +605,7 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   if (kb[SDL_SCANCODE_ESCAPE] || (PIR((scrW/2)+21,37,(scrW/2)+61,48,mstate.x,mstate.y) && leftclick && iface!=UIMobile)) {
     ASC::interval=16384;
   }
+  int numit=0;
   for (size_t i=0; i<nframes;) {
     ASC::currentclock-=20; // 20 CPU cycles per sound output cycle
     if (ASC::currentclock<=0) {
@@ -647,47 +648,59 @@ static void nothing(void* userdata, Uint8* stream, int len) {
       resa1[1]=resa1[1]+resaf*(resa0[1]-resa1[1]);
       resa1[1]=resa1[1]+resaf*(resa0[1]-resa1[1]);
       resa1[1]=resa1[1]+resaf*(resa0[1]-resa1[1]);
+
+      resa2[0]+=resa1[0];
+      resa2[1]+=resa1[1];
     } else {
-      resa1[0]=temp[2];
-      resa1[1]=temp[3];
+      resa2[0]=temp[2];
+      resa2[1]=temp[3];
     }
 
-#ifdef JACK
-    buf[0][i]=0.5*resa1[0];
-    buf[1][i]=0.5*resa1[1];
-#else
-    resa1[0]=fmin(fmax(resa1[0],-2),2);
-    resa1[1]=fmin(fmax(resa1[1],-2),2);
-    switch (ar.format) {
-      case AUDIO_F32:
-        buf[0][i*ar.channels]=0.5*resa1[0];
-        buf[0][1+(i*ar.channels)]=0.5*resa1[1];
-        break;
-      case AUDIO_S16:
-        buf16[0][i*ar.channels]=fmin(fmax(-1,0.5*resa1[0]),1)*32767;
-        buf16[0][1+(i*ar.channels)]=fmin(fmax(-1,0.5*resa1[1]),1)*32767;
-        break;
-      case AUDIO_S32:
-        buf32[0][i*ar.channels]=int(fmin(fmax(-1,0.5*resa1[0]),1)*8388607)<<8;
-        buf32[0][1+(i*ar.channels)]=int(fmin(fmax(-1,0.5*resa1[1]),1)*8388607)<<8;
-        break;
-      case AUDIO_S8:
-        buf8[0][i*ar.channels]=fmin(fmax(-1,0.5*resa1[0]),1)*127;
-        buf8[0][1+(i*ar.channels)]=fmin(fmax(-1,0.5*resa1[1]),1)*127;
-        break;
-      case AUDIO_U8:
-      case AUDIO_U16:
-        break;
-    }
-    
-#endif
     procPos+=noProc;
+    numit++;
     if (procPos>=1) {
       procPos-=1;
+
+      if (settings::muffle) {
+        resa2[0]/=numit;
+        resa2[1]/=numit;
+      }
+#ifdef JACK
+      buf[0][i]=0.5*resa2[0];
+      buf[1][i]=0.5*resa2[1];
+#else
+      resa2[0]=fmin(fmax(resa2[0],-2),2);
+      resa2[1]=fmin(fmax(resa2[1],-2),2);
+      switch (ar.format) {
+        case AUDIO_F32:
+          buf[0][i*ar.channels]=0.5*resa2[0];
+          buf[0][1+(i*ar.channels)]=0.5*resa2[1];
+          break;
+        case AUDIO_S16:
+          buf16[0][i*ar.channels]=fmin(fmax(-1,0.5*resa2[0]),1)*32767;
+          buf16[0][1+(i*ar.channels)]=fmin(fmax(-1,0.5*resa2[1]),1)*32767;
+          break;
+        case AUDIO_S32:
+          buf32[0][i*ar.channels]=int(fmin(fmax(-1,0.5*resa2[0]),1)*8388607)<<8;
+          buf32[0][1+(i*ar.channels)]=int(fmin(fmax(-1,0.5*resa2[1]),1)*8388607)<<8;
+          break;
+        case AUDIO_S8:
+          buf8[0][i*ar.channels]=fmin(fmax(-1,0.5*resa2[0]),1)*127;
+          buf8[0][1+(i*ar.channels)]=fmin(fmax(-1,0.5*resa2[1]),1)*127;
+          break;
+        case AUDIO_U8:
+        case AUDIO_U16:
+          break;
+      }
+#endif
+
       i++;
-      oscbuf[oscbufWPos]=resa1[0];
-      oscbuf2[oscbufWPos]=resa1[1];
+      oscbuf[oscbufWPos]=resa2[0];
+      oscbuf2[oscbufWPos]=resa2[1];
+      resa2[0]=0;
+      resa2[1]=0;
       oscbufWPos++;
+      numit=0;
     }
   }
 #ifdef JACK
