@@ -178,6 +178,7 @@ struct Instrument {
   unsigned char flags, RMf;
 };
 Instrument instrument[256]; // instrument[id][position]
+Instrument blankIns;
 unsigned char bytable[8][256][256]={}; // bytable[table][indextab][position]
 unsigned char pat[256][256][32][5]={}; // pat[patid][patpos][channel][bytepos]
 int scroll[32][7]={}; // scroll[channel][envelope]
@@ -2144,10 +2145,13 @@ void CleanupPatterns() {
   }
   // instruments
   memset(instrument,0,256*64);
+  memset(&blankIns,0,64);
   for (int jj=0;jj<256;jj++) {
     instrument[jj].noteOffset=48;
     instrument[jj].vol=64;
   }
+  blankIns.noteOffset=48;
+  blankIns.vol=64;
   // default vol/pan
   for (int j=0; j<32; j++) {
     defchanvol[j]=0x80;
@@ -3743,13 +3747,7 @@ int SaveFile() {
     for (int ii=0; ii<256; ii++) {
       IS_INS_BLANK[ii]=true;
       // check if the instrument is blank
-      for (int ii1=0; ii1<64; ii1++) {
-        if (ii1==0x2b) {
-          if (instrument[ii].noteOffset!=48) {IS_INS_BLANK[ii]=false;break;}
-        } else {
-          if (((unsigned char*)&instrument[ii])[ii1]!=0) {IS_INS_BLANK[ii]=false;break;}
-        }
-      }
+      if (memcmp(&instrument[ii],&blankIns,64)!=0) {IS_INS_BLANK[ii]=false;}
       if (IS_INS_BLANK[ii]) {
         insparas[ii]=0;continue;
       }
