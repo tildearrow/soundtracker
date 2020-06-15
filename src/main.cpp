@@ -67,7 +67,7 @@ uint32_t jacksr;
 soundchip chip[4]; // up to 4 soundchips
 
 blip_buffer_t* bb[2];
-short prevSample[2]={0,0};
+int prevSample[2]={0,0};
 
 short bbOut[2][32768];
 
@@ -574,7 +574,8 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   short* buf16[2];
   int* buf32[2];
 #endif
-  short temp[4];
+  short stemp[2];
+  int temp[2];
 #ifdef JACK
   for (int i=0; i<2; i++) {
     buf[i]=(float*)jack_port_get_buffer(ao[i],nframes);
@@ -643,15 +644,15 @@ static void nothing(void* userdata, Uint8* stream, int len) {
       }
       ASC::currentclock+=ASC::interval;
     }
-    temp[2]=0; temp[3]=0;
+    temp[0]=0; temp[1]=0;
     for (int j=0; j<(1+((channels-1)>>3)); j++) {
-      chip[j].NextSample(&temp[0],&temp[1]);
-      temp[2]+=temp[0]; temp[3]+=temp[1];
+      chip[j].NextSample(&stemp[0],&stemp[1]);
+      temp[0]+=stemp[0]; temp[1]+=stemp[1];
     }
-    blip_add_delta(bb[0],i,temp[2]-prevSample[0]);
-    blip_add_delta(bb[1],i,temp[3]-prevSample[1]);
-    prevSample[0]=temp[2];
-    prevSample[1]=temp[3];
+    blip_add_delta(bb[0],i,(short)(temp[0]-prevSample[0]));
+    blip_add_delta(bb[1],i,(short)(temp[1]-prevSample[1]));
+    prevSample[0]=temp[0];
+    prevSample[1]=temp[1];
   }
   
   blip_end_frame(bb[0],runtotal);
