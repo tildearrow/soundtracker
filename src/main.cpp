@@ -420,6 +420,7 @@ int inputcurpos=0;
 int chantoplayfx=0;
 string* inputvar=NULL;
 string candInput;
+string origin;
 int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
 size_t maxinputsize=string::npos;
 bool imeActive=false;
@@ -2143,6 +2144,7 @@ void CleanupPatterns() {
   songdf=0;
   channels=8;
   songlength=255;
+  origin="Unknown";
 }
 
 Color mapHSV(float hue,float saturation,float value) {
@@ -3108,6 +3110,7 @@ int ImportIT(FILE* it) {
       name+=memblock[sk];
     }
     printf("module name is %s\n",name.c_str());
+    origin="Impulse Tracker";
     // orders, instruments, samples and patterns
     printf("%d orders, %d instruments, %d samples, %d patterns\n",(int)memblock[0x20],(int)memblock[0x22],(int)memblock[0x24],(int)memblock[0x26]);
     songlength=(unsigned char)memblock[0x20]; instruments=(unsigned char)memblock[0x22]; patterns=(unsigned char)memblock[0x26]; samples=(unsigned char)memblock[0x24];
@@ -3297,8 +3300,8 @@ int ImportMOD(FILE* mod) {
      (memblock[1081]=='C' && memblock[1082]=='H' && memblock[1083]=='N')||
      (memblock[1082]=='C' && memblock[1083]=='H')) {
        switch(memblock[1080]) {
-      case 'M': printf("4-channel original MOD module detected\n"); chans=4; break;
-      default: printf("multi-channel MOD module detected\n"); break;
+      case 'M': printf("4-channel original MOD module detected\n"); origin="ProTracker"; chans=4; break;
+      default: printf("multi-channel MOD module detected\n"); origin="FastTracker or similar"; break;
        }
        if (memblock[1082]=='C' && memblock[1083]=='H') {chans=(NumberLetter(memblock[1080])*10)+NumberLetter(memblock[1081]);}
        if (memblock[1081]=='C' && memblock[1082]=='H' && memblock[1083]=='N') {chans=NumberLetter(memblock[1080]);}
@@ -3568,6 +3571,7 @@ int ImportS3M() {
 
   }
   delete[] memblock;
+  origin="Scream Tracker 3";
   return 0;
 }
 
@@ -3915,6 +3919,7 @@ int LoadFile(const char* filename) {
     //printf("%d ",ftell(sfile));
     TVER=fgetsh(sfile); // version
     printf("module version %d\n",TVER);
+    origin=strFormat("soundtracker dev%d\n",TVER);
     if (TVER<60) {printf("-applying filter mode compatibility\n");}
     if (TVER<65) {printf("-applying volume column compatibility\n");}
     if (TVER<106) {printf("-applying loop point fix compatibility\n");}
@@ -5714,7 +5719,7 @@ void drawdisp() {
     g.tColor(14);
     g.printf(PROGRAM_NAME);
     g.tPos(14,0);
-    g.printf("r%d",ver);
+    g.printf("dev%d",ver);
   
     // properties - buttons
     patseek+=(curpat-patseek)/4;
