@@ -202,7 +202,7 @@ bool SSInter::next(const char* buf, int& set, size_t size) {
         }
         break;
     }
-    if (c=='R') break;
+    if (c=='R' || c==';') break;
   }
   return true;
 };

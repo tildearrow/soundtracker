@@ -79,7 +79,7 @@ static void process(void* userdata, Uint8* stream, int len) {
       str="";
       while ((wc=fgetc(f))!=EOF) {
         str+=wc;
-        if (wc=='R') break;
+        if (wc=='R' || wc==';') break;
       }
       if (feof(f)) quit=true;
       writable=0;
@@ -119,8 +119,8 @@ static void process(void* userdata, Uint8* stream, int len) {
     resa1[1]=resa1[1]+resaf*(resa0[1]-resa1[1]);
     
 #ifdef JACK
-    buf[0][i]=0.25*resa1[0];
-    buf[1][i]=0.25*resa1[1];
+    buf[0][i]=(0.5*resa1[0])/32768;
+    buf[1][i]=(0.5*resa1[1])/32768;
 #else
     buf[0][i*ar.channels]=0.25*resa1[0];
     buf[1][i*ar.channels]=0.25*resa1[1];

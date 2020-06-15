@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
-const float pi=3.1415926535;
 
 class soundchip {
   signed char SCsaw[257];
@@ -24,7 +23,6 @@ class soundchip {
   int nshigh[8];
   int nsband[8];
   int pnsL, pnsR, ppsL, ppsR, tnsL, tnsR;
-  //char (*ShapeFunctions[8])(int theduty, float value);
   signed char* ShapeFunctions[8];
   unsigned short oldfreq[8];
   unsigned short oldflags[8];
