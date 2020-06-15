@@ -182,7 +182,6 @@ unsigned char bytable[8][256][256]={}; // bytable[table][indextab][position]
 unsigned char pat[256][256][32][5]={}; // pat[patid][patpos][channel][bytepos]
 int scroll[32][7]={}; // scroll[channel][envelope]
 unsigned char songlength=255;
-int orders=0;
 int instruments=0;
 int patterns=0;
 int seqs=255;
@@ -2143,6 +2142,7 @@ void CleanupPatterns() {
   defspeed=6;
   songdf=0;
   channels=8;
+  songlength=255;
 }
 
 Color mapHSV(float hue,float saturation,float value) {
@@ -3110,7 +3110,7 @@ int ImportIT(FILE* it) {
     printf("module name is %s\n",name.c_str());
     // orders, instruments, samples and patterns
     printf("%d orders, %d instruments, %d samples, %d patterns\n",(int)memblock[0x20],(int)memblock[0x22],(int)memblock[0x24],(int)memblock[0x26]);
-    orders=(unsigned char)memblock[0x20]; instruments=(unsigned char)memblock[0x22]; patterns=(unsigned char)memblock[0x26]; samples=(unsigned char)memblock[0x24];
+    songlength=(unsigned char)memblock[0x20]; instruments=(unsigned char)memblock[0x22]; patterns=(unsigned char)memblock[0x26]; samples=(unsigned char)memblock[0x24];
     //cout << (int)memblock[0x29] << "." << (int)memblock[0x28];
     printf("\n");
     //cout << "volumes: global " << (int)(unsigned char)memblock[0x30] << ", mixing " << (int)(unsigned char)memblock[0x31] << "\n";
@@ -3129,7 +3129,7 @@ int ImportIT(FILE* it) {
     }
     printf("\n");
     printf("---ORDER LIST---\n");
-    for (sk=0xc0;sk<(0xc0+orders);sk++) {
+    for (sk=0xc0;sk<(0xc0+songlength);sk++) {
       patid[sk-0xc0]=memblock[sk];
       switch(memblock[sk]) {
       case -2: printf("+++ "); break;
@@ -3141,7 +3141,7 @@ int ImportIT(FILE* it) {
     // pointers
     printf("\n---POINTERS---\n");
     for (sk=0;sk<patterns;sk++) {
-    patparas[sk]=((unsigned char)memblock[0xc0+orders+(instruments*4)+(samples*4)+(sk*4)])+(((unsigned char)memblock[0xc0+orders+(instruments*4)+(samples*4)+(sk*4)+1])*256)+(((unsigned char)memblock[0xc0+orders+(instruments*4)+(samples*4)+(sk*4)+2])*65536)+(((unsigned char)memblock[0xc0+orders+(instruments*4)+(samples*4)+(sk*4)+3])*16777216);
+    patparas[sk]=((unsigned char)memblock[0xc0+songlength+(instruments*4)+(samples*4)+(sk*4)])+(((unsigned char)memblock[0xc0+songlength+(instruments*4)+(samples*4)+(sk*4)+1])*256)+(((unsigned char)memblock[0xc0+songlength+(instruments*4)+(samples*4)+(sk*4)+2])*65536)+(((unsigned char)memblock[0xc0+songlength+(instruments*4)+(samples*4)+(sk*4)+3])*16777216);
     printf("pattern %d offset: ",sk);
     printf("%d\n",patparas[sk]);
     }
@@ -3323,6 +3323,7 @@ int ImportMOD(FILE* mod) {
       if (patid[sk]>patterns) {patterns=patid[sk];}
     }
     printf("%d patterns\n",patterns);
+    songlength=memblock[950]-1;
     if (settings::samples) {
     printf("putting samples to PCM memory if possible\n");
     printf("%ld bytes",size-1084-(patterns*chans*64*4));
@@ -3501,13 +3502,13 @@ int ImportS3M() {
     name+=memblock[sk];
   }
   printf("module name is %s\n",name.c_str());
-  orders=memblock[0x20];
+  songlength=memblock[0x20];
   instruments=memblock[0x22];
   patterns=memblock[0x24]*2;
-  printf("%d orders, %d instruments, %d patterns\n",orders,instruments,patterns);
+  printf("%d orders, %d instruments, %d patterns\n",songlength,instruments,patterns);
   // order list
   printf("---ORDER LIST---\n");
-  for (sk=0x60;sk<orders+0x60;sk++) {
+  for (sk=0x60;sk<songlength+0x60;sk++) {
     patid[sk-0x60]=memblock[sk];
     switch(memblock[sk]) {
       case -2: printf("+++ "); break;
@@ -3517,15 +3518,15 @@ int ImportS3M() {
     }
   // pointers
   printf("\n---POINTERS---\n");
-  for (sk=0x60+orders;sk<(0x60+orders+instruments);sk+=2) {
-    insparas[(sk-(0x60+orders))/2]=((unsigned char)memblock[sk]*16)+((unsigned char)memblock[sk+1]*4096);
-    printf("instrument %d offset: ",(sk-(0x60+orders))/2);
-    printf("%d\n",insparas[(sk-(0x60+orders))/2]);
+  for (sk=0x60+songlength;sk<(0x60+songlength+instruments);sk+=2) {
+    insparas[(sk-(0x60+songlength))/2]=((unsigned char)memblock[sk]*16)+((unsigned char)memblock[sk+1]*4096);
+    printf("instrument %d offset: ",(sk-(0x60+songlength))/2);
+    printf("%d\n",insparas[(sk-(0x60+songlength))/2]);
     }
-  for (sk=0x60+orders+(instruments*2);sk<(0x60+orders+(instruments*2)+patterns);sk+=2) {
-    patparas[(sk-(0x60+orders+(instruments*2)))/2]=((unsigned char)memblock[sk]*16)+((unsigned char)memblock[sk+1]*4096);
-    printf("pattern %d offset: ",(sk-(0x60+orders+(instruments*2)))/2);
-    printf("%d\n",patparas[(sk-(0x60+orders+(instruments*2)))/2]);
+  for (sk=0x60+songlength+(instruments*2);sk<(0x60+songlength+(instruments*2)+patterns);sk+=2) {
+    patparas[(sk-(0x60+songlength+(instruments*2)))/2]=((unsigned char)memblock[sk]*16)+((unsigned char)memblock[sk+1]*4096);
+    printf("pattern %d offset: ",(sk-(0x60+songlength+(instruments*2)))/2);
+    printf("%d\n",patparas[(sk-(0x60+songlength+(instruments*2)))/2]);
     }
   // unpack patterns
   for (int pointer=0;pointer<(patterns/2);pointer++) {
@@ -3693,7 +3694,7 @@ int SaveFile() {
     fwrite(&ver,2,1,sfile); // version
     fputc(instruments,sfile); // instruments
     fputc(patterns,sfile); // patterns
-    fputc(orders,sfile); // orders
+    fputc(songlength,sfile); // orders
     fputc(defspeed,sfile); // speed
     fputc(seqs,sfile); // sequences
     fputc(125,sfile); // tempo
@@ -3920,11 +3921,12 @@ int LoadFile(const char* filename) {
     if (TVER<144) {printf("-applying endianness compatibility\n");}
     if (TVER<145) {printf("-applying channel pan/vol compatibility\n");}
     if (TVER<146) {printf("-applying no channel count compatibility\n");}
+    if (TVER<147) {printf("-applying no song length compatibility\n");}
     //if (TVER<??) {printf("-applying legacy instrument compatibility\n");}
     //printf("%d ",ftell(sfile));
     instruments=fgetc(sfile); // instruments
     patterns=fgetc(sfile); // patterns
-    orders=fgetc(sfile); // orders
+    songlength=fgetc(sfile); // orders
     defspeed=fgetc(sfile); // speed
     seqs=fgetc(sfile); // sequences
     //fputc(sfile,125); // tempo
@@ -3960,6 +3962,18 @@ int LoadFile(const char* filename) {
     fseek(sfile,0x80,SEEK_SET); // seek to 0x80
     for (int ii=0; ii<256; ii++) {
       patid[ii]=fgetc(sfile); // order list
+    }
+    if (TVER<147) {
+      // detect song length.
+      songlength=255;
+      for (int i=255; i>0; i--) {
+        if (patid[i]==0) {
+          songlength=i;
+        } else {
+          break;
+        }
+      }
+      songlength--;
     }
     fseek(sfile,0x3a,SEEK_SET); // seek to 0x3a
     comments=""; // clean comments
@@ -4359,7 +4373,11 @@ void ClickEvents() {
         }
         // skip right button
         if (PIR((scrW/2)+82,13,(scrW/2)+112,47,mstate.x,mstate.y)) {
-          if (curpat<255) curpat++;
+          if (curpat<songlength) {
+            curpat++;
+          } else {
+            curpat=0;
+          }
           if (playmode==1) Play();
         }
       }
@@ -4441,7 +4459,14 @@ void ClickEvents() {
       if (PIR(160,24,167,35,mstate.x,mstate.y)) {tempo--; if (tempo<31) {tempo=31;}; FPS=tempo/2.5;}
       if (PIR(168,24,176,35,mstate.x,mstate.y)) {tempo++; if (tempo>255) {tempo=255;}; FPS=tempo/2.5;}
       if (PIR(160,36,167,48,mstate.x,mstate.y)) {if (curpat>0) curpat--; if (playmode==1) Play();}
-      if (PIR(168,36,176,48,mstate.x,mstate.y)) {if (curpat<255) curpat++; if (playmode==1) Play();}
+      if (PIR(168,36,176,48,mstate.x,mstate.y)) {
+        if (curpat<songlength) {
+          curpat++;
+        } else {
+          curpat=0;
+        }
+        if (playmode==1) Play();
+      }
       if (PIR(272,12,279,24,mstate.x,mstate.y)) {patid[curpat]--;}
       if (PIR(280,12,288,24,mstate.x,mstate.y)) {patid[curpat]++;}
       if (PIR(272,36,279,48,mstate.x,mstate.y)) {patlength[patid[curpat]]--;}
@@ -5748,11 +5773,23 @@ void drawdisp() {
     delta=(6*fmod(patseek,1));
     g.tNLPos(23);
     g.tPos(-fmod(patseek,1));
-    g.tColor(244-delta); g.printf("%.2X\n",patid[maxval((int)patseek-2,0)]);
-    g.tColor(250-delta); g.printf("%.2X\n",patid[maxval((int)patseek-1,0)]);
+    if (((int)patseek-1)>0) {
+      g.tColor(244-delta); g.printf("%.2X\n",patid[maxval((int)patseek-2,0)]);
+    } else {
+      g.printf("\n");
+    }
+    if (((int)patseek)>0) {
+      g.tColor(250-delta); g.printf("%.2X\n",patid[maxval((int)patseek-1,0)]);
+    } else {
+      g.printf("\n");
+    }
     g.tColor(255-delta); g.printf("%.2X\n",patid[(int)patseek]);
-    g.tColor(249+delta); g.printf("%.2X\n",patid[minval((int)patseek+1,255)]);
-    g.tColor(244+delta); g.printf("%.2X",patid[maxval((int)patseek+2,0)]);
+    if (((int)patseek)<songlength) {
+      g.tColor(249+delta); g.printf("%.2X\n",patid[minval((int)patseek+1,255)]);
+    }
+    if (((int)patseek+1)<songlength) {
+      g.tColor(244+delta); g.printf("%.2X",patid[maxval((int)patseek+2,0)]);
+    }
     g._WRAP_reset_clipping_rectangle();
     g.tNLPos(0);
     // boundaries
