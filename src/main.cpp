@@ -412,7 +412,7 @@ bool rightclickprev=false;
 int prevZ=0;
 int channels=8;
 int hover[16]={}; // hover time per button
-int16_t ver=147; // version number
+int16_t ver=148; // version number
 unsigned char chs0[5000];
 char* helptext;
 string comments;
@@ -1360,8 +1360,8 @@ void NextRow() {
     }
     ninst=pat[patid[curpat]][curstep][loop][1]; // finds out next instrument
     nvolu[loop]=pat[patid[curpat]][curstep][loop][2]; // finds out next volume value
-    // is there a note and instrument, but no volume value? assume v3f
-    if ((nnote%16)!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13 && nvolu[loop]==0 && ninst!=0) {nvolu[loop]=0x7f;}
+    // is there a note and instrument, but no volume value? assume instrument volume
+    if ((nnote%16)!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13 && nvolu[loop]==0 && ninst!=0) {nvolu[loop]=0x40+minval(instrument[ninst].vol,63);}
     nfxid[loop]=pat[patid[curpat]][curstep][loop][3]; // finds out next effect
     nfxvl[loop]=pat[patid[curpat]][curstep][loop][4]; // finds out next effect value
     // Txx
@@ -1384,7 +1384,12 @@ void NextRow() {
     // is there a new instrument? if yes then reset volume
     if (ninst!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13) {
       if (nvolu[loop]==0) {
-        if (EnvelopesRunning[loop][0]) {Mvol[loop]=126;} else {cvol[loop]=126;}}
+        if (EnvelopesRunning[loop][0]) {
+          Mvol[loop]=minval(instrument[ninst].vol,63)*2;
+        } else {
+          cvol[loop]=minval(instrument[ninst].vol,63)*2;
+        }
+      }
     }
     if (ninst!=0) {
       Mins[loop]=ninst;
@@ -2133,6 +2138,7 @@ void CleanupPatterns() {
   memset(instrument,0,256*64);
   for (int jj=0;jj<256;jj++) {
     instrument[jj].noteOffset=48;
+    instrument[jj].vol=64;
   }
   // default vol/pan
   for (int j=0; j<32; j++) {
@@ -2206,7 +2212,7 @@ void drawpatterns(bool force) {
       g.printf("%c%c",getinsH(pat[patid[curpat]][i][j+curedpage][1]),getinsL(pat[patid[curpat]][i][j+curedpage][1]));
       // instrument
       if (pat[patid[curpat]][i][j+curedpage][2]==0 && pat[patid[curpat]][i][j+curedpage][0]!=0) {
-        g.printf("v40");
+        g.printf("v%.2X",instrument[pat[patid[curpat]][i][j+curedpage][1]].vol);
       } else {
         g.tColor(getVFXColor(pat[patid[curpat]][i][j+curedpage][2]));
         g.printf("%s%c%c",getVFX(pat[patid[curpat]][i][j+curedpage][2]),getVFXH(pat[patid[curpat]][i][j+curedpage][2]),getVFXL(pat[patid[curpat]][i][j+curedpage][2]));
@@ -3266,6 +3272,7 @@ int ImportMOD(FILE* mod) {
     for (int jj=0;jj<22;jj++) {
       instrument[ii+1].name[jj]=memblock[0x14+(ii*30)+jj];
     }
+    instrument[ii+1].vol=memblock[0x14+(ii*30)+25];
     if (settings::samples) {
       instrument[ii+1].pcmPos[1]=CurrentSampleSeek>>8;
       instrument[ii+1].pcmPos[0]=CurrentSampleSeek%256;
@@ -3928,6 +3935,7 @@ int LoadFile(const char* filename) {
     if (TVER<145) {printf("-applying channel pan/vol compatibility\n");}
     if (TVER<146) {printf("-applying no channel count compatibility\n");}
     if (TVER<147) {printf("-applying no song length compatibility\n");}
+    if (TVER<148) {printf("-applying instrument volume compatibility\n");}
     //if (TVER<??) {printf("-applying legacy instrument compatibility\n");}
     //printf("%d ",ftell(sfile));
     instruments=fgetc(sfile); // instruments
@@ -4033,6 +4041,11 @@ int LoadFile(const char* filename) {
         instrument[ii].pcmLoop[0]^=instrument[ii].pcmLoop[1];
         instrument[ii].filterH=bswapu16(instrument[ii].filterH);
       }
+      // version<148 instrument volume
+      if (TVER<148) {
+        instrument[ii].vol=64;
+      }
+
       // version<145 panning
       if (TVER<145) {
         for (int j=0; j<32; j++) {
