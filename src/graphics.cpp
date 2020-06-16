@@ -343,8 +343,12 @@ int Graphics::printf(const char* format, ...) {
   return ret;
 }
 
-void Graphics::setTarget(SDL_Texture* where) {
-  SDL_SetRenderTarget(sdlRend,where);
+void Graphics::setTarget(Texture where) {
+  SDL_SetRenderTarget(sdlRend,where.actual);
+}
+
+void Graphics::resetTarget() {
+  SDL_SetRenderTarget(sdlRend,NULL);
 }
 
 void Graphics::setTitle(string t) {

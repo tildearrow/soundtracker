@@ -83,6 +83,12 @@ struct Color {
     a(al) {}
 };
 
+struct Texture {
+  SDL_Texture* actual;
+  int w, h;
+  Texture(): actual(NULL), w(0), h(0) {}
+};
+
 enum UIType {
   UIClassic=0,
   UIModern,
@@ -263,13 +269,18 @@ class Graphics {
       SDL_SetRenderDrawColor(sdlRend,color.r*255,color.g*255,color.b*255,color.a*255);
       SDL_RenderClear(sdlRend);
     }
-    SDL_Texture* _WRAP_create_bitmap(int w, int h) {
-      SDL_Texture* ret=SDL_CreateTexture(sdlRend,SDL_PIXELFORMAT_RGBA8888,SDL_TEXTUREACCESS_TARGET,w,h);
-      SDL_SetTextureBlendMode(ret,SDL_BLENDMODE_BLEND);
+    Texture _WRAP_create_bitmap(int w, int h) {
+      Texture ret;
+      ret.actual=SDL_CreateTexture(sdlRend,SDL_PIXELFORMAT_RGBA8888,SDL_TEXTUREACCESS_TARGET,w,h);
+      SDL_SetTextureBlendMode(ret.actual,SDL_BLENDMODE_BLEND);
+      ret.w=w;
+      ret.h=h;
       return ret;
     }
-    void _WRAP_destroy_bitmap(SDL_Texture* bitmap) {
-      SDL_DestroyTexture(bitmap);
+    void _WRAP_destroy_bitmap(Texture bitmap) {
+      SDL_DestroyTexture(bitmap.actual);
+      bitmap.w=0;
+      bitmap.h=0;
     }
     bool _WRAP_get_next_event(SDL_Event* e) {
       return SDL_PollEvent(e);
@@ -285,15 +296,13 @@ class Graphics {
       SDL_SetRenderDrawColor(sdlRend,color.r*255,color.g*255,color.b*255,color.a*255);
       SDL_RenderDrawPointF(sdlRend,x,y);
     }
-    SDL_Texture* _WRAP_load_bitmap(const char* fn) {
-      return NULL;//al_load_bitmap(fn);
-    }
-    void _WRAP_draw_bitmap(SDL_Texture* bitmap, float x, float y, int flags) {
+    void _WRAP_draw_bitmap(Texture bitmap, float x, float y, int flags) {
       SDL_Rect dr;
       dr.x=x;
       dr.y=y;
-      SDL_QueryTexture(bitmap,NULL,NULL,&dr.w,&dr.h);
-      SDL_RenderCopy(sdlRend,bitmap,NULL,&dr);
+      dr.w=bitmap.w;
+      dr.h=bitmap.h;
+      SDL_RenderCopy(sdlRend,bitmap.actual,NULL,&dr);
     }
     void _WRAP_set_blender(SDL_BlendMode op) {
       SDL_SetRenderDrawBlendMode(sdlRend,op);
@@ -331,12 +340,10 @@ class Graphics {
       }
       SDL_RenderSetClipRect(sdlRend,&r);
     }
-    int _WRAP_get_bitmap_width(SDL_Texture* bitmap) {
-      int retval;
-      SDL_QueryTexture(bitmap,NULL,NULL,&retval,NULL);
-      return retval;
+    int _WRAP_get_bitmap_width(Texture bitmap) {
+      return bitmap.w;
     }
-    void _WRAP_draw_bitmap_region(SDL_Texture* bitmap, float x, float y, float w, float h, float dx, float dy, int flags) {
+    void _WRAP_draw_bitmap_region(Texture bitmap, float x, float y, float w, float h, float dx, float dy, int flags) {
       SDL_Rect sr, dr, tr;
       sr.x=x;
       sr.y=y;
@@ -348,14 +355,15 @@ class Graphics {
       dr.h=h;
       tr.x=0;
       tr.y=0;
-      SDL_QueryTexture(bitmap,NULL,NULL,&tr.w,&tr.h);
+      tr.w=bitmap.w;
+      tr.h=bitmap.h;
       if ((sr.h+sr.y)>tr.h) {
         sr.h-=(sr.h+sr.y)-tr.h;
         dr.h=sr.h;
       }
-      SDL_RenderCopy(sdlRend,bitmap,&sr,&dr);
+      SDL_RenderCopy(sdlRend,bitmap.actual,&sr,&dr);
     }
-    void _WRAP_disregard_scale_draw(SDL_Texture* bitmap, float x, float y, float w, float h, float dx, float dy, float cscale, int flags) {
+    void _WRAP_disregard_scale_draw(Texture bitmap, float x, float y, float w, float h, float dx, float dy, float cscale, int flags) {
       SDL_Rect sr, dr, tr;
       sr.x=x;
       sr.y=y;
@@ -367,7 +375,8 @@ class Graphics {
       dr.h=h;
       tr.x=0;
       tr.y=0;
-      SDL_QueryTexture(bitmap,NULL,NULL,&tr.w,&tr.h);
+      tr.w=bitmap.w;
+      tr.h=bitmap.h;
       sr.w=tr.w;
       sr.h=tr.h;
       dr.w=tr.w;
@@ -379,10 +388,10 @@ class Graphics {
       dr.w*=cscale;
       dr.h*=cscale;
       SDL_RenderSetScale(sdlRend,1,1);
-      SDL_RenderCopy(sdlRend,bitmap,&sr,&dr);
+      SDL_RenderCopy(sdlRend,bitmap.actual,&sr,&dr);
       SDL_RenderSetScale(sdlRend,dpiScale,dpiScale);
     }
-    void _WRAP_draw_scaled_bitmap(SDL_Texture* bitmap, float sx, float sy, float sw, float sh, float dx, float dy, float dw, float dh, int flags) {
+    void _WRAP_draw_scaled_bitmap(Texture bitmap, float sx, float sy, float sw, float sh, float dx, float dy, float dw, float dh, int flags) {
       SDL_Rect sr, dr;
       sr.x=sx;
       sr.y=sy;
@@ -392,9 +401,9 @@ class Graphics {
       dr.y=dy;
       dr.w=dw;
       dr.h=dh;
-      SDL_RenderCopy(sdlRend,bitmap,&sr,&dr);
+      SDL_RenderCopy(sdlRend,bitmap.actual,&sr,&dr);
     }
-    void _WRAP_draw_rotated_bitmap(SDL_Texture* bitmap, float cx, float cy, float x, float y, float r, int flags) {
+    void _WRAP_draw_rotated_bitmap(Texture bitmap, float cx, float cy, float x, float y, float r, int flags) {
       // TODO
       ::printf("Draw Rotated Bitmap\n");
       //al_draw_rotated_bitmap(bitmap,cx,cy,x,y,r,flags);
@@ -421,7 +430,8 @@ class Graphics {
     void tNLPos(float x);
     void tAlign(float x);
     void tColor(unsigned char color);
-    void setTarget(SDL_Texture* where);
+    void setTarget(Texture where);
+    void resetTarget();
     void setTitle(string t);
     void trigResize(int tx, int ty);
     int printf(const char* format, ...);

@@ -71,7 +71,6 @@ double FPS=50;
 int tempo;
 
 int doframe;
-SDL_Texture *bpatterns=NULL;
 unsigned char colorof[6]={0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff};
 // init sound stuff
 unsigned int cfreq[32]={1,1,1,1,1,1,1,1,
@@ -353,7 +352,7 @@ enum envTypes {
 struct {
   int x, y, z, buttons;
 } mstate;
-SDL_Texture *logo=NULL;
+Texture logo;
 bool leftclick=false;
 bool leftclickprev=false;
 bool rightclick=false;  
@@ -413,12 +412,12 @@ struct FileInList {
 std::vector<FileInList> filenames;
 std::vector<FileInList> filessorted;
 int scrW,scrH;
-SDL_Texture* patternbitmap = NULL;
-SDL_Texture* pianoroll=NULL;
-SDL_Texture* pianoroll_temp=NULL;
-SDL_Texture* piano=NULL;
-SDL_Texture* mixer=NULL;
-SDL_Texture* osc=NULL;
+Texture patternbitmap;
+Texture pianoroll;
+Texture pianoroll_temp;
+Texture piano;
+Texture mixer;
+Texture osc;
 bool firstframe=true;
 float oscbuf[65536]={}; // safe oscilloscope buffer
 float oscbuf2[65536]={}; // safe oscilloscope buffer
@@ -2156,7 +2155,7 @@ void drawpatterns(bool force) {
     g.tColor(15);
     g.printf("|");
   }
-  g.setTarget(NULL);
+  g.resetTarget();
 }
 
 void drawinsedit() {
@@ -2491,7 +2490,7 @@ void drawmixerlayer() {
   g._WRAP_draw_line(0,21.5+60,scrW,21.5+60,g._WRAP_map_rgb(255,255,255),1);
   g._WRAP_draw_line(0,57.5+60,scrW,57.5+60,g._WRAP_map_rgb(255,255,255),1);
   g._WRAP_draw_line(12.5+(chanstodisplay*96)+mixerdrawoffset,60,12.5+(chanstodisplay*96)+mixerdrawoffset,scrW-0.5,g._WRAP_map_rgb(255,255,255),1);
-  g.setTarget(NULL);
+  g.resetTarget();
 }
 
 char shapeSym(int sh) {
@@ -2783,7 +2782,7 @@ void drawabout() {
   g.tColor(14);
   g.printf("r%d",ver);
   g.tAlign(0);
-  if (logo==NULL) {
+  if (logo.actual==NULL) {
     g.tColor(15);
     g.tPos(0,10);
     g.printf("it seems you don't have the logo file!");
@@ -2817,7 +2816,7 @@ void drawpiano() {
   g.setTarget(pianoroll);
   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
   g._WRAP_draw_bitmap(pianoroll_temp,0,0,0);
-  g.setTarget(NULL);
+  g.resetTarget();
   //printf("--------------\n");
   for (int ii=0;ii<32;ii++) {
     if (muted[ii] || cvol[ii]==0) continue;
@@ -2878,7 +2877,7 @@ void drawpiano() {
       ));
                 }
                 g._WRAP_set_blender(SDL_BLENDMODE_BLEND);
-    g.setTarget(NULL);
+    g.resetTarget();
   }
   g._WRAP_draw_scaled_bitmap(pianoroll,0,0,700,128,(scrW/2)-((((scrW)/700)*700)/2),scrH-(((scrH-(60+((((scrW)/700)*60))))/128)*128)-(((scrW)/700)*60),((scrW)/700)*700,((scrH-(60+((((scrW)/700)*60))))/128)*128,0);
   for (int ii=0;ii<32;ii++) {
@@ -5559,7 +5558,7 @@ void drawdisp() {
     }
   }
   g._WRAP_set_blender(SDL_BLENDMODE_BLEND);
-  g.setTarget(NULL);
+  g.resetTarget();
   
   if (iface==UIMobile) {
     // boundaries
@@ -6059,10 +6058,6 @@ int main(int argc, char **argv) {
   pianoroll_temp=g._WRAP_create_bitmap(700,128);
   mixer=g._WRAP_create_bitmap(scrW,scrH);
   osc=g._WRAP_create_bitmap(128,59);
-  logo=NULL;
-  if (!logo) {
-    printf("you don't have the logo.\n");
-  }
 
   CleanupPatterns();
   // init colors
@@ -6095,7 +6090,7 @@ int main(int argc, char **argv) {
     g.setTarget(mixer);
     g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
     drawmixerlayer();
-    g.setTarget(NULL);
+    g.resetTarget();
     initNewBits();
   }
   printf("initializing audio channels\n");
