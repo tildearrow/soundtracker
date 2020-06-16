@@ -5792,6 +5792,147 @@ void initNewBits() {
   bdSave=Button(158,76,64,32,"Save",NULL,NULL);
 }
 
+void updateDisp() {
+  SDL_Event ev;
+  while (g._WRAP_get_next_event(&ev)) {
+    if (ev.type==SDL_QUIT) {
+      printf("close button pressed\n");
+      quit=true;
+    } else if (ev.type==SDL_MOUSEMOTION) {
+      mstate.x=ev.motion.x/dpiScale;
+      mstate.y=ev.motion.y/dpiScale;
+    } else if (ev.type==SDL_MOUSEBUTTONDOWN) {
+      mstate.x=ev.button.x/dpiScale;
+      mstate.y=ev.button.y/dpiScale;
+      switch (ev.button.button) {
+        case SDL_BUTTON_LEFT:
+          mstate.buttons|=1;
+          break;
+        case SDL_BUTTON_RIGHT:
+          mstate.buttons|=2;
+          break;
+        case SDL_BUTTON_MIDDLE:
+          mstate.buttons|=4;
+          break;
+      }
+    } else if (ev.type==SDL_MOUSEBUTTONUP) {
+      mstate.x=ev.button.x/dpiScale;
+      mstate.y=ev.button.y/dpiScale;
+      switch (ev.button.button) {
+        case SDL_BUTTON_LEFT:
+          mstate.buttons&=~1;
+          break;
+        case SDL_BUTTON_RIGHT:
+          mstate.buttons&=~2;
+          break;
+        case SDL_BUTTON_MIDDLE:
+          mstate.buttons&=~4;
+          break;
+      }
+    } else if (ev.type==SDL_MOUSEWHEEL) {
+      mstate.z+=ev.wheel.y;
+    } else if (ev.type==SDL_WINDOWEVENT) {
+      if (ev.window.event==SDL_WINDOWEVENT_RESIZED) {
+        g.trigResize(ev.window.data1,ev.window.data2);
+        g._WRAP_destroy_bitmap(mixer);
+        // recreate pattern bitmap
+        g._WRAP_destroy_bitmap(patternbitmap);
+        patternbitmap=g._WRAP_create_bitmap(g.getWSize().x,g.getWSize().y);
+        scrW=g.getWSize().x;
+        scrH=g.getWSize().y;
+        mixer=g._WRAP_create_bitmap(scrW,scrH);
+        // adjust channel count if needed
+        maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+        if (maxCTD>channels) maxCTD=channels;
+        if (maxCTD<1) maxCTD=1;
+        chanstodisplay=maxCTD;
+        drawmixerlayer();
+        drawpatterns(true);
+      }
+    } else if (ev.type==SDL_KEYDOWN) {
+      if (inputvar!=NULL && !imeActive) {
+        switch (ev.key.keysym.sym) {
+          case SDLK_LEFT:
+            inputcurpos--;
+            if (inputcurpos<0) {
+              inputcurpos=0;
+              triggerfx(1);
+            }
+            break;
+          case SDLK_RIGHT:
+            inputcurpos++;
+            if (inputcurpos>(signed)utf8len(inputvar->c_str())) {
+              inputcurpos=(signed)utf8len(inputvar->c_str());
+              triggerfx(1);
+            }
+            break;
+          case SDLK_HOME:
+            inputcurpos=0;
+            break;
+          case SDLK_END:
+            inputcurpos=utf8len(inputvar->c_str());
+            break;
+          case SDLK_BACKSPACE:
+            if (--inputcurpos<0) {
+              inputcurpos=0;
+              triggerfx(1);
+            } else {
+              inputvar->erase(utf8pos(inputvar->c_str(),inputcurpos),utf8csize((const unsigned char*)inputvar->c_str()+utf8pos(inputvar->c_str(),inputcurpos)));
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    } else if (ev.type==SDL_TEXTEDITING) {
+      candInput=ev.edit.text;
+      if (ev.edit.start>0) {
+        imeActive=true;
+      } else {
+        imeActive=false;
+      }
+    } else if (ev.type==SDL_TEXTINPUT) {
+      imeActive=false;
+      candInput="";
+      if (inputvar!=NULL) {
+        if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
+          inputvar->insert(utf8pos(inputvar->c_str(),inputcurpos),ev.text.text);
+          inputcurpos+=utf8len(ev.text.text);;
+        } else {
+          triggerfx(1);
+        }
+      }
+    }
+  }
+  if (true) {
+    doframe=1;
+    framecounter++;
+    if (!playermode) {
+      scrW=g.getWSize().x;
+      scrH=g.getWSize().y;
+    }
+
+    maxrasterdelta=(maxval(0,raster2-raster1)>maxrasterdelta)?(maxval(0,raster2-raster1)):(maxrasterdelta);
+    if (!playermode) {
+      g.clearScreen();
+      drawdisp();
+      if (kb[SDL_SCANCODE_LSHIFT]) {
+        g.tColor(9);
+        g.tAlign(0.5);
+        g.tPos((float)scrW/16.0,0);
+        if (ntsc) {
+          g.printf("%.1fHz CLOCK: 6.18MHz i: %x t: %.5x NTSC",FPS,ASC::interval,ASC::currentclock);
+        } else {
+          g.printf("%.1fHz CLOCK: 5.95MHz i: %x t: %.5x PAL",FPS,ASC::interval,ASC::currentclock);
+        }
+        g.tAlign(0);
+        g.tNLPos(0);
+      }
+      g._WRAP_flip_display();
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   int filearg=0;
   printf("soundtracker (r%d)\n",ver);
@@ -5833,14 +5974,16 @@ int main(int argc, char **argv) {
         }
         // -o ORDER
         if (argv[i][1]=='o') {
-          curpat=atoi(argv[i+1]); i++;
+          curpat=atoi(argv[i+1]);
+          i++;
         }
         // -f FILE
         if (argv[i][1]=='f') {
-          fileswitch=true;filearg=++i;
+          fileswitch=true;
+          filearg=++i;
+          playermode=true;
         }
       } else {
-        playermode=true;
         filearg=i;
       }
     }
@@ -5987,148 +6130,7 @@ int main(int argc, char **argv) {
     g._WRAP_rest(3600);
   } else {
     while (1) {
-      SDL_Event ev;
-      while (g._WRAP_get_next_event(&ev)) {
-        if (ev.type==SDL_QUIT) {
-          printf("close button pressed\n");
-          quit=true;
-          break;
-        } else if (ev.type==SDL_MOUSEMOTION) {
-          mstate.x=ev.motion.x/dpiScale;
-          mstate.y=ev.motion.y/dpiScale;
-        } else if (ev.type==SDL_MOUSEBUTTONDOWN) {
-          mstate.x=ev.button.x/dpiScale;
-          mstate.y=ev.button.y/dpiScale;
-          switch (ev.button.button) {
-            case SDL_BUTTON_LEFT:
-              mstate.buttons|=1;
-              break;
-            case SDL_BUTTON_RIGHT:
-              mstate.buttons|=2;
-              break;
-            case SDL_BUTTON_MIDDLE:
-              mstate.buttons|=4;
-              break;
-          }
-        } else if (ev.type==SDL_MOUSEBUTTONUP) {
-          mstate.x=ev.button.x/dpiScale;
-          mstate.y=ev.button.y/dpiScale;
-          switch (ev.button.button) {
-            case SDL_BUTTON_LEFT:
-              mstate.buttons&=~1;
-              break;
-            case SDL_BUTTON_RIGHT:
-              mstate.buttons&=~2;
-              break;
-            case SDL_BUTTON_MIDDLE:
-              mstate.buttons&=~4;
-              break;
-          }
-        } else if (ev.type==SDL_MOUSEWHEEL) {
-          mstate.z+=ev.wheel.y;
-        } else if (ev.type==SDL_WINDOWEVENT) {
-          if (ev.window.event==SDL_WINDOWEVENT_RESIZED) {
-            g.trigResize(ev.window.data1,ev.window.data2);
-            g._WRAP_destroy_bitmap(mixer);
-            // recreate pattern bitmap
-            g._WRAP_destroy_bitmap(patternbitmap);
-            patternbitmap=g._WRAP_create_bitmap(g.getWSize().x,g.getWSize().y);
-            scrW=g.getWSize().x;
-            scrH=g.getWSize().y;
-            mixer=g._WRAP_create_bitmap(scrW,scrH);
-            // adjust channel count if needed
-            maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
-            if (maxCTD>channels) maxCTD=channels;
-            if (maxCTD<1) maxCTD=1;
-            chanstodisplay=maxCTD;
-            drawmixerlayer();
-            drawpatterns(true);
-          }
-        } else if (ev.type==SDL_KEYDOWN) {
-          if (inputvar!=NULL && !imeActive) {
-            switch (ev.key.keysym.sym) {
-              case SDLK_LEFT:
-                inputcurpos--;
-                if (inputcurpos<0) {
-                  inputcurpos=0;
-                  triggerfx(1);
-                }
-                break;
-              case SDLK_RIGHT:
-                inputcurpos++;
-                if (inputcurpos>(signed)utf8len(inputvar->c_str())) {
-                  inputcurpos=(signed)utf8len(inputvar->c_str());
-                  triggerfx(1);
-                }
-                break;
-              case SDLK_HOME:
-                inputcurpos=0;
-                break;
-              case SDLK_END:
-                inputcurpos=utf8len(inputvar->c_str());
-                break;
-              case SDLK_BACKSPACE:
-                if (--inputcurpos<0) {
-                  inputcurpos=0;
-                  triggerfx(1);
-                } else {
-                  inputvar->erase(utf8pos(inputvar->c_str(),inputcurpos),utf8csize((const unsigned char*)inputvar->c_str()+utf8pos(inputvar->c_str(),inputcurpos)));
-                }
-                break;
-              default:
-                break;
-            }
-          }
-        } else if (ev.type==SDL_TEXTEDITING) {
-          candInput=ev.edit.text;
-          if (ev.edit.start>0) {
-            imeActive=true;
-          } else {
-            imeActive=false;
-          }
-        } else if (ev.type==SDL_TEXTINPUT) {
-          imeActive=false;
-          candInput="";
-          if (inputvar!=NULL) {
-            if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
-              inputvar->insert(utf8pos(inputvar->c_str(),inputcurpos),ev.text.text);
-              inputcurpos+=utf8len(ev.text.text);;
-            } else {
-              triggerfx(1);
-            }
-          }
-        }
-      }
-      if (true) {
-        doframe=1;
-        rt3=g._WRAP_get_time();
-        framecounter++;
-        if (!playermode) {
-          scrW=g.getWSize().x;
-          scrH=g.getWSize().y;
-        }
-
-        maxrasterdelta=(maxval(0,raster2-raster1)>maxrasterdelta)?(maxval(0,raster2-raster1)):(maxrasterdelta);
-        if (!playermode) {
-          g.clearScreen();
-          drawdisp();
-          if (kb[SDL_SCANCODE_LSHIFT]) {
-            g.tColor(9);
-            g.tAlign(0.5);
-            g.tPos((float)scrW/16.0,0);
-            if (ntsc) {
-              g.printf("%.1fHz CLOCK: 6.18MHz i: %x t: %.5x NTSC",FPS,ASC::interval,ASC::currentclock);
-            } else {
-              g.printf("%.1fHz CLOCK: 5.95MHz i: %x t: %.5x PAL",FPS,ASC::interval,ASC::currentclock);
-            }
-            g.tAlign(0);
-            g.tNLPos(0);
-          }
-          g._WRAP_flip_display();
-          time2=time1;
-          time1=g._WRAP_get_time();
-        }
-      }
+      updateDisp();
       if (quit) {
         break;
       }
