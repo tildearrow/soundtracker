@@ -362,7 +362,6 @@ int channels=8;
 int hover[16]={}; // hover time per button
 int16_t ver=149; // version number
 unsigned char chs0[5000];
-char* helptext;
 string comments;
 int inputcurpos=0;
 int chantoplayfx=0;
@@ -2718,59 +2717,51 @@ void drawsong() {
   g.tPos(95,5);
   g.printf("%.2X",defspeed);
 }
-void drawhelp() {
-  // draws the help screen
-  g.tColor(15);
-  g.tPos(0,5);
-  g.printf(helptext);
-}
+
+// CONCEPT FOR NEW CONFIG BEGIN //
+
+// 1. General
+// - UI type (auto, modern, mobile or classic)
+// - import samples
+// - keyboard layout
+
+// 2. Audio
+// - audio system (JACK or SDL, if available)
+// - JACK config
+//   - server name
+//   - client name
+//   - mono/stereo
+//   - auto-connect (and where)
+// - SDL config
+//   - audio driver
+//   - audio device
+//   - sample rate
+//   - audio format
+//   - mono/stereo
+//   - latency
+
+// 3. Video
+// - scale factor
+// - default zoom
+
+// CONCEPT FOR NEW CONFIG END //
 void drawconfig() {
+  // new config page!
   g.tColor(15);
-  g.tPos(0,6);
+  g.tAlign(0.5);
+  g.tPos((scrW/2)/8-10,5.5);
+  g.printf("General");
+
+  g.tPos((scrW/2)/8,5.5);
+  g.printf("Audio");
+
+  g.tPos((scrW/2)/8+10,5.5);
+  g.printf("Video");
+  g.tAlign(0);
   
-  g.printf(
-  "Color Palette          |Load|Save| Audio Settings\n"
-  "                                 |\n"
-  "Note              |          C-4 | simulate distortion\n"
-  "Instrument        |          01  | \n"
-  "Volume            |          v20 | \n"
-  "Effect (tempo)    |          A06 | cubic spline PCM\n"
-  "Effect (song)     |          B02 |---------------------\n"
-  "Effect (volume)   |          D06 | Importer Settings\n"
-  "Effect (pitch)    |          GFF | \n"
-  "Effect (note)     |          J37 | import samples\n"
-  "Effect (special)  |          SC1 | split instruments\n"
-  "Effect (pan)      |          Y64 |---------------------\n"
-  "Effect (unknown)  |          ?FF | Filter Settings\n"
-  "Blank Row         |          ... | \n"
-  "Selected 1        |          abc | disable filters\n"
-  "Selected 2        |          abc | high quality\n"
-  "Selected 3        |          abc |\n"
-  "Peak Meter        |          abc |\n"
-  "Default           |          abc |\n"
-  "Dark              |          abc |\n"
-  "Loop Highlight    |          abc |\n"
-  "Release Highlight |          abc |\n"
-  "CurPos Highlight  |          abc |\n"
-  "On/Up             |          ON  |\n"
-  "Off/Down          |          NO  |\n"
-  "Absolute          |          A   |\n"
-  "CurrentRow HL     |          abc |\n"
-  "Selection         |          abc |\n"
-  "No Volume         |          v40 |"
-  );
-  
-  g.tNLPos(35);
-  g.tPos(8);
-  g.tColor((settings::distortion)?11:15);
-  g.printf("simulate distortion\n\n\n");
-  g.tColor((settings::cubicspline)?11:15);
-  g.printf("cubic spline PCM\n\n\n\n\n\n\n\n\n");
-  g.tColor((settings::nofilters)?11:15);
-  g.printf("disable filters\n");
-  g.tColor((settings::muffle)?11:15);
-  g.printf("high quality");
-  g.tNLPos(0);
+  g._WRAP_draw_line(0,92,scrW,92,g._WRAP_map_rgb(255,255,255),1);
+
+  // draw config section
 }
 void drawabout() {
   // draws about screen
@@ -5758,7 +5749,6 @@ void drawdisp() {
     case 3: drawsong(); break;
     case 4: drawmixer(); break;
     case 5: drawconfig(); break;
-    case 6: drawhelp(); break;
     case 7: drawabout(); break;
     case 9: drawsfxpanel(); break;
     case 10: drawmemory(); break;
@@ -6005,8 +5995,6 @@ int main(int argc, char **argv) {
   }
   // create memory blocks
   patlength=new unsigned char[256];
-  helptext=new char[18];
-  strcpy(helptext,"help.txt not found");
 
   printf("initializing SDL\n");
   if (!g.preinit()) {
