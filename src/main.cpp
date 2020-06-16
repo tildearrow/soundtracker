@@ -23,12 +23,8 @@ double time2=0;
 #define sign(a) ((a>0)?(1):((a<0)?(-1):(0)))
 //#define MOUSE_GRID
 //#define NTSC // define for NTSC mode
-//#define FILM // define for film mode (NTSC should be defined first)
-//#define SMOOTH_SCROLL
 #define SOUNDS
-//#define JACK
 int dpiScale;
-//#define VBLANK
 //#define PRESERVE_INS
 
 #ifdef _WIN32
@@ -41,8 +37,6 @@ int dpiScale;
 
 
 bool ntsc=false;
-
-float DETUNE_FACTOR_GLOBAL;
 
 //// INCLUDES AND STUFF ////
 #include "tracker.h"
@@ -79,12 +73,6 @@ int tempo;
 int doframe;
 SDL_Texture *bpatterns=NULL;
 unsigned char colorof[6]={0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff};
-int degrees=0; // global all-purpose sine
-int prevX=0;
-int prevY=0;
-int cycle=0;
-float totalrender=0;
-int cycle1=0;
 // init sound stuff
 float detunefactor;
 unsigned int cfreq[32]={1,1,1,1,1,1,1,1,
@@ -97,7 +85,6 @@ unsigned char cshape[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 unsigned char cshapeprev[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 unsigned char cduty[32]={31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,
                31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31};
-int cstep[32]={};
 int crstep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int crrmstep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int coff[32]={262144,262144,262144,262144,262144,262144,262144,
@@ -110,16 +97,6 @@ unsigned char cfmode[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 unsigned char cmode[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 signed char cpan[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 bool cfsweep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int cfcycles[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int cfperiod[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-bool cvisweep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-bool cviloop[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int cvicycles[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-bool cvdsweep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-bool cvdloop[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int cvdcycles[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int cvperiod[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-bool cvdir[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 double cpcmpos[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 unsigned short crmfreq[32]={100,1,1,1,1,1,1,1,
          1,1,1,1,1,1,1,1,
@@ -142,15 +119,6 @@ enum filters {
 };
 float cseek[32]={};
 float crseek[32]={};
-#ifdef NTSC
-#ifdef FILM
-const unsigned int bufsize=8000;
-#else
-const unsigned int bufsize=8000;
-#endif
-#else
-const unsigned int bufsize=8000;
-#endif
 int rngpgv[32]={0};
 int scrollpos=0;
 int valuewidth=4;
@@ -358,25 +326,6 @@ const char HEXVALS[17]="0123456789ABCDEF"; // 17 for the null
 const int modeOff[6]={
   24,48,64,88,96,112
 };
-int sfxcvol=0;
-int sfxcpan=0;
-int sfxcshape=0;
-int sfxcduty=0;
-int sfxcoff=0;
-int sfxcreso=0;
-int sfxcfmode=0;
-int sfxcfreq=0;
-int sfxcmode=0;
-int sfxcrmfreq=0;
-int sfxcrm=0;
-
-int sfxspan=0;
-int sfxsshape=0;
-int sfxsduty=0;
-int sfxsoff=0;
-int sfxsreso=0;
-int sfxsfmode=0;
-int sfxsfreq=0;
 
 SSInter sfxInst;
 
@@ -845,46 +794,13 @@ float lengthdir_y(float len,float dir) {
   return len*sin(dir*(M_PI/180));
 }
 char gethnibble(int nval) {
-  switch(nval>>4) {
-    case 0: return '0'; break;
-    case 1: return '1'; break;
-    case 2: return '2'; break;
-    case 3: return '3'; break;
-    case 4: return '4'; break;
-    case 5: return '5'; break;
-    case 6: return '6'; break;
-    case 7: return '7'; break;
-    case 8: return '8'; break;
-    case 9: return '9'; break;
-    case 10: return 'A'; break;
-    case 11: return 'B'; break;
-    case 12: return 'C'; break;
-    case 13: return 'D'; break;
-    case 14: return 'E'; break;
-    case 15: return 'F'; break;
+  if (nval<256) {
+    return HEXVALS[nval>>4];
   }
   return '?';
 }
 char getlnibble(int nval) {
-  switch(nval&15) {
-    case 0: return '0'; break;
-    case 1: return '1'; break;
-    case 2: return '2'; break;
-    case 3: return '3'; break;
-    case 4: return '4'; break;
-    case 5: return '5'; break;
-    case 6: return '6'; break;
-    case 7: return '7'; break;
-    case 8: return '8'; break;
-    case 9: return '9'; break;
-    case 10: return 'A'; break;
-    case 11: return 'B'; break;
-    case 12: return 'C'; break;
-    case 13: return 'D'; break;
-    case 14: return 'E'; break;
-    case 15: return 'F'; break;
-  }
-  return '?';
+  return HEXVALS[nval&15];
 }
 const char* getnote(int nval) {
   switch(nval&15) {
@@ -1749,7 +1665,6 @@ void NextTick() {
   curtick--;
   // run envelopes
   for (int loop2=0;loop2<32;loop2++) {
-        //crstep[loop2]=0; // no
   // Qxx
   if (doretrigger[loop2])
     {retrig[loop2]--;
@@ -3016,13 +2931,9 @@ void Play() {
   if (!speedlock) {speed=defspeed;}
   if (!tempolock) {
   if (ntsc) {
-  #ifdef FILM
-  tempo=60;
-  #else
-  tempo=150;
-  #endif
+    tempo=150;
   } else {
-  tempo=125;
+    tempo=125;
   }
   }
   for (int ii=0;ii<32;ii++) {
@@ -3032,7 +2943,6 @@ void Play() {
     }}
   }
   FPS=tempo/2.5;
-  //detunefactor=DETUNE_FACTOR_GLOBAL*(50/FPS);
   // reset cursor position
   curtick=2;curstep=-1;playmode=1;
   tickstart=true;
@@ -5043,8 +4953,6 @@ void ClickEvents() {
       if (pcmeditenable) chip[0].pcm[(int)(((float)mstate.x)*pow(2.0f,-pcmeditscale))+pcmeditoffset]=minval(127,maxval(-127,mstate.y-(scrH/2)));
     }
   }
-  prevX=mstate.x;
-  prevY=mstate.y;
   prevZ=mstate.z;
 }
 void FastTracker() {
@@ -5575,10 +5483,6 @@ void drawdisp() {
     }
     g._WRAP_draw_line(0,80,scrW,80,g._WRAP_map_rgb(255,255,255),1);
     
-#ifdef SMOOTH_SCROLL
-    g._WRAP_draw_bitmap_region(patternbitmap,0,-minval(0,189-(curpatrow*12)+(int)(((float)curtick/(float)speed)*12.0)),g._WRAP_get_bitmap_width(patternbitmap),g._WRAP_get_bitmap_height(patternbitmap),0,60+maxval(0,189-(curpatrow*12)+(int)(((float)curtick/(float)speed)*12.0)),0);
-#else
-    //g._WRAP_draw_bitmap(patternbitmap,0,0,0);
     g._WRAP_set_clipping_rectangle(0,81,scrW,scrH-81);
     g._WRAP_disregard_scale_draw(patternbitmap,0,
                           0,//maxval(0,curpatrow-16)*12,
@@ -5588,7 +5492,6 @@ void drawdisp() {
                           patStartY-patOffY,
                           curzoom,
                           0);
-    #endif
     firstChan=curedchan; firstMode=curedmode;
     lastChan=curselchan; lastMode=curselmode;
     selTop=selStart; selBottom=selEnd;
@@ -5941,19 +5844,11 @@ int main(int argc, char **argv) {
     }
     }
       if (ntsc) {
-#ifdef FILM
-FPS = 24;
-tempo=60;
-DETUNE_FACTOR_GLOBAL=0.5;
-#else
 FPS = 60;
 tempo=150;
-DETUNE_FACTOR_GLOBAL=1.2;
-#endif
-  }else{
+  } else {
 FPS = 50;
 tempo=125;
-DETUNE_FACTOR_GLOBAL=1;
   }
    filessorted.resize(1024);
    filenames.resize(1024);
