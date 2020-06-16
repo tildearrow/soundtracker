@@ -74,7 +74,6 @@ int doframe;
 SDL_Texture *bpatterns=NULL;
 unsigned char colorof[6]={0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff};
 // init sound stuff
-float detunefactor;
 unsigned int cfreq[32]={1,1,1,1,1,1,1,1,
          1,1,1,1,1,1,1,1,
                1,1,1,1,1,1,1,1,
@@ -5794,15 +5793,14 @@ void initNewBits() {
 }
 
 int main(int argc, char **argv) {
-  detunefactor=1;
+  int filearg=0;
+  printf("soundtracker (r%d)\n",ver);
   chip[0].Init();
   chip[1].Init();
   chip[2].Init();
   chip[3].Init();
-  printf("soundtracker (r%d)\n",ver);
   framecounter=0;
   playermode=false;
-  int filearg=0;
   
   // new variables
 #ifdef ANDROID
@@ -5819,123 +5817,126 @@ int main(int argc, char **argv) {
   
   if (argc>1) {
     // for each argument
-    for (int i=1;i<argc;i++) {
-        // is it an option?
-        if (argv[i][0]=='-') {
-      // is it a multi-char option?
-           if (argv[i][1]=='-') {
-         if (!strcmp(&argv[i][2],"help")) {
-           printf("usage: soundtracker [--help] [-o order] [-f song] [-v] [] [song]\n"); return 0;
-         }
-       }
-       // -n
-       if (argv[i][1]=='n') {
-         ntsc=true;
-       }
-       // -o ORDER
-       if (argv[i][1]=='o') {
-         curpat=atoi(argv[i+1]); i++;
-       }
-       // -f FILE
-       if (argv[i][1]=='f') {
-         fileswitch=true;filearg=++i;
-       }
-    } else {playermode=true;filearg=i;}
+    for (int i=1; i<argc; i++) {
+      // is it an option?
+      if (argv[i][0]=='-') {
+        // is it a multi-char option?
+        if (argv[i][1]=='-') {
+          if (!strcmp(&argv[i][2],"help")) {
+            printf("usage: soundtracker [--help] [-o order] [-f song] [-v] [] [song]\n");
+            return 0;
+          }
+        }
+        // -n
+        if (argv[i][1]=='n') {
+          ntsc=true;
+        }
+        // -o ORDER
+        if (argv[i][1]=='o') {
+          curpat=atoi(argv[i+1]); i++;
+        }
+        // -f FILE
+        if (argv[i][1]=='f') {
+          fileswitch=true;filearg=++i;
+        }
+      } else {
+        playermode=true;
+        filearg=i;
+      }
     }
-    }
-      if (ntsc) {
-FPS = 60;
-tempo=150;
-  } else {
-FPS = 50;
-tempo=125;
   }
-   filessorted.resize(1024);
-   filenames.resize(1024);
-   //int success=0;
-   if (iface==UIMobile) {
-     scrW=360;
-     scrH=640;
-   } else {
-     scrW=800;
-     scrH=450;
-   }
-   // create memory blocks
-   patlength=new unsigned char[256];
-    helptext=new char[18];
-    strcpy(helptext,"help.txt not found");
+  if (ntsc) {
+    FPS=60;
+    tempo=150;
+  } else {
+    FPS=50;
+    tempo=125;
+  }
+  filessorted.resize(1024);
+  filenames.resize(1024);
+  if (iface==UIMobile) {
+    scrW=360;
+    scrH=640;
+  } else {
+    scrW=800;
+    scrH=450;
+  }
+  // create memory blocks
+  patlength=new unsigned char[256];
+  helptext=new char[18];
+  strcpy(helptext,"help.txt not found");
 
-   printf("initializing SDL\n");
-   if (!g.preinit()) {
-      fprintf(stderr, "failed to initialize SDL!\n");
-      return 1;
-   }
+  printf("initializing SDL\n");
+  if (!g.preinit()) {
+    fprintf(stderr,"failed to initialize SDL!\n");
+    return 1;
+  }
    
-   curdir=new char[4096];
-   memset(curdir,0,4096);
+  curdir=new char[4096];
+  memset(curdir,0,4096);
 #ifdef ANDROID
-   // TODO: find the actual path
-   strcpy(curdir,"/storage/emulated/0");
+  // TODO: find the actual path
+  strcpy(curdir,"/storage/emulated/0");
 #elif defined(_WIN32)
-   GetCurrentDirectory(4095,curdir);
+  GetCurrentDirectory(4095,curdir);
 #else
-   getcwd(curdir,4095);
+  getcwd(curdir,4095);
 #endif
-   int peerrno=print_entry(curdir);
-   
+  int peerrno=print_entry(curdir);
+
 #ifdef ANDROID
-   if (peerrno<0) {
-     popbox=PopupBox("Error","you need to grant Storage permission to this app.");
-     noStoragePerm=true;
-   }
+  if (peerrno<0) {
+    popbox=PopupBox("Error","you need to grant Storage permission to this app.");
+    noStoragePerm=true;
+  }
 #else
-   if (peerrno<0) {
-     popbox=PopupBox("Error","you need to grant Storage permission to this app.");
-   }
+  if (peerrno<0) {
+    popbox=PopupBox("Error","you need to grant Storage permission to this app.");
+  }
 #endif
 
-   if (!playermode) {
-   printf("creating display\n");
-   if (!g.init(scrW,scrH)) {
-     printf("couldn't initialize display...\n");
-     return 1;
-   }
-   dpiScale=g._getScale();
+  if (!playermode) {
+    printf("creating display\n");
+    if (!g.init(scrW,scrH)) {
+      printf("couldn't initialize display...\n");
+      return 1;
+    }
+    dpiScale=g._getScale();
 #ifdef ANDROID
-   curzoom=dpiScale-1;
-   if (curzoom<1) curzoom=1;
+    curzoom=dpiScale-1;
+    if (curzoom<1) curzoom=1;
 #else
-   curzoom=dpiScale;
+    curzoom=dpiScale;
 #endif
-   maxTSize=g.maxTexSize();
-   }
-   patternbitmap=g._WRAP_create_bitmap(scrW,scrH);
-   piano=g._WRAP_create_bitmap(700,60);
-   pianoroll=g._WRAP_create_bitmap(700,128);
-   pianoroll_temp=g._WRAP_create_bitmap(700,128);
-   mixer=g._WRAP_create_bitmap(scrW,scrH);
-   osc=g._WRAP_create_bitmap(128,59);
-   logo=NULL;//g._WRAP_load_bitmap("logo.png");
-   if (!logo) {
-     printf("you don't have the logo.\n");
-   }
+    maxTSize=g.maxTexSize();
+  }
+  patternbitmap=g._WRAP_create_bitmap(scrW,scrH);
+  piano=g._WRAP_create_bitmap(700,60);
+  pianoroll=g._WRAP_create_bitmap(700,128);
+  pianoroll_temp=g._WRAP_create_bitmap(700,128);
+  mixer=g._WRAP_create_bitmap(scrW,scrH);
+  osc=g._WRAP_create_bitmap(128,59);
+  logo=NULL;
+  if (!logo) {
+    printf("you don't have the logo.\n");
+  }
 
-   CleanupPatterns();
-   // init colors
-   Color colors[256]={};
-   for (int lc=0;lc<256;lc++) {
-     colors[lc]=getucol(lc);
-   }
-   g.setTarget(patternbitmap);
-   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
-   g.setTarget(pianoroll);
-   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
-   g.setTarget(pianoroll_temp);
-   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
-   g.setTarget(piano);
-   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
-   // draw a piano
-  for (int ii=0;ii<10;ii++) {
+  CleanupPatterns();
+  // init colors
+  Color colors[256];
+  for (int lc=0; lc<256; lc++) {
+    colors[lc]=getucol(lc);
+  }
+  g.setTarget(patternbitmap);
+  g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
+  g.setTarget(pianoroll);
+  g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
+  g.setTarget(pianoroll_temp);
+  g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
+  g.setTarget(piano);
+  g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
+  // draw a piano
+  for (int ii=0; ii<10; ii++) {
     for (int jj=0; jj<7; jj++) {
       g._WRAP_draw_filled_rectangle((jj*10)+(ii*70),60-60,((jj+1)*10)+(ii*70),60,g._WRAP_map_rgb(64,64,64));
       g._WRAP_draw_filled_rectangle((jj*10)+1+(ii*70),60-59,((jj+1)*10)+(ii*70),60-1,g._WRAP_map_rgb(224,224,224));
@@ -5946,213 +5947,201 @@ tempo=125;
     }
   }
   g.setTarget(osc);
-   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
-   if (!playermode) {
-     g.setTarget(mixer);
-     g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
-       drawmixerlayer();
-     g.setTarget(NULL);
-     initNewBits();
+  g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
+  if (!playermode) {
+    g.setTarget(mixer);
+    g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
+    drawmixerlayer();
+    g.setTarget(NULL);
+    initNewBits();
   }
-   printf("initializing audio channels\n");
-   initaudio();
-   // clear to black
-   if (!playermode) {g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
-   // flip buffers
-   g._WRAP_flip_display();
-   SDL_StopTextInput();
-   SDL_SetTextInputRect(NULL);
-   drawpatterns(true);
-}
-   //printf("%d",argc);
-   if (playermode || fileswitch) {
-     if (LoadFile(argv[filearg])) {return 1;}
-     if (playermode) {Play();
-     printf("playing: %s\n",name.c_str());}
-   }
-   printf("run\n");
+  printf("initializing audio channels\n");
+  initaudio();
+  // clear to black
+  if (!playermode) {
+    g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
+    // flip buffers
+    g._WRAP_flip_display();
+    SDL_StopTextInput();
+    SDL_SetTextInputRect(NULL);
+    drawpatterns(true);
+  }
+  if (playermode || fileswitch) {
+    if (LoadFile(argv[filearg])) return 1;
+      if (playermode) {
+        Play();
+        printf("playing: %s\n",name.c_str());
+      }
+  }
+  printf("run\n");
 #ifdef ANDROID
-   if (noStoragePerm) triggerfx(1);
+  if (noStoragePerm) triggerfx(1);
 #endif
-   // run timer
+
 #ifndef JACK
-   SDL_PauseAudioDevice(audioID,0);
+  SDL_PauseAudioDevice(audioID,0);
 #endif
-   printf("done\n");
-   // MAIN LOOP
-   if (playermode) {
-     g._WRAP_rest(3600);
-   } else {
-   while (1)
-   {
+  printf("done\n");
+  // MAIN LOOP
+  if (playermode) {
+    g._WRAP_rest(3600);
+  } else {
+    while (1) {
       SDL_Event ev;
       while (g._WRAP_get_next_event(&ev)) {
-
-      if (ev.type == SDL_QUIT) {
-     printf("close button pressed\n");
-                 quit=true;
-         break;
-      } else if (ev.type == SDL_MOUSEMOTION) {
-        mstate.x=ev.motion.x/dpiScale;
-        mstate.y=ev.motion.y/dpiScale;
-      } else if (ev.type == SDL_MOUSEBUTTONDOWN) {
-        mstate.x=ev.button.x/dpiScale;
-        mstate.y=ev.button.y/dpiScale;
-        switch (ev.button.button) {
-          case SDL_BUTTON_LEFT:
-            mstate.buttons|=1;
-            break;
-          case SDL_BUTTON_RIGHT:
-            mstate.buttons|=2;
-            break;
-          case SDL_BUTTON_MIDDLE:
-            mstate.buttons|=4;
-            break;
-        }
-      } else if (ev.type == SDL_MOUSEBUTTONUP) {
-        mstate.x=ev.button.x/dpiScale;
-        mstate.y=ev.button.y/dpiScale;
-        switch (ev.button.button) {
-          case SDL_BUTTON_LEFT:
-            mstate.buttons&=~1;
-            break;
-          case SDL_BUTTON_RIGHT:
-            mstate.buttons&=~2;
-            break;
-          case SDL_BUTTON_MIDDLE:
-            mstate.buttons&=~4;
-            break;
-        }
-      } else if (ev.type == SDL_MOUSEWHEEL) {
-        mstate.z+=ev.wheel.y;
-      } else if (ev.type == SDL_WINDOWEVENT) {
-        if (ev.window.event==SDL_WINDOWEVENT_RESIZED) {
-          g.trigResize(ev.window.data1,ev.window.data2);
-          g._WRAP_destroy_bitmap(mixer);
-          // recreate pattern bitmap
-          g._WRAP_destroy_bitmap(patternbitmap);
-          patternbitmap=g._WRAP_create_bitmap(g.getWSize().x,g.getWSize().y);
-          scrW=g.getWSize().x;
-          scrH=g.getWSize().y;
-          mixer=g._WRAP_create_bitmap(scrW,scrH);
-          // adjust channel count if needed
-          maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
-          if (maxCTD>channels) maxCTD=channels;
-          if (maxCTD<1) maxCTD=1;
-          chanstodisplay=maxCTD;
-          drawmixerlayer();
-          drawpatterns(true);
-        }
-      } else if (ev.type == SDL_KEYDOWN) {
-      //printf("event, %c\n",ev.keyboard.unichar);
-      if (inputvar!=NULL && !imeActive) {
-        switch (ev.key.keysym.sym) {
-          case SDLK_LEFT:
-            inputcurpos--;
-            if (inputcurpos<0) {
-              inputcurpos=0;
-              triggerfx(1);
+        if (ev.type==SDL_QUIT) {
+          printf("close button pressed\n");
+          quit=true;
+          break;
+        } else if (ev.type==SDL_MOUSEMOTION) {
+          mstate.x=ev.motion.x/dpiScale;
+          mstate.y=ev.motion.y/dpiScale;
+        } else if (ev.type==SDL_MOUSEBUTTONDOWN) {
+          mstate.x=ev.button.x/dpiScale;
+          mstate.y=ev.button.y/dpiScale;
+          switch (ev.button.button) {
+            case SDL_BUTTON_LEFT:
+              mstate.buttons|=1;
+              break;
+            case SDL_BUTTON_RIGHT:
+              mstate.buttons|=2;
+              break;
+            case SDL_BUTTON_MIDDLE:
+              mstate.buttons|=4;
+              break;
+          }
+        } else if (ev.type==SDL_MOUSEBUTTONUP) {
+          mstate.x=ev.button.x/dpiScale;
+          mstate.y=ev.button.y/dpiScale;
+          switch (ev.button.button) {
+            case SDL_BUTTON_LEFT:
+              mstate.buttons&=~1;
+              break;
+            case SDL_BUTTON_RIGHT:
+              mstate.buttons&=~2;
+              break;
+            case SDL_BUTTON_MIDDLE:
+              mstate.buttons&=~4;
+              break;
+          }
+        } else if (ev.type==SDL_MOUSEWHEEL) {
+          mstate.z+=ev.wheel.y;
+        } else if (ev.type==SDL_WINDOWEVENT) {
+          if (ev.window.event==SDL_WINDOWEVENT_RESIZED) {
+            g.trigResize(ev.window.data1,ev.window.data2);
+            g._WRAP_destroy_bitmap(mixer);
+            // recreate pattern bitmap
+            g._WRAP_destroy_bitmap(patternbitmap);
+            patternbitmap=g._WRAP_create_bitmap(g.getWSize().x,g.getWSize().y);
+            scrW=g.getWSize().x;
+            scrH=g.getWSize().y;
+            mixer=g._WRAP_create_bitmap(scrW,scrH);
+            // adjust channel count if needed
+            maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+            if (maxCTD>channels) maxCTD=channels;
+            if (maxCTD<1) maxCTD=1;
+            chanstodisplay=maxCTD;
+            drawmixerlayer();
+            drawpatterns(true);
+          }
+        } else if (ev.type==SDL_KEYDOWN) {
+          if (inputvar!=NULL && !imeActive) {
+            switch (ev.key.keysym.sym) {
+              case SDLK_LEFT:
+                inputcurpos--;
+                if (inputcurpos<0) {
+                  inputcurpos=0;
+                  triggerfx(1);
+                }
+                break;
+              case SDLK_RIGHT:
+                inputcurpos++;
+                if (inputcurpos>(signed)utf8len(inputvar->c_str())) {
+                  inputcurpos=(signed)utf8len(inputvar->c_str());
+                  triggerfx(1);
+                }
+                break;
+              case SDLK_HOME:
+                inputcurpos=0;
+                break;
+              case SDLK_END:
+                inputcurpos=utf8len(inputvar->c_str());
+                break;
+              case SDLK_BACKSPACE:
+                if (--inputcurpos<0) {
+                  inputcurpos=0;
+                  triggerfx(1);
+                } else {
+                  inputvar->erase(utf8pos(inputvar->c_str(),inputcurpos),utf8csize((const unsigned char*)inputvar->c_str()+utf8pos(inputvar->c_str(),inputcurpos)));
+                }
+                break;
+              default:
+                break;
             }
-            break;
-          case SDLK_RIGHT:
-            inputcurpos++;
-            if (inputcurpos>(signed)utf8len(inputvar->c_str())) {
-              inputcurpos=(signed)utf8len(inputvar->c_str());
-              triggerfx(1);
-            }
-            break;
-          case SDLK_HOME:
-            inputcurpos=0;
-            break;
-          case SDLK_END:
-            inputcurpos=utf8len(inputvar->c_str());
-            break;
-          case SDLK_BACKSPACE:
-            if (--inputcurpos<0) {
-              inputcurpos=0;
-              triggerfx(1);
+          }
+        } else if (ev.type==SDL_TEXTEDITING) {
+          candInput=ev.edit.text;
+          if (ev.edit.start>0) {
+            imeActive=true;
+          } else {
+            imeActive=false;
+          }
+        } else if (ev.type==SDL_TEXTINPUT) {
+          imeActive=false;
+          candInput="";
+          if (inputvar!=NULL) {
+            if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
+              inputvar->insert(utf8pos(inputvar->c_str(),inputcurpos),ev.text.text);
+              inputcurpos+=utf8len(ev.text.text);;
             } else {
-              inputvar->erase(utf8pos(inputvar->c_str(),inputcurpos),utf8csize((const unsigned char*)inputvar->c_str()+utf8pos(inputvar->c_str(),inputcurpos)));
+              triggerfx(1);
             }
-            break;
-          default:
-            break;
+          }
         }
-      }
-    } else if (ev.type == SDL_TEXTEDITING) {
-      candInput=ev.edit.text;
-      if (ev.edit.start>0) {
-        imeActive=true;
-      } else {
-        imeActive=false;
-      }
-    } else if (ev.type == SDL_TEXTINPUT) {
-      imeActive=false;
-      candInput="";
-      if (inputvar!=NULL) {
-        if ((inputvar->size()+strlen(ev.text.text))<maxinputsize) {
-          inputvar->insert(utf8pos(inputvar->c_str(),inputcurpos),ev.text.text);
-          inputcurpos+=utf8len(ev.text.text);;
-        } else {
-          triggerfx(1);
-        }
-      }
-    }
       }
       if (true) {
         doframe=1;
-  rt3=g._WRAP_get_time();
-      framecounter++;
-     if (!playermode) {
-     scrW=g.getWSize().x;
-     scrH=g.getWSize().y;
-     }
+        rt3=g._WRAP_get_time();
+        framecounter++;
+        if (!playermode) {
+          scrW=g.getWSize().x;
+          scrH=g.getWSize().y;
+        }
 
-     maxrasterdelta=(maxval(0,raster2-raster1)>maxrasterdelta)?(maxval(0,raster2-raster1)):(maxrasterdelta);
-         if (!playermode) {
-           g.clearScreen();
-     drawdisp();
-     if (kb[SDL_SCANCODE_LSHIFT]) {
-     g.tColor(9);
-     g.tAlign(0.5);
-     g.tPos((float)scrW/16.0,0);
-     if (ntsc) {
-       g.printf("%.1fHz CLOCK: 6.18MHz i: %x t: %.5x NTSC",FPS,ASC::interval,ASC::currentclock);
-     } else {
-       g.printf("%.1fHz CLOCK: 5.95MHz i: %x t: %.5x PAL",FPS,ASC::interval,ASC::currentclock);
-     }
-     g.tAlign(1);
-     g.tNLPos((float)scrW/8.0);
-     g.tPos(6.66666667);
-     g.printf("timings:\n\n");
-     g.printf("audio: %.2fms, %3.0f%% load\n",fabs(rt2-rt1)*1000,fabs(rt2-rt1)*44100);
-     rt4=g._WRAP_get_time();
-     g.printf("display: %.2fms, %.0f (max) FPS, %3.0f%% load\n",(rt4-rt3)*1000,(1/FPS)/(rt4-rt3)*FPS,(rt4-rt3)/(1/FPS)*100);
-     g.printf("total frame time: %.2fms",(time1-time2)*1000);
-     g.tAlign(0);
-     g.tNLPos(0);
-     }
-     g._WRAP_flip_display();
-     time2=time1;
-     time1=g._WRAP_get_time();
-  }
-     
+        maxrasterdelta=(maxval(0,raster2-raster1)>maxrasterdelta)?(maxval(0,raster2-raster1)):(maxrasterdelta);
+        if (!playermode) {
+          g.clearScreen();
+          drawdisp();
+          if (kb[SDL_SCANCODE_LSHIFT]) {
+            g.tColor(9);
+            g.tAlign(0.5);
+            g.tPos((float)scrW/16.0,0);
+            if (ntsc) {
+              g.printf("%.1fHz CLOCK: 6.18MHz i: %x t: %.5x NTSC",FPS,ASC::interval,ASC::currentclock);
+            } else {
+              g.printf("%.1fHz CLOCK: 5.95MHz i: %x t: %.5x PAL",FPS,ASC::interval,ASC::currentclock);
+            }
+            g.tAlign(0);
+            g.tNLPos(0);
+          }
+          g._WRAP_flip_display();
+          time2=time1;
+          time1=g._WRAP_get_time();
+        }
       }
       if (quit) {
         break;
       }
-   }
-   }
+    }
+  }
   printf("destroying audio system\n");
 #ifdef JACK
-   jack_deactivate(jclient);
+  jack_deactivate(jclient);
 #endif
-   printf("destroying display\n");
-   g.quit();
-   printf("destroying event queue\n");
-   
-   printf("destroying some buffers\n");
-   delete[] patlength;
-   printf("finished\n");
-   return 0;
+  printf("destroying display\n");
+  g.quit();
+  printf("destroying some buffers\n");
+  delete[] patlength;
+  printf("finished\n");
+  return 0;
 }
