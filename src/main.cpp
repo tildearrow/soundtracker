@@ -3771,6 +3771,12 @@ int SaveFile() {
   }
   return 1;
 }
+
+// TODO: this
+int volOldToNew(int orig) {
+  return 0;
+}
+
 int LoadFile(const char* filename) {
   // load file
   FILE *sfile;
@@ -3778,6 +3784,7 @@ int LoadFile(const char* filename) {
   int CurrentRow=0;
   int NextByte=0;
   int NextChannel=0;
+  int votn=0;
   int insparas[256];
   int patparas[256];
   int seqparas[256];
@@ -3844,6 +3851,7 @@ int LoadFile(const char* filename) {
     if (TVER<146) {printf("-applying no channel count compatibility\n");}
     if (TVER<147) {printf("-applying no song length compatibility\n");}
     if (TVER<148) {printf("-applying instrument volume compatibility\n");}
+    if (TVER<150) {printf("-applying old volume effects compatibility\n");}
     //if (TVER<??) {printf("-applying legacy instrument compatibility\n");}
     //printf("%d ",ftell(sfile));
     instruments=fgetc(sfile); // instruments
@@ -4068,12 +4076,22 @@ int LoadFile(const char* filename) {
       if (TVER<65) {
         if (pat[pointer][CurrentRow][NextChannel][0]!=0 && pat[pointer][CurrentRow][NextChannel][2]==0x7f) {pat[pointer][CurrentRow][NextChannel][2]=0;}
       }
+      // version<150 old volume effects
+      if (TVER<150) {
+        votn=volOldToNew(pat[pointer][CurrentRow][NextChannel][2]);
+        pat[pointer][CurrentRow][NextChannel][2]=votn;
+      }
     }
     if ((NextByte>>7)%2) {
       a++;
       pat[pointer][CurrentRow][NextChannel][3]=fgetc(sfile);
       a++;
       pat[pointer][CurrentRow][NextChannel][4]=fgetc(sfile);
+    }
+    if (TVER<150) {
+      pat[pointer][CurrentRow][NextChannel][3]&=0x7f;
+      pat[pointer][CurrentRow][NextChannel][3]|=(votn&0x100)>>1;
+      votn=0;
     }
     }
   }
