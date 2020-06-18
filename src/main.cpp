@@ -4397,8 +4397,8 @@ void ClickEvents() {
         }
         if (playmode==1) Play();
       }
-      if (PIR(272,12,279,24,mstate.x,mstate.y)) {patid[curpat]--;}
-      if (PIR(280,12,288,24,mstate.x,mstate.y)) {patid[curpat]++;}
+      if (PIR(272,12,279,24,mstate.x,mstate.y)) {patid[curpat]--; drawpatterns(true);}
+      if (PIR(280,12,288,24,mstate.x,mstate.y)) {patid[curpat]++; drawpatterns(true);}
       if (PIR(272,36,279,48,mstate.x,mstate.y)) {patlength[patid[curpat]]--;}
       if (PIR(280,36,288,48,mstate.x,mstate.y)) {patlength[patid[curpat]]++;}
       if (PIR((scrW/2)-20,37,(scrW/2)+20,48,mstate.x,mstate.y)) {StepPlay();}
@@ -5347,69 +5347,8 @@ void KeyboardEvents() {
     #endif
     curedpage=0;
   };drawpatterns(true);drawmixerlayer();}
-  if (kbpressed[SDL_SCANCODE_END]) {
-    if (kb[SDL_SCANCODE_LSHIFT]) {
-      curzoom++;
-      maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
-      if (maxCTD<1) maxCTD=1;
-      if (chanstodisplay>maxCTD) {
-        chanstodisplay=maxCTD;
-      }
-      if (curedpage>(channels-chanstodisplay)) {
-        curedpage=(channels-chanstodisplay);
-      }
-      drawpatterns(true);
-      drawmixerlayer();
-    }
-  }
-  if (kbpressed[SDL_SCANCODE_HOME]) {
-    if (kb[SDL_SCANCODE_LSHIFT]) {
-      curzoom--;
-      if (curzoom<1) {
-        triggerfx(1);
-        curzoom=1;
-      } else {
-        maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
-        if (maxCTD<1) maxCTD=1;
-        if (maxCTD>=channels) maxCTD=channels;
-        chanstodisplay=maxCTD;
-        if (curedpage>(channels-chanstodisplay)) {
-          curedpage=(channels-chanstodisplay);
-        }
-        drawpatterns(true);
-        drawmixerlayer();
-      }
-    }
-  }
-  
-  // playback
-  if (kbpressed[SDL_SCANCODE_F5]) {
-    if (curtick==0) {
-      Play();
-    } else {
-      playmode=1;
-    }
-  }
-  if (kbpressed[SDL_SCANCODE_F6]) {
-    Play();
-  }
-  if (kbpressed[SDL_SCANCODE_F8]) {
-    playmode=0;
-  }
   
   if (kbpressed[SDL_SCANCODE_TAB]) {MuteAllChannels();}
-  if (kbpressed[SDL_SCANCODE_APPLICATION] || kbpressed[SDL_SCANCODE_GRAVE]) {ntsc=!ntsc; if (ntsc) {
-    if (tempo==125) {
-      tempo=150;
-      FPS=60;
-    }
-  } else {
-    if (tempo==150) {
-      tempo=125;
-      FPS=50;
-    }
-  }
-  }
   if (screen==9 || screen==7) {
     SFXControls();
   }
@@ -5425,6 +5364,409 @@ void KeyboardEvents() {
     if (kbpressed[SDL_SCANCODE_SPACE]) {pcmeditenable=!pcmeditenable;}
   }
 }
+
+void keyEvent_pat(SDL_Event& ev) {
+  if (ev.key.keysym.scancode==SDL_SCANCODE_END) {
+    curzoom++;
+    maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+    if (maxCTD<1) maxCTD=1;
+    if (chanstodisplay>maxCTD) {
+      chanstodisplay=maxCTD;
+    }
+    if (curedpage>(channels-chanstodisplay)) {
+      curedpage=(channels-chanstodisplay);
+    }
+    drawpatterns(true);
+    drawmixerlayer();
+  } else if (ev.key.keysym.scancode==SDL_SCANCODE_HOME) {
+    curzoom--;
+    if (curzoom<1) {
+      triggerfx(1);
+      curzoom=1;
+    } else {
+      maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+      if (maxCTD<1) maxCTD=1;
+      if (maxCTD>=channels) maxCTD=channels;
+      chanstodisplay=maxCTD;
+      if (curedpage>(channels-chanstodisplay)) {
+        curedpage=(channels-chanstodisplay);
+      }
+      drawpatterns(true);
+      drawmixerlayer();
+    }
+  }
+  
+  // note input.
+  int inNote=-1;
+  int inIns=-1;
+  int inVolEffect=-1;
+  int inVol=-1;
+  int inEffect=-1;
+  int inEffectVal=-1;
+  
+  switch (curedmode) {
+    case 0: // note
+      switch (ev.key.keysym.scancode) {
+        // octave 1
+        case SDL_SCANCODE_Z:
+          inNote=1;
+          break;
+        case SDL_SCANCODE_S:
+          inNote=2;
+          break;
+        case SDL_SCANCODE_X:
+          inNote=3;
+          break;
+        case SDL_SCANCODE_D:
+          inNote=4;
+          break;
+        case SDL_SCANCODE_C:
+          inNote=5;
+          break;
+        case SDL_SCANCODE_V:
+          inNote=6;
+          break;
+        case SDL_SCANCODE_G:
+          inNote=7;
+          break;
+        case SDL_SCANCODE_B:
+          inNote=8;
+          break;
+        case SDL_SCANCODE_H:
+          inNote=9;
+          break;
+        case SDL_SCANCODE_N:
+          inNote=10;
+          break;
+        case SDL_SCANCODE_J:
+          inNote=11;
+          break;
+        case SDL_SCANCODE_M:
+          inNote=12;
+          break;
+        // octave 2
+        case SDL_SCANCODE_Q:
+          inNote=17;
+          break;
+        case SDL_SCANCODE_2:
+          inNote=18;
+          break;
+        case SDL_SCANCODE_W:
+          inNote=19;
+          break;
+        case SDL_SCANCODE_3:
+          inNote=20;
+          break;
+        case SDL_SCANCODE_E:
+          inNote=21;
+          break;
+        case SDL_SCANCODE_R:
+          inNote=22;
+          break;
+        case SDL_SCANCODE_5:
+          inNote=23;
+          break;
+        case SDL_SCANCODE_T:
+          inNote=24;
+          break;
+        case SDL_SCANCODE_6:
+          inNote=25;
+          break;
+        case SDL_SCANCODE_Y:
+          inNote=26;
+          break;
+        case SDL_SCANCODE_7:
+          inNote=27;
+          break;
+        case SDL_SCANCODE_U:
+          inNote=28;
+          break;
+        // octave 3
+        case SDL_SCANCODE_I:
+          inNote=33;
+          break;
+        case SDL_SCANCODE_9:
+          inNote=34;
+          break;
+        case SDL_SCANCODE_O:
+          inNote=35;
+          break;
+        case SDL_SCANCODE_0:
+          inNote=36;
+          break;
+        case SDL_SCANCODE_P:
+          inNote=37;
+          break;
+        case SDL_SCANCODE_EQUALS:
+          inNote=13;
+          break;
+        case SDL_SCANCODE_BACKSLASH:
+          inNote=14;
+          break;
+        case SDL_SCANCODE_1:
+          inNote=15;
+          break;
+        default:
+          break;
+      }
+      break;
+    case 1: // instrument
+      switch (ev.key.keysym.scancode) {
+        case SDL_SCANCODE_0:
+          inIns=0;
+          break;
+        case SDL_SCANCODE_1:
+          inIns=1;
+          break;
+        case SDL_SCANCODE_2:
+          inIns=2;
+          break;
+        case SDL_SCANCODE_3:
+          inIns=3;
+          break;
+        case SDL_SCANCODE_4:
+          inIns=4;
+          break;
+        case SDL_SCANCODE_5:
+          inIns=5;
+          break;
+        case SDL_SCANCODE_6:
+          inIns=6;
+          break;
+        case SDL_SCANCODE_7:
+          inIns=7;
+          break;
+        case SDL_SCANCODE_8:
+          inIns=8;
+          break;
+        case SDL_SCANCODE_9:
+          inIns=9;
+          break;
+        case SDL_SCANCODE_A:
+          inIns=10;
+          break;
+        case SDL_SCANCODE_B:
+          inIns=11;
+          break;
+        case SDL_SCANCODE_C:
+          inIns=12;
+          break;
+        case SDL_SCANCODE_D:
+          inIns=13;
+          break;
+        case SDL_SCANCODE_E:
+          inIns=14;
+          break;
+        case SDL_SCANCODE_F:
+          inIns=15;
+          break;
+        default:
+          break;
+      }
+      break;
+    case 2: // volume/volume effect
+      switch (ev.key.keysym.scancode) {
+        case SDL_SCANCODE_0:
+          inVol=0;
+          break;
+        case SDL_SCANCODE_1:
+          inVol=1;
+          break;
+        case SDL_SCANCODE_2:
+          inVol=2;
+          break;
+        case SDL_SCANCODE_3:
+          inVol=3;
+          break;
+        case SDL_SCANCODE_4:
+          inVol=4;
+          break;
+        case SDL_SCANCODE_5:
+          inVol=5;
+          break;
+        case SDL_SCANCODE_6:
+          inVol=6;
+          break;
+        case SDL_SCANCODE_7:
+          inVol=7;
+          break;
+        case SDL_SCANCODE_8:
+          inVol=8;
+          break;
+        case SDL_SCANCODE_9:
+          inVol=9;
+          break;
+        // TODO: volume effects.
+        case SDL_SCANCODE_A:
+          inVol=10;
+          break;
+        case SDL_SCANCODE_B:
+          inVol=11;
+          break;
+        case SDL_SCANCODE_C:
+          inVol=12;
+          break;
+        case SDL_SCANCODE_D:
+          inVol=13;
+          break;
+        case SDL_SCANCODE_E:
+          inVol=14;
+          break;
+        case SDL_SCANCODE_F:
+          inVol=15;
+          break;
+        default:
+          break;
+      }
+      break;
+    case 3: // effect
+      break;
+    case 4: // effect value
+      switch (ev.key.keysym.scancode) {
+        case SDL_SCANCODE_0:
+          inEffectVal=0;
+          break;
+        case SDL_SCANCODE_1:
+          inEffectVal=1;
+          break;
+        case SDL_SCANCODE_2:
+          inEffectVal=2;
+          break;
+        case SDL_SCANCODE_3:
+          inEffectVal=3;
+          break;
+        case SDL_SCANCODE_4:
+          inEffectVal=4;
+          break;
+        case SDL_SCANCODE_5:
+          inEffectVal=5;
+          break;
+        case SDL_SCANCODE_6:
+          inEffectVal=6;
+          break;
+        case SDL_SCANCODE_7:
+          inEffectVal=7;
+          break;
+        case SDL_SCANCODE_8:
+          inEffectVal=8;
+          break;
+        case SDL_SCANCODE_9:
+          inEffectVal=9;
+          break;
+        case SDL_SCANCODE_A:
+          inEffectVal=10;
+          break;
+        case SDL_SCANCODE_B:
+          inEffectVal=11;
+          break;
+        case SDL_SCANCODE_C:
+          inEffectVal=12;
+          break;
+        case SDL_SCANCODE_D:
+          inEffectVal=13;
+          break;
+        case SDL_SCANCODE_E:
+          inEffectVal=14;
+          break;
+        case SDL_SCANCODE_F:
+          inEffectVal=15;
+          break;
+        default:
+          break;
+      }
+      break;
+  }
+  // note set
+  if (inNote>=0) {
+    if (inNote==13 || inNote==14 || inNote==15) {
+      pat[patid[curpat]][curstep][curedpage+curedchan][0]=inNote;
+    } else {
+      pat[patid[curpat]][curstep][curedpage+curedchan][0]=minval(inNote+(curoctave<<4),0x9C);
+    }
+    EditSkip();
+  }
+  // instrument set
+  if (inIns>=0) {
+    pat[patid[curpat]][curstep][curedpage+curedchan][1]<<=4;
+    pat[patid[curpat]][curstep][curedpage+curedchan][1]|=inIns;
+    drawpatterns(true);
+  }
+  // volume effect set
+  if (inVolEffect>=0) {
+  }
+  // volume set
+  // TODO: other vol effects
+  if (inVol>=0) {
+    if (pat[patid[curpat]][curstep][curedpage+curedchan][2]==0 ||
+        (pat[patid[curpat]][curstep][curedpage+curedchan][2]>=0x40 &&
+         pat[patid[curpat]][curstep][curedpage+curedchan][2]<0x80)) {
+      pat[patid[curpat]][curstep][curedpage+curedchan][2]=
+        0x40+(((pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x3f)<<4)|inVol);
+        if (pat[patid[curpat]][curstep][curedpage+curedchan][2]>0x7f ||
+            pat[patid[curpat]][curstep][curedpage+curedchan][2]<0x40) {
+          pat[patid[curpat]][curstep][curedpage+curedchan][2]=
+           0x40+(pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x0f);
+        }
+    }
+    drawpatterns(true);
+  }
+  // effect set
+  if (inEffect>=0) {
+    
+  }
+  // effect value set
+  if (inEffectVal>=0) {
+    pat[patid[curpat]][curstep][curedpage+curedchan][4]<<=4;
+    pat[patid[curpat]][curstep][curedpage+curedchan][4]|=inEffectVal;
+    drawpatterns(true);
+  }
+}
+
+void keyEvent(SDL_Event& ev) {
+  // global keys
+  if (!ev.key.repeat) switch (ev.key.keysym.scancode) {
+    case SDL_SCANCODE_F5: // play/pause
+      if (curtick==0) {
+        Play();
+      } else {
+        playmode=1;
+      }
+      break;
+    case SDL_SCANCODE_F6: // play
+      Play();
+      break;
+    case SDL_SCANCODE_F7: // play pattern
+      Play();
+      break;
+    case SDL_SCANCODE_F8: // stop
+      playmode=0;
+      break;
+    case SDL_SCANCODE_APPLICATION:
+    case SDL_SCANCODE_GRAVE:
+      ntsc=!ntsc;
+      if (!tempolock) {
+        if (ntsc) {
+          if (tempo==125) {
+            tempo=150;
+            FPS=60;
+          }
+        } else {
+          if (tempo==150) {
+            tempo=125;
+            FPS=50;
+          }
+        }
+      }
+      break;
+    default:
+      break;
+  }
+  
+  switch (screen) {
+    case 0: keyEvent_pat(ev); break;
+  }
+}
+
 void drawdisp() {
   int delta;
   int firstChan, firstMode;
@@ -5436,7 +5778,6 @@ void drawdisp() {
   
   if (playermode) {return;}
   ClickEvents();
-  KeyboardEvents();
   if (screen==0) {
     patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
     patStartY=(60+((scrH*dpiScale)-60)/2);
@@ -5839,39 +6180,44 @@ void updateDisp() {
         drawpatterns(true);
       }
     } else if (ev.type==SDL_KEYDOWN) {
-      if (inputvar!=NULL && !imeActive) {
-        switch (ev.key.keysym.sym) {
-          case SDLK_LEFT:
-            inputcurpos--;
-            if (inputcurpos<0) {
+      if (inputvar!=NULL) {
+        if (!imeActive) {
+          switch (ev.key.keysym.sym) {
+            case SDLK_LEFT:
+              inputcurpos--;
+              if (inputcurpos<0) {
+                inputcurpos=0;
+                triggerfx(1);
+              }
+              break;
+            case SDLK_RIGHT:
+              inputcurpos++;
+              if (inputcurpos>(signed)utf8len(inputvar->c_str())) {
+                inputcurpos=(signed)utf8len(inputvar->c_str());
+                triggerfx(1);
+              }
+              break;
+            case SDLK_HOME:
               inputcurpos=0;
-              triggerfx(1);
-            }
-            break;
-          case SDLK_RIGHT:
-            inputcurpos++;
-            if (inputcurpos>(signed)utf8len(inputvar->c_str())) {
-              inputcurpos=(signed)utf8len(inputvar->c_str());
-              triggerfx(1);
-            }
-            break;
-          case SDLK_HOME:
-            inputcurpos=0;
-            break;
-          case SDLK_END:
-            inputcurpos=utf8len(inputvar->c_str());
-            break;
-          case SDLK_BACKSPACE:
-            if (--inputcurpos<0) {
-              inputcurpos=0;
-              triggerfx(1);
-            } else {
-              inputvar->erase(utf8pos(inputvar->c_str(),inputcurpos),utf8csize((const unsigned char*)inputvar->c_str()+utf8pos(inputvar->c_str(),inputcurpos)));
-            }
-            break;
-          default:
-            break;
+              break;
+            case SDLK_END:
+              inputcurpos=utf8len(inputvar->c_str());
+              break;
+            case SDLK_BACKSPACE:
+              if (--inputcurpos<0) {
+                inputcurpos=0;
+                triggerfx(1);
+              } else {
+                inputvar->erase(utf8pos(inputvar->c_str(),inputcurpos),utf8csize((const unsigned char*)inputvar->c_str()+utf8pos(inputvar->c_str(),inputcurpos)));
+              }
+              break;
+            default:
+              break;
+          }
         }
+      } else {
+        // pass event to keyboard input
+        keyEvent(ev);
       }
     } else if (ev.type==SDL_TEXTEDITING) {
       candInput=ev.edit.text;
