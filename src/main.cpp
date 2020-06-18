@@ -360,7 +360,7 @@ bool rightclickprev=false;
 int prevZ=0;
 int channels=8;
 int hover[16]={}; // hover time per button
-int16_t ver=149; // version number
+int16_t ver=150; // version number
 unsigned char chs0[5000];
 string comments;
 int inputcurpos=0;
@@ -897,61 +897,54 @@ char getinsH(int nval) {
 }
 const char* getVFX(int fxval) {
   if (fxval==0) {return ".";} // 0
-  if (fxval<128 && fxval>63) {return "v";} // 64-127
-  if (fxval<193 && fxval>127) {return "p";} // 128-192
-  switch((fxval-1)/10) {
-  case 0: return "a"; break; // 1-10
-  case 1: return "b"; break; // 11-20
-  case 2: return "c"; break; // 21-30
-  case 3: return "d"; break; // 31-40
-  case 4: return "e"; break; // 41-50
-  case 5: return "f"; break; // 51-60
-  }
-  switch((fxval-193)/10) {
-  case 0: return "g"; break; // 193-202
-  case 1: return "h"; break; // 203-212
-  case 2: return "o"; break; // 213-222
+  switch (fxval>>4) {
+    case 0: return "a"; break;
+    case 1: return "b"; break;
+    case 2: return "c"; break;
+    case 3: return "d"; break;
+    case 4: case 5: case 6: case 7:
+      return "v"; break;
+    case 8: case 9: case 10: case 11:
+      return "p"; break;
+    case 12: return "e"; break;
+    case 13: return "f"; break;
+    case 14: return "g"; break;
+    case 15: return "h"; break;
+
+    case 28: return "l"; break;
+    case 29: return "r"; break;
+    case 30: return "o"; break;
+    case 31: return "u"; break;
   }
   return "?";
 }
-unsigned char getVFXval(int nval) {
+unsigned char getVFXVal(int nval) {
   if (nval==0) {return 255;} // 0
   if (nval<128 && nval>63) {return nval-64;} // 64-127
   if (nval<193 && nval>127) {return nval-128;} // 128-192
-  switch((nval-1)/10) {
-  case 0: return nval-1; break; // 1-10
-  case 1: return nval-11; break; // 11-20
-  case 2: return nval-21; break; // 21-30
-  case 3: return nval-31; break; // 31-40
-  case 4: return nval-41; break; // 41-50
-  case 5: return nval-51; break; // 51-60
-  }
-  switch((nval-193)/10) {
-  case 0: return nval-193; break; // 193-202
-  case 1: return nval-203; break; // 203-212
-  case 2: return nval-213; break; // 213-222
-  }
-  return 254;
-}
-char getVFXL(int nval) {
-  if (nval==0) {return '.';}
-  else{return getlnibble(nval&0x3f);}
-}
-char getVFXH(int nval) {
-  if (nval==0) {return '.';}
-  else{return gethnibble(nval&0x3f);}
+  return nval&0x0f;
 }
 unsigned char getVFXColor(int fxval) {
   if (fxval==0) {return 81;} // 0
-  if (fxval<128 && fxval>63) {return 27;} // 64-127
-  if (fxval<193 && fxval>127) {return 6;} // 128-192
-  switch((fxval-1)/10) {
-  case 0: return 2; break; // 1-10
-  case 1: return 2; break; // 11-20
-  case 2: return 2; break; // 21-30
-  case 3: return 2; break; // 31-40
-  case 4: return 3; break; // 41-50
-  case 5: return 3; break; // 51-60
+
+  switch (fxval>>4) {
+    case 0: return 2; break;
+    case 1: return 2; break;
+    case 2: return 2; break;
+    case 3: return 2; break;
+    case 4: case 5: case 6: case 7:
+      return 27; break;
+    case 8: case 9: case 10: case 11:
+      return 6; break;
+    case 12: return 3; break;
+    case 13: return 3; break;
+    case 14: return 3; break;
+    case 15: return 3; break;
+
+    case 28: return 117; break;
+    case 29: return 117; break;
+    case 30: return 56; break;
+    case 31: return 3; break;
   }
   switch((fxval-193)/10) {
   case 0: return 3; break; // 193-202
@@ -2144,12 +2137,16 @@ void drawpatterns(bool force) {
       if (pat[patid[curpat]][i][j+curedpage][2]==0 && pat[patid[curpat]][i][j+curedpage][0]!=0) {
         g.printf("v%.2X",instrument[pat[patid[curpat]][i][j+curedpage][1]].vol);
       } else {
-        g.tColor(getVFXColor(pat[patid[curpat]][i][j+curedpage][2]));
-        g.printf("%s%c%c",getVFX(pat[patid[curpat]][i][j+curedpage][2]),getVFXH(pat[patid[curpat]][i][j+curedpage][2]),getVFXL(pat[patid[curpat]][i][j+curedpage][2]));
+        g.tColor(getVFXColor(pat[patid[curpat]][i][j+curedpage][2]|((pat[patid[curpat]][i][j+curedpage][3]&0x80)<<1)));
+        if ((pat[patid[curpat]][i][j+curedpage][2]|((pat[patid[curpat]][i][j+curedpage][3]&0x80)<<1))==0) {
+          g.printf("...");
+        } else {
+          g.printf("%s%.2X",getVFX(pat[patid[curpat]][i][j+curedpage][2]|((pat[patid[curpat]][i][j+curedpage][3]&0x80)<<1)),getVFXVal(pat[patid[curpat]][i][j+curedpage][2]|((pat[patid[curpat]][i][j+curedpage][3]&0x80)<<1)));
+        }
       }
       // effect
-      g.tColor(GetFXColor(pat[patid[curpat]][i][j+curedpage][3]));
-      g.printf("%s%c%c",getFX(pat[patid[curpat]][i][j+curedpage][3]),getinsH(pat[patid[curpat]][i][j+curedpage][4]),getinsL(pat[patid[curpat]][i][j+curedpage][4]));
+      g.tColor(GetFXColor(pat[patid[curpat]][i][j+curedpage][3]&0x7f));
+      g.printf("%s%c%c",getFX(pat[patid[curpat]][i][j+curedpage][3]&0x7f),getinsH(pat[patid[curpat]][i][j+curedpage][4]),getinsL(pat[patid[curpat]][i][j+curedpage][4]));
     }
     g.tColor(15);
     g.printf("|");
@@ -4946,116 +4943,8 @@ void ClickEvents() {
 }
 void FastTracker() {
   // FT2-like pattern editor
-  int firstChan, firstMode;
-  int lastChan, lastMode;
-  int selTop, selBottom;
   // scroll code
-  if (kbpressed[SDL_SCANCODE_UP]) {
-    // go back
-    if (playmode==0) {
-      curtick=1;
-      curstep--;
-      if (curstep<0) {
-        curstep=0;
-      }
-      selEnd=curstep;
-      if (!kb[SDL_SCANCODE_LSHIFT]) {
-        selStart=curstep;
-        curselchan=curedchan;
-        curselmode=curedmode;
-      }
-    }
-    drawpatterns(true);
-  }
-  if (kbpressed[SDL_SCANCODE_DOWN]) {
-    // skipping
-    if (playmode==0) {
-      curtick=1;
-      curstep++;
-      if (curstep>(getpatlen(patid[curpat])-1)) {
-        curstep=0;
-        curpat++;
-      }
-      selEnd=curstep;
-      if (!kb[SDL_SCANCODE_LSHIFT]) {
-        selStart=curstep;
-        curselchan=curedchan;
-        curselmode=curedmode;
-      }
-    }
-    drawpatterns(true);
-  }
-  if (kbpressed[SDL_SCANCODE_RIGHT]) {
-    curedmode++;
-    if (curedmode>4) {
-      curedchan++;
-      curedmode=0;
-      if (curedchan>=chanstodisplay) {
-        curedchan=chanstodisplay-1;
-        curedmode=4;
-      }
-    }
-    if (!kb[SDL_SCANCODE_LSHIFT]) {
-      curselchan=curedchan;
-      curselmode=curedmode;
-      selEnd=selStart;
-    }
-    drawpatterns(true);
-  }
-  if (kbpressed[SDL_SCANCODE_LEFT]) {
-    curedmode--;
-    if (curedmode<0) {
-      curedchan--;
-      curedmode=4;
-      if (curedchan<0) {
-        curedchan=0;
-        curedmode=0;
-      }
-    }
-    if (!kb[SDL_SCANCODE_LSHIFT]) {
-      curselchan=curedchan;
-      curselmode=curedmode;
-      selEnd=selStart;
-    }
-    drawpatterns(true);
-  }
   if (kbpressed[SDL_SCANCODE_DELETE]) {
-    // delete from selection start to end
-    firstChan=curedchan; firstMode=curedmode;
-    lastChan=curselchan; lastMode=curselmode;
-    selTop=selStart; selBottom=selEnd;
-    if (lastChan<firstChan) {
-      lastChan^=firstChan;
-      firstChan^=lastChan;
-      lastChan^=firstChan;
-      
-      lastMode^=firstMode;
-      firstMode^=lastMode;
-      lastMode^=firstMode;
-    } else if (lastChan==firstChan) {
-      if (lastMode<firstMode) {
-        lastMode^=firstMode;
-        firstMode^=lastMode;
-        lastMode^=firstMode;
-      }
-    }
-    if (selBottom<selTop) {
-      selBottom^=selTop;
-      selTop^=selBottom;
-      selBottom^=selTop;
-    }
-    for (int i=firstChan; i<=lastChan; i++) {
-      for (int j=(i==firstChan)?firstMode:0; (j<5 && (i<lastChan || j<=lastMode)); j++) {
-        for (int k=selTop; k<=selBottom; k++) {
-          pat[patid[curpat]][k][curedpage+i][j]=0x00;
-        }
-      }
-    }
-    drawpatterns(true);
-    selStart=curstep;
-    selEnd=curstep;
-    curselchan=curedchan;
-    curselmode=curedmode;
   }
   if (curedmode==0) {
   // silences and stuff
@@ -5366,34 +5255,150 @@ void KeyboardEvents() {
 }
 
 void keyEvent_pat(SDL_Event& ev) {
-  if (ev.key.keysym.scancode==SDL_SCANCODE_END) {
-    curzoom++;
-    maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
-    if (maxCTD<1) maxCTD=1;
-    if (chanstodisplay>maxCTD) {
-      chanstodisplay=maxCTD;
+  int firstChan, firstMode;
+  int lastChan, lastMode;
+  int selTop, selBottom;
+  firstChan=curedchan; firstMode=curedmode;
+  lastChan=curselchan; lastMode=curselmode;
+  selTop=selStart; selBottom=selEnd;
+  if (lastChan<firstChan) {
+    lastChan^=firstChan;
+    firstChan^=lastChan;
+    lastChan^=firstChan;
+    
+    lastMode^=firstMode;
+    firstMode^=lastMode;
+    lastMode^=firstMode;
+  } else if (lastChan==firstChan) {
+    if (lastMode<firstMode) {
+      lastMode^=firstMode;
+      firstMode^=lastMode;
+      lastMode^=firstMode;
     }
-    if (curedpage>(channels-chanstodisplay)) {
-      curedpage=(channels-chanstodisplay);
-    }
-    drawpatterns(true);
-    drawmixerlayer();
-  } else if (ev.key.keysym.scancode==SDL_SCANCODE_HOME) {
-    curzoom--;
-    if (curzoom<1) {
-      triggerfx(1);
-      curzoom=1;
-    } else {
+  }
+  if (selBottom<selTop) {
+    selBottom^=selTop;
+    selTop^=selBottom;
+    selBottom^=selTop;
+  }
+
+  switch (ev.key.keysym.scancode) {
+    case SDL_SCANCODE_END:
+      curzoom++;
       maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
       if (maxCTD<1) maxCTD=1;
-      if (maxCTD>=channels) maxCTD=channels;
-      chanstodisplay=maxCTD;
+      if (chanstodisplay>maxCTD) {
+        chanstodisplay=maxCTD;
+      }
       if (curedpage>(channels-chanstodisplay)) {
         curedpage=(channels-chanstodisplay);
       }
       drawpatterns(true);
       drawmixerlayer();
-    }
+      break;
+    case SDL_SCANCODE_HOME:
+      curzoom--;
+      if (curzoom<1) {
+        triggerfx(1);
+        curzoom=1;
+      } else {
+        maxCTD=(scrW*dpiScale-24*curzoom)/(96*curzoom);
+        if (maxCTD<1) maxCTD=1;
+        if (maxCTD>=channels) maxCTD=channels;
+        chanstodisplay=maxCTD;
+        if (curedpage>(channels-chanstodisplay)) {
+          curedpage=(channels-chanstodisplay);
+        }
+        drawpatterns(true);
+        drawmixerlayer();
+      }
+      break;
+    case SDL_SCANCODE_UP:
+      // go back
+      if (playmode==0) {
+        curtick=1;
+        curstep--;
+        if (curstep<0) {
+          curstep=0;
+        }
+        selEnd=curstep;
+        if (!(ev.key.keysym.mod&KMOD_SHIFT)) {
+          selStart=curstep;
+          curselchan=curedchan;
+          curselmode=curedmode;
+        }
+      }
+      drawpatterns(true);
+      break;
+    case SDL_SCANCODE_DOWN:
+      // skipping
+      if (playmode==0) {
+        curtick=1;
+        curstep++;
+        if (curstep>(getpatlen(patid[curpat])-1)) {
+          curstep=0;
+          curpat++;
+        }
+        selEnd=curstep;
+        if (!(ev.key.keysym.mod&KMOD_SHIFT)) {
+          selStart=curstep;
+          curselchan=curedchan;
+          curselmode=curedmode;
+        }
+      }
+      drawpatterns(true);
+      break;
+    case SDL_SCANCODE_LEFT:
+      curedmode--;
+      if (curedmode<0) {
+        curedchan--;
+        curedmode=4;
+        if (curedchan<0) {
+          curedchan=0;
+          curedmode=0;
+        }
+      }
+      if (!(ev.key.keysym.mod&KMOD_SHIFT)) {
+        curselchan=curedchan;
+        curselmode=curedmode;
+        selEnd=selStart;
+      }
+      drawpatterns(true);
+      break;
+    case SDL_SCANCODE_RIGHT:
+      curedmode++;
+      if (curedmode>4) {
+        curedchan++;
+        curedmode=0;
+        if (curedchan>=chanstodisplay) {
+          curedchan=chanstodisplay-1;
+          curedmode=4;
+        }
+      }
+      if (!(ev.key.keysym.mod&KMOD_SHIFT)) {
+        curselchan=curedchan;
+        curselmode=curedmode;
+        selEnd=selStart;
+      }
+      drawpatterns(true);
+      break;
+    case SDL_SCANCODE_DELETE:
+      // delete from selection start to end
+      for (int i=firstChan; i<=lastChan; i++) {
+        for (int j=(i==firstChan)?firstMode:0; (j<5 && (i<lastChan || j<=lastMode)); j++) {
+          for (int k=selTop; k<=selBottom; k++) {
+            pat[patid[curpat]][k][curedpage+i][j]=0x00;
+          }
+        }
+      }
+      drawpatterns(true);
+      selStart=curstep;
+      selEnd=curstep;
+      curselchan=curedchan;
+      curselmode=curedmode;
+      break;
+    default:
+      break;
   }
   
   // note input.
@@ -5668,6 +5673,86 @@ void keyEvent_pat(SDL_Event& ev) {
       }
       break;
     case 3: // effect
+      switch (ev.key.keysym.scancode) {
+        case SDL_SCANCODE_A:
+          inEffect=1;
+          break;
+        case SDL_SCANCODE_B:
+          inEffect=2;
+          break;
+        case SDL_SCANCODE_C:
+          inEffect=3;
+          break;
+        case SDL_SCANCODE_D:
+          inEffect=4;
+          break;
+        case SDL_SCANCODE_E:
+          inEffect=5;
+          break;
+        case SDL_SCANCODE_F:
+          inEffect=6;
+          break;
+        case SDL_SCANCODE_G:
+          inEffect=7;
+          break;
+        case SDL_SCANCODE_H:
+          inEffect=8;
+          break;
+        case SDL_SCANCODE_I:
+          inEffect=9;
+          break;
+        case SDL_SCANCODE_J:
+          inEffect=10;
+          break;
+        case SDL_SCANCODE_K:
+          inEffect=11;
+          break;
+        case SDL_SCANCODE_L:
+          inEffect=12;
+          break;
+        case SDL_SCANCODE_M:
+          inEffect=13;
+          break;
+        case SDL_SCANCODE_N:
+          inEffect=14;
+          break;
+        case SDL_SCANCODE_O:
+          inEffect=15;
+          break;
+        case SDL_SCANCODE_P:
+          inEffect=16;
+          break;
+        case SDL_SCANCODE_Q:
+          inEffect=17;
+          break;
+        case SDL_SCANCODE_R:
+          inEffect=18;
+          break;
+        case SDL_SCANCODE_S:
+          inEffect=19;
+          break;
+        case SDL_SCANCODE_T:
+          inEffect=20;
+          break;
+        case SDL_SCANCODE_U:
+          inEffect=21;
+          break;
+        case SDL_SCANCODE_V:
+          inEffect=22;
+          break;
+        case SDL_SCANCODE_W:
+          inEffect=23;
+          break;
+        case SDL_SCANCODE_X:
+          inEffect=24;
+          break;
+        case SDL_SCANCODE_Y:
+          inEffect=25;
+          break;
+        case SDL_SCANCODE_Z:
+          inEffect=26;
+          break;
+      }
       break;
     case 4: // effect value
       switch (ev.key.keysym.scancode) {
@@ -5726,68 +5811,71 @@ void keyEvent_pat(SDL_Event& ev) {
   }
   // note set
   if (inNote>=0) {
+    curstep=selTop;
     if (inNote==13 || inNote==14 || inNote==15) {
-      pat[patid[curpat]][curstep][curedpage+curedchan][0]=inNote;
+      pat[patid[curpat]][selTop][curedpage+curedchan][0]=inNote;
     } else {
-      pat[patid[curpat]][curstep][curedpage+curedchan][0]=minval(inNote+(curoctave<<4),0x9C);
+      pat[patid[curpat]][selTop][curedpage+curedchan][0]=minval(inNote+(curoctave<<4),0x9C);
     }
     EditSkip();
   }
   // instrument set
   if (inIns>=0) {
-    pat[patid[curpat]][curstep][curedpage+curedchan][1]<<=4;
-    pat[patid[curpat]][curstep][curedpage+curedchan][1]|=inIns;
+    pat[patid[curpat]][selTop][curedpage+curedchan][1]<<=4;
+    pat[patid[curpat]][selTop][curedpage+curedchan][1]|=inIns;
     drawpatterns(true);
   }
   // volume effect set
   if (inVolEffect>=0) {
     // set volume effect
-    pat[patid[curpat]][curstep][curedpage+curedchan][2]&=0x0f;
-    pat[patid[curpat]][curstep][curedpage+curedchan][2]|=(inVolEffect&0x0f)<<4;
-    pat[patid[curpat]][curstep][curedpage+curedchan][3]&=0x7f;
-    pat[patid[curpat]][curstep][curedpage+curedchan][3]|=(inVolEffect&0x10)<<3;
+    pat[patid[curpat]][selTop][curedpage+curedchan][2]&=0x0f;
+    pat[patid[curpat]][selTop][curedpage+curedchan][2]|=(inVolEffect&0x0f)<<4;
+    pat[patid[curpat]][selTop][curedpage+curedchan][3]&=0x7f;
+    pat[patid[curpat]][selTop][curedpage+curedchan][3]|=(inVolEffect&0x10)<<3;
     drawpatterns(true);
   }
   // volume set
   // TODO: other vol effects
   if (inVol>=0) {
     // check type
-    if (pat[patid[curpat]][curstep][curedpage+curedchan][2]==0 ||
-        (pat[patid[curpat]][curstep][curedpage+curedchan][2]>=0x40 &&
-         pat[patid[curpat]][curstep][curedpage+curedchan][2]<0x80)) {
+    if (pat[patid[curpat]][selTop][curedpage+curedchan][2]==0 ||
+        (pat[patid[curpat]][selTop][curedpage+curedchan][2]>=0x40 &&
+         pat[patid[curpat]][selTop][curedpage+curedchan][2]<0x80)) {
       // normal volume
-      pat[patid[curpat]][curstep][curedpage+curedchan][2]=
-        0x40+(((pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x3f)<<4)|inVol);
-        if (pat[patid[curpat]][curstep][curedpage+curedchan][2]>0x7f ||
-            pat[patid[curpat]][curstep][curedpage+curedchan][2]<0x40) {
-          pat[patid[curpat]][curstep][curedpage+curedchan][2]=
-           0x40+(pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x0f);
+      pat[patid[curpat]][selTop][curedpage+curedchan][2]=
+        0x40+(((pat[patid[curpat]][selTop][curedpage+curedchan][2]&0x3f)<<4)|inVol);
+        if (pat[patid[curpat]][selTop][curedpage+curedchan][2]>0x7f ||
+            pat[patid[curpat]][selTop][curedpage+curedchan][2]<0x40) {
+          pat[patid[curpat]][selTop][curedpage+curedchan][2]=
+           0x40+(pat[patid[curpat]][selTop][curedpage+curedchan][2]&0x0f);
         }
-    } else if (pat[patid[curpat]][curstep][curedpage+curedchan][2]>=0x80 &&
-               pat[patid[curpat]][curstep][curedpage+curedchan][2]<0xc0) {
+    } else if (pat[patid[curpat]][selTop][curedpage+curedchan][2]>=0x80 &&
+               pat[patid[curpat]][selTop][curedpage+curedchan][2]<0xc0) {
       // panning
-      pat[patid[curpat]][curstep][curedpage+curedchan][2]=
-        0x80+(((pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x3f)<<4)|inVol);
-        if (pat[patid[curpat]][curstep][curedpage+curedchan][2]>0xbf ||
-            pat[patid[curpat]][curstep][curedpage+curedchan][2]<0x80) {
-          pat[patid[curpat]][curstep][curedpage+curedchan][2]=
-           0x80+(pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x0f);
+      pat[patid[curpat]][selTop][curedpage+curedchan][2]=
+        0x80+(((pat[patid[curpat]][selTop][curedpage+curedchan][2]&0x3f)<<4)|inVol);
+        if (pat[patid[curpat]][selTop][curedpage+curedchan][2]>0xbf ||
+            pat[patid[curpat]][selTop][curedpage+curedchan][2]<0x80) {
+          pat[patid[curpat]][selTop][curedpage+curedchan][2]=
+           0x80+(pat[patid[curpat]][selTop][curedpage+curedchan][2]&0x0f);
         }
     } else {
       // other
-      pat[patid[curpat]][curstep][curedpage+curedchan][2]&=0xf0;
-      pat[patid[curpat]][curstep][curedpage+curedchan][2]|=inVol;
+      pat[patid[curpat]][selTop][curedpage+curedchan][2]&=0xf0;
+      pat[patid[curpat]][selTop][curedpage+curedchan][2]|=inVol;
     }
     drawpatterns(true);
   }
   // effect set
   if (inEffect>=0) {
-    
+    pat[patid[curpat]][selTop][curedpage+curedchan][3]&=0x80;
+    pat[patid[curpat]][selTop][curedpage+curedchan][3]|=inEffect;
+    drawpatterns(true);
   }
   // effect value set
   if (inEffectVal>=0) {
-    pat[patid[curpat]][curstep][curedpage+curedchan][4]<<=4;
-    pat[patid[curpat]][curstep][curedpage+curedchan][4]|=inEffectVal;
+    pat[patid[curpat]][selTop][curedpage+curedchan][4]<<=4;
+    pat[patid[curpat]][selTop][curedpage+curedchan][4]|=inEffectVal;
     drawpatterns(true);
   }
 }
