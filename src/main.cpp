@@ -5609,6 +5609,9 @@ void keyEvent_pat(SDL_Event& ev) {
           case SDL_SCANCODE_U:
             inVolEffect=31;
             break;
+          default:
+            break;
+        }
       } else {
         switch (ev.key.keysym.scancode) {
           case SDL_SCANCODE_0:
@@ -5740,7 +5743,10 @@ void keyEvent_pat(SDL_Event& ev) {
   if (inVolEffect>=0) {
     // set volume effect
     pat[patid[curpat]][curstep][curedpage+curedchan][2]&=0x0f;
-    pat[patid[curpat]][curstep][curedpage+curedchan][2]|=inVolEffect<<4;
+    pat[patid[curpat]][curstep][curedpage+curedchan][2]|=(inVolEffect&0x0f)<<4;
+    pat[patid[curpat]][curstep][curedpage+curedchan][3]&=0x7f;
+    pat[patid[curpat]][curstep][curedpage+curedchan][3]|=(inVolEffect&0x10)<<3;
+    drawpatterns(true);
   }
   // volume set
   // TODO: other vol effects
