@@ -5565,58 +5565,103 @@ void keyEvent_pat(SDL_Event& ev) {
       }
       break;
     case 2: // volume/volume effect
-      switch (ev.key.keysym.scancode) {
-        case SDL_SCANCODE_0:
-          inVol=0;
-          break;
-        case SDL_SCANCODE_1:
-          inVol=1;
-          break;
-        case SDL_SCANCODE_2:
-          inVol=2;
-          break;
-        case SDL_SCANCODE_3:
-          inVol=3;
-          break;
-        case SDL_SCANCODE_4:
-          inVol=4;
-          break;
-        case SDL_SCANCODE_5:
-          inVol=5;
-          break;
-        case SDL_SCANCODE_6:
-          inVol=6;
-          break;
-        case SDL_SCANCODE_7:
-          inVol=7;
-          break;
-        case SDL_SCANCODE_8:
-          inVol=8;
-          break;
-        case SDL_SCANCODE_9:
-          inVol=9;
-          break;
-        // TODO: volume effects.
-        case SDL_SCANCODE_A:
-          inVol=10;
-          break;
-        case SDL_SCANCODE_B:
-          inVol=11;
-          break;
-        case SDL_SCANCODE_C:
-          inVol=12;
-          break;
-        case SDL_SCANCODE_D:
-          inVol=13;
-          break;
-        case SDL_SCANCODE_E:
-          inVol=14;
-          break;
-        case SDL_SCANCODE_F:
-          inVol=15;
-          break;
-        default:
-          break;
+      if (ev.key.keysym.mod&KMOD_SHIFT) {
+        switch (ev.key.keysym.scancode) {
+          case SDL_SCANCODE_A:
+            inVolEffect=0;
+            break;
+          case SDL_SCANCODE_B:
+            inVolEffect=1;
+            break;
+          case SDL_SCANCODE_C:
+            inVolEffect=2;
+            break;
+          case SDL_SCANCODE_D:
+            inVolEffect=3;
+            break;
+          case SDL_SCANCODE_V:
+            inVolEffect=4;
+            break;
+          case SDL_SCANCODE_P:
+            inVolEffect=8;
+            break;
+          case SDL_SCANCODE_E:
+            inVolEffect=12;
+            break;
+          case SDL_SCANCODE_F:
+            inVolEffect=13;
+            break;
+          case SDL_SCANCODE_G:
+            inVolEffect=14;
+            break;
+          case SDL_SCANCODE_H:
+            inVolEffect=15;
+            break;
+          case SDL_SCANCODE_L:
+            inVolEffect=28;
+            break;
+          case SDL_SCANCODE_R:
+            inVolEffect=29;
+            break;
+          case SDL_SCANCODE_O:
+            inVolEffect=30;
+            break;
+          case SDL_SCANCODE_U:
+            inVolEffect=31;
+            break;
+      } else {
+        switch (ev.key.keysym.scancode) {
+          case SDL_SCANCODE_0:
+            inVol=0;
+            break;
+          case SDL_SCANCODE_1:
+            inVol=1;
+            break;
+          case SDL_SCANCODE_2:
+            inVol=2;
+            break;
+          case SDL_SCANCODE_3:
+            inVol=3;
+            break;
+          case SDL_SCANCODE_4:
+            inVol=4;
+            break;
+          case SDL_SCANCODE_5:
+            inVol=5;
+            break;
+          case SDL_SCANCODE_6:
+            inVol=6;
+            break;
+          case SDL_SCANCODE_7:
+            inVol=7;
+            break;
+          case SDL_SCANCODE_8:
+            inVol=8;
+            break;
+          case SDL_SCANCODE_9:
+            inVol=9;
+            break;
+          case SDL_SCANCODE_A:
+            inVol=10;
+            break;
+          case SDL_SCANCODE_B:
+            inVol=11;
+            break;
+          case SDL_SCANCODE_C:
+            inVol=12;
+            break;
+          case SDL_SCANCODE_D:
+            inVol=13;
+            break;
+          case SDL_SCANCODE_E:
+            inVol=14;
+            break;
+          case SDL_SCANCODE_F:
+            inVol=15;
+            break;
+          default:
+            break;
+        }
       }
       break;
     case 3: // effect
@@ -5693,13 +5738,18 @@ void keyEvent_pat(SDL_Event& ev) {
   }
   // volume effect set
   if (inVolEffect>=0) {
+    // set volume effect
+    pat[patid[curpat]][curstep][curedpage+curedchan][2]&=0x0f;
+    pat[patid[curpat]][curstep][curedpage+curedchan][2]|=inVolEffect<<4;
   }
   // volume set
   // TODO: other vol effects
   if (inVol>=0) {
+    // check type
     if (pat[patid[curpat]][curstep][curedpage+curedchan][2]==0 ||
         (pat[patid[curpat]][curstep][curedpage+curedchan][2]>=0x40 &&
          pat[patid[curpat]][curstep][curedpage+curedchan][2]<0x80)) {
+      // normal volume
       pat[patid[curpat]][curstep][curedpage+curedchan][2]=
         0x40+(((pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x3f)<<4)|inVol);
         if (pat[patid[curpat]][curstep][curedpage+curedchan][2]>0x7f ||
@@ -5707,6 +5757,20 @@ void keyEvent_pat(SDL_Event& ev) {
           pat[patid[curpat]][curstep][curedpage+curedchan][2]=
            0x40+(pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x0f);
         }
+    } else if (pat[patid[curpat]][curstep][curedpage+curedchan][2]>=0x80 &&
+               pat[patid[curpat]][curstep][curedpage+curedchan][2]<0xc0) {
+      // panning
+      pat[patid[curpat]][curstep][curedpage+curedchan][2]=
+        0x80+(((pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x3f)<<4)|inVol);
+        if (pat[patid[curpat]][curstep][curedpage+curedchan][2]>0xbf ||
+            pat[patid[curpat]][curstep][curedpage+curedchan][2]<0x80) {
+          pat[patid[curpat]][curstep][curedpage+curedchan][2]=
+           0x80+(pat[patid[curpat]][curstep][curedpage+curedchan][2]&0x0f);
+        }
+    } else {
+      // other
+      pat[patid[curpat]][curstep][curedpage+curedchan][2]&=0xf0;
+      pat[patid[curpat]][curstep][curedpage+curedchan][2]|=inVol;
     }
     drawpatterns(true);
   }
