@@ -3015,7 +3015,7 @@ int ImportIT(FILE* it) {
   if (it!=NULL) { // read the file
   printf("loading IT file, ");
     size=fsize(it);
-  printf("%ld bytes\n",size);
+    printf("%zu bytes\n",size);
     memblock=new char[size];
     fseek(it,0,SEEK_SET);
     fread(memblock,1,size,it);
@@ -3157,6 +3157,38 @@ int ImportIT(FILE* it) {
   songlength--;
   return 0;
 }
+
+struct MODHeader {
+  char name[20];
+  struct {
+    char name[22];
+    unsigned short len;
+    char pitch;
+    char vol;
+    unsigned short loopStart;
+    unsigned short loopLen;
+  } ins[31];
+  char len;
+  char loop;
+  char ord[128];
+  int ident;
+};
+
+struct ClassicMODHeader {
+  char name[20];
+  struct {
+    char name[22];
+    unsigned short len;
+    char pitch;
+    char vol;
+    unsigned short loopStart;
+    unsigned short loopLen;
+  } ins[15];
+  char len;
+  char loop;
+  char ord[128];
+};
+
 int ImportMOD(FILE* mod) {
   // import MOD file
   // check out http://www.fileformat.info/format/mod/corion.htm for specs in MOD format
@@ -3171,7 +3203,7 @@ int ImportMOD(FILE* mod) {
   printf("loading MOD file, ");
   CleanupPatterns();
     size=fsize(mod);
-  printf("%ld bytes\n",size);
+    printf("%zu bytes\n",size);
     memblock=new char[size];
     fseek(mod,0,SEEK_SET);
     fread(memblock,1,size,mod);
@@ -3251,7 +3283,6 @@ int ImportMOD(FILE* mod) {
     songlength=memblock[950]-1;
     if (settings::samples) {
     printf("putting samples to PCM memory if possible\n");
-    printf("%ld bytes",size-1084-(patterns*chans*64*4));
     memcpy(chip[0].pcm,memblock+1084+((patterns+1)*chans*64*4),minval(65280,size-1084-((patterns+1)*chans*64*4)));
     if (size-1084-((patterns+1)*chans*64*4)>65280) {
       popbox=PopupBox("Warning","out of PCM memory to load all samples!");
@@ -3411,7 +3442,7 @@ int ImportS3M() {
   if (s3m!=NULL) { // read the file
     printf("loading S3M file, ");
     size=fsize(s3m);
-    printf("%ld bytes\n",size);
+    printf("%zu bytes\n",size);
     memblock=new char[size];
     fseek(s3m,0,SEEK_SET);
     fread(memblock,1,size,s3m);
