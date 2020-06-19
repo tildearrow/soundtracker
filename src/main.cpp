@@ -3774,6 +3774,23 @@ int SaveFile() {
 
 // TODO: this
 int volOldToNew(int orig) {
+  if (orig==0) return 0;
+  if (orig>=0x40 && orig<0xc0) {
+    return orig;
+  }
+  switch ((orig-1)/10) {
+    case 0: return orig-1; break; // 1-10
+    case 1: return 0x10+orig-11; break; // 11-20
+    case 2: return 0x20+orig-21; break; // 21-30
+    case 3: return 0x30+orig-31; break; // 31-40
+    case 4: return 0xc0+orig-41; break; // 41-50
+    case 5: return 0xd0+orig-51; break; // 51-60
+  }
+  switch ((orig-193)/10) {
+    case 0: return 0xe0+orig-193; break; // 193-202
+    case 1: return 0xf0+orig-203; break; // 203-212
+    case 2: return 0x1e0+orig-213; break; // 213-222
+  }
   return 0;
 }
 
