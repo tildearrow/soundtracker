@@ -5770,6 +5770,8 @@ void keyEvent_pat(SDL_Event& ev) {
         case SDL_SCANCODE_Z:
           inEffect=26;
           break;
+        default:
+          break;
       }
       break;
     case 4: // effect value
