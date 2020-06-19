@@ -2992,7 +2992,7 @@ unsigned char ITVolumeConverter(unsigned char itvol) {
 int ImportIT(FILE* it) {
   // import IT file, after YEARS I wasn't able to do this.
   // check out http://schismtracker.org/wiki/ITTECH.TXT for specs in IT format
-    int64_t size;
+  size_t size;
   char * memblock;
   int sk;
   int samples;
@@ -3160,8 +3160,8 @@ int ImportIT(FILE* it) {
 int ImportMOD(FILE* mod) {
   // import MOD file
   // check out http://www.fileformat.info/format/mod/corion.htm for specs in MOD format
-    int64_t size;
-  char * memblock;
+  size_t size;
+  char* memblock;
   int sk;
   //string fn;
   int chans;
@@ -3394,8 +3394,8 @@ int ImportMOD(FILE* mod) {
 }
 int ImportS3M() {
   // import S3M file
-  int64_t size;
-  char * memblock;
+  size_t size;
+  char* memblock;
   int sk;
   int NextByte;
   int NextChannel;
