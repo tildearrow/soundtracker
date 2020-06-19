@@ -1280,7 +1280,7 @@ void NextRow() {
       cutcount[loop]=speed-(instrument[Mins[loop]].flags>>6);
     }
     ninst=pat[patid[curpat]][curstep][loop][1]; // finds out next instrument
-    nvolu[loop]=pat[patid[curpat]][curstep][loop][2]&((pat[patid[curpat]][curstep][loop][3]&0x80)<<1); // finds out next volume value
+    nvolu[loop]=pat[patid[curpat]][curstep][loop][2]|((pat[patid[curpat]][curstep][loop][3]&0x80)<<1);// finds out next volume value
     // is there a note and instrument, but no volume value? assume instrument volume
     if ((nnote%16)!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13 && nvolu[loop]==0 && ninst!=0) {nvolu[loop]=0x40+minval(instrument[ninst].vol,63);}
     nfxid[loop]=pat[patid[curpat]][curstep][loop][3]&0x7f; // finds out next effect
