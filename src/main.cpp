@@ -768,7 +768,7 @@ unsigned char GetFXColor(unsigned char fxval) {
   switch (fxval) {
   case 1: case 20: return 164; break; // speed control
   case 2: case 3: case 22: case 23: return 9; break; // song control
-  case 4: case 13: case 14: case 18: return 10; break; // volume control
+  case 4: case 13: case 14: case 18: case 27: return 10; break; // volume control
   case 5: case 6: case 7: case 8: case 11: case 12: case 21: return 11; break; // pitch control
   case 9: case 10: case 15: case 17: return 63; break; // note control
   case 19: case 26: return 13; break; // special commands
@@ -982,6 +982,7 @@ const char* getFX(int fxval) {
   case 24: return "X"; break;
   case 25: return "Y"; break;
   case 26: return "Z"; break;
+  case 27: return "v"; break;
   }
   return "?";
 }
@@ -1014,6 +1015,7 @@ const char* getFX_PT(int fxval) {
   case 24: return "8"; break;
   case 25: return "Y"; break;
   case 26: return "Z"; break;
+  case 27: return "C"; break;
   }
   return "?";
 }
@@ -1280,7 +1282,7 @@ void NextRow() {
       cutcount[loop]=speed-(instrument[Mins[loop]].flags>>6);
     }
     ninst=pat[patid[curpat]][curstep][loop][1]; // finds out next instrument
-    nvolu[loop]=pat[patid[curpat]][curstep][loop][2]|((pat[patid[curpat]][curstep][loop][3]&0x80)<<1);// finds out next volume value
+    nvolu[loop]=pat[patid[curpat]][curstep][loop][2]|((pat[patid[curpat]][curstep][loop][3]&0x80)<<1); // finds out next volume value
     // is there a note and instrument, but no volume value? assume instrument volume
     if ((nnote%16)!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13 && nvolu[loop]==0 && ninst!=0) {nvolu[loop]=0x40+minval(instrument[ninst].vol,63);}
     nfxid[loop]=pat[patid[curpat]][curstep][loop][3]&0x7f; // finds out next effect
@@ -3209,11 +3211,6 @@ int ImportMOD(FILE* mod) {
     fread(memblock,1,size,mod);
     fclose(mod);
     printf("success, now importing file\n");
-  for (int nonsense=0;nonsense<256;nonsense++) {
-    patlength[nonsense]=64;
-    //instrument[nonsense].env[envPan]=48;
-  }
-#ifndef PRESERVE_INS
   for (int ii=0;ii<31;ii++) {
     for (int jj=0;jj<22;jj++) {
       instrument[ii+1].name[jj]=memblock[0x14+(ii*30)+jj];
@@ -3237,17 +3234,8 @@ int ImportMOD(FILE* mod) {
       CurrentSampleSeek+=tempsize;
       instrument[ii+1].noteOffset=12;
       instrument[ii+1].DFM|=8;
-                        /*
-    instrument[ii+1].pcmPos[0]=CurrentSampleSeek>>8;
-    instrument[ii+1].pcmPos[1]=CurrentSampleSeek%256;
-    instrument[ii+1].DFM|=(CurrentSampleSeek>>16)<<7;
-    CurrentSampleSeek+=(((memblock[0x14+(ii*30)+22]<<8)+memblock[0x14+(ii*30)+23])*2);
-    if ((((((memblock[0x14+(ii*30)+22]<<8)+memblock[0x14+(ii*30)+23])*2)>>4)%8)>3) {CurrentSampleSeek+=256;}
-    instrument[ii+1][0x33]=(((memblock[0x14+(ii*30)+23]<<8)+memblock[0x14+(ii*30)+22])*2)>>8;
-    instrument[ii+1][0x32]=(((memblock[0x14+(ii*30)+23]<<8)+memblock[0x14+(ii*30)+22])*2)%256;*/
     }
   }
-#endif
   if ((memblock[1080]=='M' && memblock[1081]=='.' && memblock[1082]=='K' && memblock[1083]=='.')||
     (memblock[1080]=='M' && memblock[1081]=='!' && memblock[1082]=='K' && memblock[1083]=='!')||
      (memblock[1081]=='C' && memblock[1082]=='H' && memblock[1083]=='N')||
