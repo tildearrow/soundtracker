@@ -3733,7 +3733,7 @@ int ImportXM(FILE* xm) {
           if (patData[sk]>=96) {
             pat[i][curRow][curChan][0]=0x0d;
           } else {
-            pat[i][curRow][curChan][0]=((patData[sk]/12)<<4)+(patData[sk]%12);
+            pat[i][curRow][curChan][0]=1+(((patData[sk]-1)/12)<<4)+((patData[sk]-1)%12);
           }
           sk++;
         }
@@ -3750,7 +3750,7 @@ int ImportXM(FILE* xm) {
         if (nextNote>=96) {
           pat[i][curRow][curChan][0]=0x0d;
         } else {
-          pat[i][curRow][curChan][0]=((nextNote/12)<<4)+(nextNote%12);
+          pat[i][curRow][curChan][0]=1+(((nextNote-1)/12)<<4)+((nextNote-1)%12);
         }
         pat[i][curRow][curChan][1]=patData[sk++];
         vol=patData[sk++];
