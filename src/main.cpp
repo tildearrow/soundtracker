@@ -1365,7 +1365,7 @@ void NextRow() {
         chip[0].chan[loop].pcmrst=*(unsigned short*)instrument[Mins[loop]].pcmPos+*(unsigned short*)instrument[Mins[loop]].pcmLoop;
         // set respective PCM pointers
         chip[0].chan[loop].pcmpos=*(unsigned short*)instrument[Mins[loop]].pcmPos;
-        chip[0].chan[loop].pcmbnd=*(unsigned short*)instrument[Mins[loop]].pcmPos+instrument[Mins[loop]].pcmLen;
+        chip[0].chan[loop].pcmbnd=minval(0xfeff,(*(unsigned short*)instrument[Mins[loop]].pcmPos)+instrument[Mins[loop]].pcmLen);
       } else {chip[0].chan[loop].flags.pcm=0;}
       // is ringmod on? (ringmod check)
       if (instrument[Mins[loop]].DFM&16) {
@@ -3279,13 +3279,27 @@ int ImportMOD(FILE* mod) {
       int tempsize;
       tempsize=h.ins[ii].len*2;
       int repeatpos;
-      repeatpos=h.ins[ii].loopStart*2;
+      if (karsten) {
+        repeatpos=h.ins[ii].loopStart;
+      } else {
+        repeatpos=h.ins[ii].loopStart*2;
+      }
       int repeatlen;
       repeatlen=h.ins[ii].loopLen*2;
       printf("sample %d size: %.5x repeat: %.4x replen: %.4x\n",ii,tempsize,repeatpos,repeatlen);
-      instrument[ii+1].pcmLen=(repeatpos>0 || repeatlen>2)?(minval(tempsize,repeatpos+repeatlen)):(tempsize);
-      instrument[ii+1].pcmLoop[1]=repeatpos>>8;
-      instrument[ii+1].pcmLoop[0]=repeatpos&0xff;
+      
+      if (karsten) {
+        instrument[ii+1].pcmPos[1]=(CurrentSampleSeek+repeatpos)>>8;
+        instrument[ii+1].pcmPos[0]=(CurrentSampleSeek+repeatpos)%256;
+        instrument[ii+1].pcmLen=(repeatpos>0 || repeatlen>2)?(minval(tempsize,repeatlen)):(tempsize);
+        instrument[ii+1].pcmLoop[1]=0;
+        instrument[ii+1].pcmLoop[0]=0;
+      } else {
+        instrument[ii+1].pcmLen=(repeatpos>0 || repeatlen>2)?(minval(tempsize,repeatpos+repeatlen)):(tempsize);
+        instrument[ii+1].pcmLoop[1]=repeatpos>>8;
+        instrument[ii+1].pcmLoop[0]=repeatpos&0xff;
+      }
+      
       instrument[ii+1].pcmMult|=(repeatpos>0 || repeatlen>2)?(128):(0);
       CurrentSampleSeek+=tempsize;
       instrument[ii+1].noteOffset=12;
@@ -3477,6 +3491,7 @@ int ImportMOD(FILE* mod) {
     g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
   }
   channels=chans;
+  songlength--;
   return 0;
 }
 int ImportS3M(FILE* s3m) {
@@ -3577,11 +3592,191 @@ int ImportS3M(FILE* s3m) {
 }
 
 // THE FINAL ONE
+struct XMHeader {
+  char name[37];
+  char x1a;
+  char program[20];
+  short ver;
+  int size;
+  short orders, loop, chans, pats, instrs, flags, speed, tempo;
+  char ord[256];
+};
+
+struct XMPatternHeader {
+  int size;
+  unsigned char packType;
+  unsigned char rows[2];
+  unsigned char len[2];
+};
+
+int XMVolume(int val) {
+  switch (val>>4) {
+    case 0: return 0; break;
+    case 1: case 2: case 3: case 4: case 5:
+      return 0x40+minval(0x3f,val-16); break;
+    case 6: return 0x30+(val&0x0f); break;
+    case 7: return 0x20+(val&0x0f); break;
+    case 8: return 0x10+(val&0x0f); break;
+    case 9: return 0x00+(val&0x0f); break;
+    case 10: return 0x1e0+(val&0x0f); break;
+    case 11: return 0xe0+(val&0x0f); break;
+    case 12: return 0x80+(val&0x0f)*4; break;
+    case 13: return 0x1c0+(val&0x0f); break;
+    case 14: return 0x1d0+(val&0x0f); break;
+    case 15: return 0xf0+(val&0x0f); break;
+  }
+  return 0;
+}
+
+int XMEffect(int fx, int fxv) {
+  switch (fx) {
+    case 0:
+      if (fxv!=0) {
+        return 10;
+      } else {
+        return 0;
+      }
+      break;
+    case 1: return 6; break;
+    case 2: return 5; break;
+    case 3: return 7; break;
+    case 4: return 8; break;
+    case 5: return 12; break;
+    case 6: return 11; break;
+    case 7: return 18; break;
+    case 8: return 24; break;
+    case 9: return 15; break;
+    case 10: return 4; break;
+    case 11: return 2; break;
+    case 12: return 27; break;
+    case 13: return 3; break;
+    case 14:
+      return 19; // todo
+      break;
+    case 15:
+      if (fxv>31) {
+        return 20;
+      } else {
+        return 1;        
+      }
+      break;
+    case 16: return 22; break;
+    case 17: return 23; break;
+    case 19: return 19; break;
+    case 20: return 15; break;
+    case 24: return 16; break;
+    case 26: return 17; break;
+    case 28: return 9; break;
+    case 32:
+      return 0; // todo
+      break;
+  }
+  return 0;
+}
+
 int ImportXM(FILE* xm) {
+  XMHeader h;
+  XMPatternHeader ph;
+  unsigned char patData[65536];
+  int sk, curChan, curRow, nextNote, vol, fx, fxval;
+  printf("loading XM\n");
+  fseek(xm,0,SEEK_SET);
+  fread(&h,1,sizeof(XMHeader),xm);
+  
+  CleanupPatterns();
+  name="";
+  for (int i=0; i<20; i++) {
+    if (h.name[i+17]==0) break;
+    name+=h.name[i+17];
+  }
+  
+  origin="";
+  for (int i=0; i<20; i++) {
+    if (h.name[i+17]==0) break;
+    origin+=h.name[i+17];
+  }
+  
+  for (int i=0; i<256; i++) {
+    patid[i]=h.ord[i];
+  }
+  songlength=h.orders-1;
+  channels=h.chans;
+  defspeed=h.speed;
+  
+  if (h.size!=(sizeof(XMHeader)-60)) {
+    popbox=PopupBox("Error",strFormat("header size mismatch! %d != %d",h.size,sizeof(XMHeader)-60));
+    triggerfx(1);
+    fclose(xm);
+    return 1;
+  }
+  
+  printf("seeking to %d\n",60+h.size);
+  fseek(xm,60+h.size,SEEK_SET);
+  for (int i=0; i<h.pats; i++) {
+    fread(&ph,1,9,xm);
+    if (ph.size!=9) {
+      popbox=PopupBox("Error",strFormat("pattern %d header size mismatch! %d != 9",i,ph.size));
+      triggerfx(1);
+      fclose(xm);
+      return 1;
+    }
+    patlength[i]=ph.rows[0];
+    fread(patData,1,ph.len[0]+(ph.len[1]<<8),xm);
+    // decode pattern!
+    sk=0;
+    curChan=0; curRow=0;
+    do {
+      nextNote=patData[sk++];
+      if (nextNote&0x80) {
+        if (nextNote&1) {
+          if (patData[sk]>=96) {
+            pat[i][curRow][curChan][0]=0x0d;
+          } else {
+            pat[i][curRow][curChan][0]=((patData[sk]/12)<<4)+(patData[sk]%12);
+          }
+          sk++;
+        }
+        if (nextNote&2) pat[i][curRow][curChan][1]=patData[sk++];
+        fx=0; fxval=0; vol=0;
+        if (nextNote&4) vol=patData[sk++];
+        if (nextNote&8) fx=patData[sk++];
+        if (nextNote&16) fxval=patData[sk++];
+        
+        pat[i][curRow][curChan][2]=XMVolume(vol);
+        pat[i][curRow][curChan][3]=XMEffect(fx,fxval);
+        pat[i][curRow][curChan][4]=fxval;
+      } else {
+        if (nextNote>=96) {
+          pat[i][curRow][curChan][0]=0x0d;
+        } else {
+          pat[i][curRow][curChan][0]=((nextNote/12)<<4)+(nextNote%12);
+        }
+        pat[i][curRow][curChan][1]=patData[sk++];
+        vol=patData[sk++];
+        fx=patData[sk++];
+        fxval=patData[sk++];
+        pat[i][curRow][curChan][2]=XMVolume(vol);
+        pat[i][curRow][curChan][3]=XMEffect(fx,fxval);
+        pat[i][curRow][curChan][4]=fxval;
+      }
+      curChan++;
+      if (curChan>=h.chans) {
+        curChan=0;
+        curRow++;
+      }
+    } while (sk<(ph.len[0]+(ph.len[1]<<8)));
+  }
+  
   fclose(xm);
-  printf("TODO\n");
-  triggerfx(1);
-  return 1;
+  
+  if (!playermode && !fileswitch) {curpat=0;}
+  if (playmode==1) {Play();}
+  if (name=="") {
+    g.setTitle(PROGRAM_NAME);
+  } else {
+    g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
+  }
+  return 0;
 }
 
 #ifdef _WIN32
@@ -3896,7 +4091,7 @@ int getFormat(FILE* sfile) {
   if (memcmp(ident,"FORM",4)==0) return FormatAudio;
   
   // S3M check
-  fseek(sfile,60,SEEK_SET);
+  fseek(sfile,0x2c,SEEK_SET);
   fread(ident,1,4,sfile);
   if (memcmp(ident,"SCRM",4)==0) return FormatS3M;
   
