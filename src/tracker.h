@@ -22,6 +22,7 @@
 #endif
 #include <dirent.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #endif
 #ifdef __APPLE__
 extern "C" {
@@ -49,6 +50,18 @@ wstring utf8To16(const char* in);
 string utf16To8(const wchar_t* in);
 
 bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky);
+
+enum SupportedFormats {
+  FormatUnknown=-1,
+  
+  FormatTRACK=0,
+  FormatTRACKINS,
+  FormatMOD,
+  FormatS3M,
+  FormatIT,
+  FormatXM,
+  FormatAudio,
+};
 
 struct Point {
   float x, y;

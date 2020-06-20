@@ -3200,38 +3200,88 @@ struct ClassicMODHeader {
 int ImportMOD(FILE* mod) {
   // import MOD file
   // check out http://www.fileformat.info/format/mod/corion.htm for specs in MOD format
-  size_t size;
-  char* memblock;
+  MODHeader h;
   int sk;
   //string fn;
-  int chans;
+  int chans=0;
   int CurrentSampleSeek=0;
-  printf("\nplease write filename? ");
+  bool karsten=false;
+  int insMax=31;
+  unsigned char noteVal[4];
   if (mod!=NULL) { // read the file
-  printf("loading MOD file, ");
-  CleanupPatterns();
-    size=fsize(mod);
-    printf("%zu bytes\n",size);
-    memblock=new char[size];
+    printf("loading MOD file, ");
+    CleanupPatterns();
     fseek(mod,0,SEEK_SET);
-    fread(memblock,1,size,mod);
-    fclose(mod);
+    fread(&h,1,sizeof(MODHeader),mod);
     printf("success, now importing file\n");
-  for (int ii=0;ii<31;ii++) {
-    for (int jj=0;jj<22;jj++) {
-      instrument[ii+1].name[jj]=memblock[0x14+(ii*30)+jj];
+    switch (h.ident) {
+      case 0x2e4b2e4d: // M.K.
+        printf("4-channel ProTracker/NoiseTracker module detected\n");
+        origin="ProTracker/NoiseTracker";
+        chans=4;
+        break;
+      case 0x214b214d: // M!K!
+        printf("4-channel ProTracker module detected\n");
+        origin="ProTracker";
+        chans=4;
+        break;
+      case 0x31384443: // CD81
+      case 0x41544b4f: // OKTA
+      case 0x4154434f: // OCTA
+        printf("8-channel Oktalyzer/OctaMED module detected\n");
+        origin="Oktalyzer/OctaMED";
+        chans=8;
+        break;
+      case 0x214b264d: // M&K!
+        printf("echobea3.mod detected\n");
+        origin="congratulations. you are a master.";
+        chans=4;
+        break;
     }
-    instrument[ii+1].vol=memblock[0x14+(ii*30)+25];
-    if (settings::samples) {
+    if ((h.ident&0xffffff00)==0x4e484300) { // .CHN
+      printf("multi-channel module detected\n");
+      origin="FastTracker or similar";
+      chans=(h.ident&0xff)-'0';
+    } else if ((h.ident&0xffffff)==0x544c46) { // FLT.
+      printf("multi-channel Fairlight module detected\n");
+      origin="StarTrekker";
+      chans=((h.ident&0xff000000)>>24)-'0';
+    } else if ((h.ident&0xffffff)==0x5a4454) { // TDZ.
+      printf("multi-channel TakeTracker module detected\n");
+      origin="TakeTracker";
+      chans=((h.ident&0xff000000)>>24)-'0';
+    } else if ((h.ident&0xffff0000)==0x48430000) { // ..CH
+      printf("multi-channel module detected\n");
+      origin="FastTracker";
+      chans=(h.ident&0xff)-'0'+((((h.ident&0xff00)>>8)-'0')*10);
+    } else if ((h.ident&0xffff0000)==0x4e430000) { // ..CN
+      printf("multi-channel TakeTracker module detected\n");
+      origin="TakeTracker";
+      chans=(h.ident&0xff)-'0'+((((h.ident&0xff00)>>8)-'0')*10);
+    }
+    if (chans==0) {
+      printf("The Ultimate Soundtracker module detected\n");
+      origin="The Ultimate Soundtracker";
+      chans=4;
+      karsten=true;
+      insMax=15;
+    }
+    for (int ii=0;ii<insMax;ii++) {
+      h.ins[ii].len=ntohs(h.ins[ii].len);
+      h.ins[ii].loopStart=ntohs(h.ins[ii].loopStart);
+      h.ins[ii].loopLen=ntohs(h.ins[ii].loopLen);
+      for (int jj=0;jj<22;jj++) {
+        instrument[ii+1].name[jj]=h.ins[ii].name[jj];
+      }
+      instrument[ii+1].vol=h.ins[ii].vol;
       instrument[ii+1].pcmPos[1]=CurrentSampleSeek>>8;
       instrument[ii+1].pcmPos[0]=CurrentSampleSeek%256;
-      instrument[ii+1].DFM|=(CurrentSampleSeek>>16)?(128):(0);
       int tempsize;
-      tempsize=(((unsigned char)(memblock[0x14+(ii*30)+0x16])<<8)+(unsigned char)(memblock[0x14+(ii*30)+0x17]))*2;
+      tempsize=h.ins[ii].len*2;
       int repeatpos;
-      repeatpos=(((unsigned char)(memblock[0x14+(ii*30)+0x1a])<<8)+(unsigned char)(memblock[0x14+(ii*30)+0x1b]))*2;
+      repeatpos=h.ins[ii].loopStart*2;
       int repeatlen;
-      repeatlen=(((unsigned char)(memblock[0x14+(ii*30)+0x1c])<<8)+(unsigned char)(memblock[0x14+(ii*30)+0x1d]))*2;
+      repeatlen=h.ins[ii].loopLen*2;
       printf("sample %d size: %.5x repeat: %.4x replen: %.4x\n",ii,tempsize,repeatpos,repeatlen);
       instrument[ii+1].pcmLen=(repeatpos>0 || repeatlen>2)?(minval(tempsize,repeatpos+repeatlen)):(tempsize);
       instrument[ii+1].pcmLoop[1]=repeatpos>>8;
@@ -3241,169 +3291,181 @@ int ImportMOD(FILE* mod) {
       instrument[ii+1].noteOffset=12;
       instrument[ii+1].DFM|=8;
     }
-  }
-  if ((memblock[1080]=='M' && memblock[1081]=='.' && memblock[1082]=='K' && memblock[1083]=='.')||
-    (memblock[1080]=='M' && memblock[1081]=='!' && memblock[1082]=='K' && memblock[1083]=='!')||
-     (memblock[1081]=='C' && memblock[1082]=='H' && memblock[1083]=='N')||
-     (memblock[1082]=='C' && memblock[1083]=='H')) {
-       switch(memblock[1080]) {
-      case 'M': printf("4-channel original MOD module detected\n"); origin="ProTracker"; chans=4; break;
-      default: printf("multi-channel MOD module detected\n"); origin="FastTracker or similar"; break;
-       }
-       if (memblock[1082]=='C' && memblock[1083]=='H') {chans=(NumberLetter(memblock[1080])*10)+NumberLetter(memblock[1081]);}
-       if (memblock[1081]=='C' && memblock[1082]=='H' && memblock[1083]=='N') {chans=NumberLetter(memblock[1080]);}
     // name
     name="";
     for (sk=0;sk<20;sk++) {
-      if (memblock[sk]==0) break;
-      name+=memblock[sk];
+      if (h.name[sk]==0) break;
+      name+=h.name[sk];
     }
     printf("module name is %s\n",name.c_str());
-    printf("---ORDER LIST---\n");
-    for (sk=952;sk<1080;sk++) {
-      patid[sk-952]=memblock[sk];
-      switch(memblock[sk]) {
-      case -2: printf("+++ "); break;
-      case -1: printf("--- "); break;
-      default: printf("%d ",(int)(unsigned char)memblock[sk]); break;
+    if (karsten) {
+      for (sk=0;sk<128;sk++) {
+        patid[sk]=(*((ClassicMODHeader*)&h)).ord[sk];
       }
+      patterns=0;
+      for (sk=0;sk<128;sk++) {
+        if (patid[sk]>patterns) {patterns=patid[sk];}
+      }
+      songlength=(*((ClassicMODHeader*)&h)).len;
+      printf("the secret bit is: %d\n",(*((ClassicMODHeader*)&h)).loop);
+    } else {
+      for (sk=0;sk<128;sk++) {
+        patid[sk]=h.ord[sk];
+      }
+      patterns=0;
+      for (sk=0;sk<128;sk++) {
+        if (patid[sk]>patterns) {patterns=patid[sk];}
+      }
+      songlength=h.len;
     }
-    printf("\nretrieving pattern count\n");
-    patterns=0;
-    for (sk=0;sk<128;sk++) {
-      if (patid[sk]>patterns) {patterns=patid[sk];}
-    }
-    printf("%d patterns\n",patterns);
-    songlength=memblock[950]-1;
-    if (settings::samples) {
     printf("putting samples to PCM memory if possible\n");
-    memcpy(chip[0].pcm,memblock+1084+((patterns+1)*chans*64*4),minval(65280,size-1084-((patterns+1)*chans*64*4)));
-    if (size-1084-((patterns+1)*chans*64*4)>65280) {
+    if (karsten) {
+      fseek(mod,sizeof(ClassicMODHeader)+((patterns+1)*chans*64*4),SEEK_SET);
+    } else {
+      fseek(mod,sizeof(MODHeader)+((patterns+1)*chans*64*4),SEEK_SET);
+    }
+    if (fread(chip[0].pcm,1,65280,mod)==65280) {
       popbox=PopupBox("Warning","out of PCM memory to load all samples!");
     }
-    }
     printf("---PATTERNS---\n");
+    if (karsten) {
+      fseek(mod,sizeof(ClassicMODHeader),SEEK_SET);
+    } else {
+      fseek(mod,sizeof(MODHeader),SEEK_SET);
+    }
     for (int importid=0;importid<patterns+1;importid++) {
-    printf("-PATTERN %d-\n",importid);
-    /*if (verbose) {cout << "-Channel1- -Channel2- -Channel3- -Channel4- ";
-    if (chans==6) {cout << "-Channel5- -Channel6-\n";} else {
-      if (chans==8) {cout << "-Channel5- -Channel6- -Channel7- -Channel8-\n";} else {cout << "\n";}
-    }}*/
-    sk=1084; // import position
-    for (int indxr=0;indxr<64;indxr++) {
-      int NPERIOD;
-      int NINS;
-      int NFX;
-      int NFXVAL;
-      for (int ichan=0;ichan<chans;ichan++) {
-        // import pattern row
-        NPERIOD=(((unsigned char)memblock[sk+(importid*(chans*256))+(indxr*(chans*4))+(ichan*4)])%16*256)+((unsigned char)memblock[sk+(importid*(chans*256))+(indxr*(chans*4))+(ichan*4)+1]);
-        NINS=(((unsigned char)memblock[sk+(importid*(chans*256))+(indxr*(chans*4))+(ichan*4)]>>4)*16)+((unsigned char)memblock[sk+(importid*(chans*256))+(indxr*(chans*4))+(ichan*4)+2]>>4);
-        NFX=(unsigned char)memblock[sk+(importid*(chans*256))+(indxr*(chans*4))+(ichan*4)+2]%16;
-        NFXVAL=(unsigned char)memblock[sk+(importid*(chans*256))+(indxr*(chans*4))+(ichan*4)+3];
-        // conversion stuff
-        switch(NPERIOD) {
-          case 56: if (verbose) printf("B-7 "); pat[importid][indxr][ichan][0]=0x7c; break;
-          case 60: if (verbose) printf("A#7 "); pat[importid][indxr][ichan][0]=0x7b; break;
-          case 63: if (verbose) printf("A-7 "); pat[importid][indxr][ichan][0]=0x7a; break;
-          case 67: if (verbose) printf("G#7 "); pat[importid][indxr][ichan][0]=0x79; break;
-          case 71: if (verbose) printf("G-7 "); pat[importid][indxr][ichan][0]=0x78; break;
-          case 75: if (verbose) printf("F#7 "); pat[importid][indxr][ichan][0]=0x77; break;
-          case 80: if (verbose) printf("F-7 "); pat[importid][indxr][ichan][0]=0x76; break;
-          case 85: if (verbose) printf("E-7 "); pat[importid][indxr][ichan][0]=0x75; break;
-          case 90: if (verbose) printf("D#7 "); pat[importid][indxr][ichan][0]=0x74; break;
-          case 95: if (verbose) printf("D-7 "); pat[importid][indxr][ichan][0]=0x73; break;
-          case 101: if (verbose) printf("C#7 "); pat[importid][indxr][ichan][0]=0x72; break;
-          case 107: if (verbose) printf("C-7 "); pat[importid][indxr][ichan][0]=0x71; break;
-          case 113: if (verbose) printf("B-6 "); pat[importid][indxr][ichan][0]=0x6c; break;
-          case 120: if (verbose) printf("A#6 "); pat[importid][indxr][ichan][0]=0x6b; break;
-          case 127: if (verbose) printf("A-6 "); pat[importid][indxr][ichan][0]=0x6a; break;
-          case 135: if (verbose) printf("G#6 "); pat[importid][indxr][ichan][0]=0x69; break;
-          case 143: if (verbose) printf("G-6 "); pat[importid][indxr][ichan][0]=0x68; break;
-          case 151: if (verbose) printf("F#6 "); pat[importid][indxr][ichan][0]=0x67; break;
-          case 160: if (verbose) printf("F-6 "); pat[importid][indxr][ichan][0]=0x66; break;
-          case 170: if (verbose) printf("E-6 "); pat[importid][indxr][ichan][0]=0x65; break;
-          case 180: if (verbose) printf("D#6 "); pat[importid][indxr][ichan][0]=0x64; break;
-          case 190: if (verbose) printf("D-6 "); pat[importid][indxr][ichan][0]=0x63; break;
-          case 202: if (verbose) printf("C#6 "); pat[importid][indxr][ichan][0]=0x62; break;
-          case 214: if (verbose) printf("C-6 "); pat[importid][indxr][ichan][0]=0x61; break;
-          case 226: if (verbose) printf("B-5 "); pat[importid][indxr][ichan][0]=0x5c; break;
-          case 240: if (verbose) printf("A#5 "); pat[importid][indxr][ichan][0]=0x5b; break;
-          case 254: if (verbose) printf("A-5 "); pat[importid][indxr][ichan][0]=0x5a; break;
-          case 269: if (verbose) printf("G#5 "); pat[importid][indxr][ichan][0]=0x59; break;
-          case 285: if (verbose) printf("G-5 "); pat[importid][indxr][ichan][0]=0x58; break;
-          case 302: if (verbose) printf("F#5 "); pat[importid][indxr][ichan][0]=0x57; break;
-          case 320: if (verbose) printf("F-5 "); pat[importid][indxr][ichan][0]=0x56; break;
-          case 339: if (verbose) printf("E-5 "); pat[importid][indxr][ichan][0]=0x55; break;
-          case 360: if (verbose) printf("D#5 "); pat[importid][indxr][ichan][0]=0x54; break;
-          case 381: if (verbose) printf("D-5 "); pat[importid][indxr][ichan][0]=0x53; break;
-          case 404: if (verbose) printf("C#5 "); pat[importid][indxr][ichan][0]=0x52; break;
-          case 428: if (verbose) printf("C-5 "); pat[importid][indxr][ichan][0]=0x51; break;
-          case 453: if (verbose) printf("B-4 "); pat[importid][indxr][ichan][0]=0x4c; break;
-          case 480: if (verbose) printf("A#4 "); pat[importid][indxr][ichan][0]=0x4b; break;
-          case 508: if (verbose) printf("A-4 "); pat[importid][indxr][ichan][0]=0x4a; break;
-          case 538: if (verbose) printf("G#4 "); pat[importid][indxr][ichan][0]=0x49; break;
-          case 570: if (verbose) printf("G-4 "); pat[importid][indxr][ichan][0]=0x48; break;
-          case 604: if (verbose) printf("F#4 "); pat[importid][indxr][ichan][0]=0x47; break;
-          case 640: if (verbose) printf("F-4 "); pat[importid][indxr][ichan][0]=0x46; break;
-          case 678: if (verbose) printf("E-4 "); pat[importid][indxr][ichan][0]=0x45; break;
-          case 720: if (verbose) printf("D#4 "); pat[importid][indxr][ichan][0]=0x44; break;
-          case 762: if (verbose) printf("D-4 "); pat[importid][indxr][ichan][0]=0x43; break;
-          case 808: if (verbose) printf("C#4 "); pat[importid][indxr][ichan][0]=0x42; break;
-          case 856: if (verbose) printf("C-4 "); pat[importid][indxr][ichan][0]=0x41; break;
-          case 906: if (verbose) printf("B-3 "); pat[importid][indxr][ichan][0]=0x3c; break;
-          case 907: if (verbose) printf("B-3 "); pat[importid][indxr][ichan][0]=0x3c; break; // OpenMPT?
-          case 960: if (verbose) printf("A#3 "); pat[importid][indxr][ichan][0]=0x3b; break;
-          case 1016: if (verbose) printf("A-3 "); pat[importid][indxr][ichan][0]=0x3a; break;
-          case 1076: if (verbose) printf("G#3 "); pat[importid][indxr][ichan][0]=0x39; break;
-          case 1140: if (verbose) printf("G-3 "); pat[importid][indxr][ichan][0]=0x38; break;
-          case 1208: if (verbose) printf("F#3 "); pat[importid][indxr][ichan][0]=0x37; break;
-          case 1280: if (verbose) printf("F-3 "); pat[importid][indxr][ichan][0]=0x36; break;
-          case 1356: if (verbose) printf("E-3 "); pat[importid][indxr][ichan][0]=0x35; break;
-          case 1440: if (verbose) printf("D#3 "); pat[importid][indxr][ichan][0]=0x34; break;
-          case 1524: if (verbose) printf("D-3 "); pat[importid][indxr][ichan][0]=0x33; break;
-          case 1616: if (verbose) printf("C#3 "); pat[importid][indxr][ichan][0]=0x32; break;
-          case 1712: if (verbose) printf("C-3 "); pat[importid][indxr][ichan][0]=0x31; break;
-          case 0: if (verbose) printf("--- "); pat[importid][indxr][ichan][0]=0x00; break;
-          default: if (verbose) printf("??? "); pat[importid][indxr][ichan][0]=0x00; printf("invalid note! %d at row %d channel %d\n",NPERIOD,indxr,ichan); break;
-        }
-        pat[importid][indxr][ichan][1]=NINS;
-        switch(NFX) {
-          case 0: if (NFXVAL!=0) {pat[importid][indxr][ichan][3]=10;pat[importid][indxr][ichan][4]=NFXVAL;} else {pat[importid][indxr][ichan][3]=0;pat[importid][indxr][ichan][4]=0;}; break;
-          case 1: pat[importid][indxr][ichan][3]=6;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 2: pat[importid][indxr][ichan][3]=5;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 3: pat[importid][indxr][ichan][3]=7;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 4: pat[importid][indxr][ichan][3]=8;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 5: pat[importid][indxr][ichan][3]=12;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 6: pat[importid][indxr][ichan][3]=11;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 7: pat[importid][indxr][ichan][3]=18;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 8: pat[importid][indxr][ichan][3]=24;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 9: pat[importid][indxr][ichan][3]=15;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 10: pat[importid][indxr][ichan][3]=4;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 11: pat[importid][indxr][ichan][3]=2;pat[importid][indxr][ichan][4]=NFXVAL; break;
-          case 12: pat[importid][indxr][ichan][2]=0x40+minval(NFXVAL,0x3f);pat[importid][indxr][ichan][4]=0; break;
-          case 13: pat[importid][indxr][ichan][3]=3;pat[importid][indxr][ichan][4]=NFXVAL-(NFXVAL>>4)*6; break;
-          case 14: pat[importid][indxr][ichan][3]=19;switch (NFXVAL>>4) {
-            case 1: pat[importid][indxr][ichan][4]=0xf0+(NFXVAL%16); pat[importid][indxr][ichan][3]=6; break;
-            case 2: pat[importid][indxr][ichan][4]=0xf0+(NFXVAL%16); pat[importid][indxr][ichan][3]=5; break;
-            case 3: pat[importid][indxr][ichan][4]=0x20+(NFXVAL%16); break;
-            case 4: pat[importid][indxr][ichan][4]=0x30+(NFXVAL%16); break;
-            case 6: pat[importid][indxr][ichan][4]=0xb0+(NFXVAL%16); break;
-            case 7: pat[importid][indxr][ichan][4]=0x40+(NFXVAL%16); break;
-            case 9: pat[importid][indxr][ichan][4]=(NFXVAL%16); pat[importid][indxr][ichan][3]=17; break;
-            case 10: pat[importid][indxr][ichan][4]=0x0f+((NFXVAL%16)<<4); pat[importid][indxr][ichan][3]=4; break;
-            case 11: pat[importid][indxr][ichan][4]=0xf0+(NFXVAL%16); pat[importid][indxr][ichan][3]=4; break;
-            default: pat[importid][indxr][ichan][4]=NFXVAL; break;
+      printf("-PATTERN %d-\n",importid);
+      for (int indxr=0;indxr<64;indxr++) {
+        int NPERIOD;
+        int NINS;
+        int NFX;
+        int NFXVAL;
+        for (int ichan=0;ichan<chans;ichan++) {
+          // import pattern row
+          fread(noteVal,1,4,mod);
+          NPERIOD=((noteVal[0]&0x0f)<<8)+noteVal[1];
+          NINS=(noteVal[0]>>3)+(noteVal[2]>>4);
+          NFX=noteVal[2]&0x0f;
+          NFXVAL=noteVal[3];
+          // conversion stuff
+          switch (NPERIOD) {
+            case 56: if (verbose) printf("B-7 "); pat[importid][indxr][ichan][0]=0x7c; break;
+            case 60: if (verbose) printf("A#7 "); pat[importid][indxr][ichan][0]=0x7b; break;
+            case 63: if (verbose) printf("A-7 "); pat[importid][indxr][ichan][0]=0x7a; break;
+            case 67: if (verbose) printf("G#7 "); pat[importid][indxr][ichan][0]=0x79; break;
+            case 71: if (verbose) printf("G-7 "); pat[importid][indxr][ichan][0]=0x78; break;
+            case 75: if (verbose) printf("F#7 "); pat[importid][indxr][ichan][0]=0x77; break;
+            case 80: if (verbose) printf("F-7 "); pat[importid][indxr][ichan][0]=0x76; break;
+            case 85: if (verbose) printf("E-7 "); pat[importid][indxr][ichan][0]=0x75; break;
+            case 90: if (verbose) printf("D#7 "); pat[importid][indxr][ichan][0]=0x74; break;
+            case 95: if (verbose) printf("D-7 "); pat[importid][indxr][ichan][0]=0x73; break;
+            case 101: if (verbose) printf("C#7 "); pat[importid][indxr][ichan][0]=0x72; break;
+            case 107: if (verbose) printf("C-7 "); pat[importid][indxr][ichan][0]=0x71; break;
+            case 113: if (verbose) printf("B-6 "); pat[importid][indxr][ichan][0]=0x6c; break;
+            case 120: if (verbose) printf("A#6 "); pat[importid][indxr][ichan][0]=0x6b; break;
+            case 127: if (verbose) printf("A-6 "); pat[importid][indxr][ichan][0]=0x6a; break;
+            case 135: if (verbose) printf("G#6 "); pat[importid][indxr][ichan][0]=0x69; break;
+            case 143: if (verbose) printf("G-6 "); pat[importid][indxr][ichan][0]=0x68; break;
+            case 151: if (verbose) printf("F#6 "); pat[importid][indxr][ichan][0]=0x67; break;
+            case 160: if (verbose) printf("F-6 "); pat[importid][indxr][ichan][0]=0x66; break;
+            case 170: if (verbose) printf("E-6 "); pat[importid][indxr][ichan][0]=0x65; break;
+            case 180: if (verbose) printf("D#6 "); pat[importid][indxr][ichan][0]=0x64; break;
+            case 190: if (verbose) printf("D-6 "); pat[importid][indxr][ichan][0]=0x63; break;
+            case 202: if (verbose) printf("C#6 "); pat[importid][indxr][ichan][0]=0x62; break;
+            case 214: if (verbose) printf("C-6 "); pat[importid][indxr][ichan][0]=0x61; break;
+            case 226: if (verbose) printf("B-5 "); pat[importid][indxr][ichan][0]=0x5c; break;
+            case 240: if (verbose) printf("A#5 "); pat[importid][indxr][ichan][0]=0x5b; break;
+            case 254: if (verbose) printf("A-5 "); pat[importid][indxr][ichan][0]=0x5a; break;
+            case 269: if (verbose) printf("G#5 "); pat[importid][indxr][ichan][0]=0x59; break;
+            case 285: if (verbose) printf("G-5 "); pat[importid][indxr][ichan][0]=0x58; break;
+            case 302: if (verbose) printf("F#5 "); pat[importid][indxr][ichan][0]=0x57; break;
+            case 320: if (verbose) printf("F-5 "); pat[importid][indxr][ichan][0]=0x56; break;
+            case 339: if (verbose) printf("E-5 "); pat[importid][indxr][ichan][0]=0x55; break;
+            case 360: if (verbose) printf("D#5 "); pat[importid][indxr][ichan][0]=0x54; break;
+            case 381: if (verbose) printf("D-5 "); pat[importid][indxr][ichan][0]=0x53; break;
+            case 404: if (verbose) printf("C#5 "); pat[importid][indxr][ichan][0]=0x52; break;
+            case 428: if (verbose) printf("C-5 "); pat[importid][indxr][ichan][0]=0x51; break;
+            case 453: if (verbose) printf("B-4 "); pat[importid][indxr][ichan][0]=0x4c; break;
+            case 480: if (verbose) printf("A#4 "); pat[importid][indxr][ichan][0]=0x4b; break;
+            case 508: if (verbose) printf("A-4 "); pat[importid][indxr][ichan][0]=0x4a; break;
+            case 538: if (verbose) printf("G#4 "); pat[importid][indxr][ichan][0]=0x49; break;
+            case 570: if (verbose) printf("G-4 "); pat[importid][indxr][ichan][0]=0x48; break;
+            case 604: if (verbose) printf("F#4 "); pat[importid][indxr][ichan][0]=0x47; break;
+            case 640: if (verbose) printf("F-4 "); pat[importid][indxr][ichan][0]=0x46; break;
+            case 678: if (verbose) printf("E-4 "); pat[importid][indxr][ichan][0]=0x45; break;
+            case 720: if (verbose) printf("D#4 "); pat[importid][indxr][ichan][0]=0x44; break;
+            case 762: if (verbose) printf("D-4 "); pat[importid][indxr][ichan][0]=0x43; break;
+            case 808: if (verbose) printf("C#4 "); pat[importid][indxr][ichan][0]=0x42; break;
+            case 856: if (verbose) printf("C-4 "); pat[importid][indxr][ichan][0]=0x41; break;
+            case 906: if (verbose) printf("B-3 "); pat[importid][indxr][ichan][0]=0x3c; break;
+            case 907: if (verbose) printf("B-3 "); pat[importid][indxr][ichan][0]=0x3c; break; // OpenMPT?
+            case 960: if (verbose) printf("A#3 "); pat[importid][indxr][ichan][0]=0x3b; break;
+            case 1016: if (verbose) printf("A-3 "); pat[importid][indxr][ichan][0]=0x3a; break;
+            case 1076: if (verbose) printf("G#3 "); pat[importid][indxr][ichan][0]=0x39; break;
+            case 1140: if (verbose) printf("G-3 "); pat[importid][indxr][ichan][0]=0x38; break;
+            case 1208: if (verbose) printf("F#3 "); pat[importid][indxr][ichan][0]=0x37; break;
+            case 1280: if (verbose) printf("F-3 "); pat[importid][indxr][ichan][0]=0x36; break;
+            case 1356: if (verbose) printf("E-3 "); pat[importid][indxr][ichan][0]=0x35; break;
+            case 1440: if (verbose) printf("D#3 "); pat[importid][indxr][ichan][0]=0x34; break;
+            case 1524: if (verbose) printf("D-3 "); pat[importid][indxr][ichan][0]=0x33; break;
+            case 1616: if (verbose) printf("C#3 "); pat[importid][indxr][ichan][0]=0x32; break;
+            case 1712: if (verbose) printf("C-3 "); pat[importid][indxr][ichan][0]=0x31; break;
+            case 0: if (verbose) printf("--- "); pat[importid][indxr][ichan][0]=0x00; break;
+            default: if (verbose) printf("??? "); pat[importid][indxr][ichan][0]=0x00; printf("invalid note! %d at row %d channel %d\n",NPERIOD,indxr,ichan); break;
+          }
+          pat[importid][indxr][ichan][1]=NINS;
+          switch(NFX) {
+            case 0: if (NFXVAL!=0) {pat[importid][indxr][ichan][3]=10;pat[importid][indxr][ichan][4]=NFXVAL;} else {pat[importid][indxr][ichan][3]=0;pat[importid][indxr][ichan][4]=0;}; break;
+            case 1:
+              if (karsten) {
+                pat[importid][indxr][ichan][3]=10;
+              } else {
+                pat[importid][indxr][ichan][3]=6;
+              }
+              pat[importid][indxr][ichan][4]=NFXVAL;
+              break;
+            case 2:
+              if (karsten) {
+                if (NFXVAL<16) {
+                  pat[importid][indxr][ichan][3]=6;
+                  pat[importid][indxr][ichan][4]=NFXVAL;
+                } else {
+                  pat[importid][indxr][ichan][3]=5;
+                  pat[importid][indxr][ichan][4]=NFXVAL>>4;
+                }
+              } else {
+                pat[importid][indxr][ichan][3]=5;
+                pat[importid][indxr][ichan][4]=NFXVAL;
+              }
+              break;
+            case 3: pat[importid][indxr][ichan][3]=7;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 4: pat[importid][indxr][ichan][3]=8;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 5: pat[importid][indxr][ichan][3]=12;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 6: pat[importid][indxr][ichan][3]=11;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 7: pat[importid][indxr][ichan][3]=18;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 8: pat[importid][indxr][ichan][3]=24;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 9: pat[importid][indxr][ichan][3]=15;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 10: pat[importid][indxr][ichan][3]=4;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 11: pat[importid][indxr][ichan][3]=2;pat[importid][indxr][ichan][4]=NFXVAL; break;
+            case 12: pat[importid][indxr][ichan][2]=0x40+minval(NFXVAL,0x3f);pat[importid][indxr][ichan][4]=0; break;
+            case 13: pat[importid][indxr][ichan][3]=3;pat[importid][indxr][ichan][4]=NFXVAL-(NFXVAL>>4)*6; break;
+            case 14: pat[importid][indxr][ichan][3]=19;switch (NFXVAL>>4) {
+              case 1: pat[importid][indxr][ichan][4]=0xf0+(NFXVAL%16); pat[importid][indxr][ichan][3]=6; break;
+              case 2: pat[importid][indxr][ichan][4]=0xf0+(NFXVAL%16); pat[importid][indxr][ichan][3]=5; break;
+              case 3: pat[importid][indxr][ichan][4]=0x20+(NFXVAL%16); break;
+              case 4: pat[importid][indxr][ichan][4]=0x30+(NFXVAL%16); break;
+              case 6: pat[importid][indxr][ichan][4]=0xb0+(NFXVAL%16); break;
+              case 7: pat[importid][indxr][ichan][4]=0x40+(NFXVAL%16); break;
+              case 9: pat[importid][indxr][ichan][4]=(NFXVAL%16); pat[importid][indxr][ichan][3]=17; break;
+              case 10: pat[importid][indxr][ichan][4]=0x0f+((NFXVAL%16)<<4); pat[importid][indxr][ichan][3]=4; break;
+              case 11: pat[importid][indxr][ichan][4]=0xf0+(NFXVAL%16); pat[importid][indxr][ichan][3]=4; break;
+              default: pat[importid][indxr][ichan][4]=NFXVAL; break;
             }; break;
-          case 15: pat[importid][indxr][ichan][3]=1;pat[importid][indxr][ichan][4]=NFXVAL;if (NFXVAL>0x20) {pat[importid][indxr][ichan][3]=20;}; break;
+            case 15: pat[importid][indxr][ichan][3]=1;pat[importid][indxr][ichan][4]=NFXVAL;if (NFXVAL>0x20) {pat[importid][indxr][ichan][3]=20;}; break;
+          }
         }
       }
-      //if (verbose) cout << "\n";
     }
-    }
-
-  } else {/*cout << "error while importing file! not a MOD module file\n";*/ delete[] memblock; return 1;}
-    delete[] memblock;
   }
   else {/*cout << "error while importing file! file doesn't exist\n";*/ return 1;}
   songdf=0x1b; // Amiga compat
@@ -3417,7 +3479,7 @@ int ImportMOD(FILE* mod) {
   channels=chans;
   return 0;
 }
-int ImportS3M() {
+int ImportS3M(FILE* s3m) {
   // import S3M file
   size_t size;
   char* memblock;
@@ -3425,14 +3487,8 @@ int ImportS3M() {
   int NextByte;
   int NextChannel;
   int CurrentRow;
-  FILE *s3m;
   int insparas[99];
   int patparas[256];
-  //string fn;
-  printf("\nplease write filename? ");
-  char rfn[256];
-  //gets(rfn);
-  s3m=ps_fopen(rfn,"rb");
   if (s3m!=NULL) { // read the file
     printf("loading S3M file, ");
     size=fsize(s3m);
@@ -3514,11 +3570,18 @@ int ImportS3M() {
     }
   }
 
-
-  }
   delete[] memblock;
+  }
   origin="Scream Tracker 3";
   return 0;
+}
+
+// THE FINAL ONE
+int ImportXM(FILE* xm) {
+  fclose(xm);
+  printf("TODO\n");
+  triggerfx(1);
+  return 1;
 }
 
 #ifdef _WIN32
@@ -3819,6 +3882,50 @@ int volOldToNew(int orig) {
   return 0;
 }
 
+int getFormat(FILE* sfile) {
+  char ident[32];
+  ClassicMODHeader cmh;
+  
+  fseek(sfile,0,SEEK_SET);
+  fread(ident,1,32,sfile);
+  if (memcmp(ident,"TRACK8BT",8)==0) return FormatTRACK;
+  if (memcmp(ident,"TRACKINS",8)==0) return FormatTRACKINS;
+  if (memcmp(ident,"IMPM",4)==0) return FormatIT;
+  if (memcmp(ident,"Extended Module:",16)==0) return FormatXM;
+  if (memcmp(ident,"RIFF",4)==0) return FormatAudio;
+  if (memcmp(ident,"FORM",4)==0) return FormatAudio;
+  
+  // S3M check
+  fseek(sfile,60,SEEK_SET);
+  fread(ident,1,4,sfile);
+  if (memcmp(ident,"SCRM",4)==0) return FormatS3M;
+  
+  // MOD check
+  fseek(sfile,1080,SEEK_SET);
+  fread(ident,1,4,sfile);
+  if (memcmp(ident,"M.K.",4)==0) return FormatMOD;
+  if (memcmp(ident,"M!K!",4)==0) return FormatMOD;
+  if (memcmp(ident,"M&K!",4)==0) return FormatMOD;
+  if (memcmp(ident,"FLT",3)==0) return FormatMOD;
+  if (memcmp(ident,"TDZ",3)==0) return FormatMOD;
+  if (memcmp(ident,"OKTA",4)==0) return FormatMOD;
+  if (memcmp(ident,"OCTA",4)==0) return FormatMOD;
+  if (memcmp(ident,"CD81",4)==0) return FormatMOD;
+  if (memcmp(&ident[1],"CHN",3)==0) return FormatMOD;
+  if (memcmp(&ident[2],"CH",2)==0) return FormatMOD;
+  if (memcmp(&ident[2],"CN",2)==0) return FormatMOD;
+  
+  // Karsten check
+  fseek(sfile,0,SEEK_SET);
+  if (fread(&cmh,1,sizeof(cmh),sfile)!=sizeof(cmh)) return FormatUnknown;
+  // check whether it makes sense
+  for (int i=0; i<15; i++) {
+    if (cmh.ins[i].pitch!=0) return FormatUnknown;
+  }
+  
+  return FormatMOD;
+}
+
 int LoadFile(const char* filename) {
   // load file
   FILE *sfile;
@@ -3842,45 +3949,40 @@ int LoadFile(const char* filename) {
   if (sfile!=NULL) { // LOAD the file
     fseek(sfile,0,SEEK_SET); // seek to 0
     printf("loading file...\n");
-    //printf("%d ",ftell(sfile));
-    fread(checkstr,1,8,sfile); // magic number
-    //printf("%s",checkstr);
-    if (checkstr[0]!='T' ||
-      checkstr[1]!='R' ||
-      checkstr[2]!='A' ||
-      checkstr[3]!='C' ||
-      checkstr[4]!='K' ||
-      checkstr[5]!='8' ||
-      checkstr[6]!='B' ||
-      checkstr[7]!='T') {
-    // check if this is a different module type just in case.
-    if (checkstr[0]=='I' &&
-      checkstr[1]=='M' &&
-      checkstr[2]=='P' &&
-      checkstr[3]=='M') { // IT
-      return ImportIT(sfile);
-    } else {
-      fseek(sfile,1080,SEEK_SET);
-      fread(checkstr,1,8,sfile); // magic number for MOD
-      if ((checkstr[0]=='M' && checkstr[1]=='.' && checkstr[2]=='K' && checkstr[3]=='.')||
-        (checkstr[0]=='M' && checkstr[1]=='!' && checkstr[2]=='K' && checkstr[3]=='!')||
-     (checkstr[1]=='C' && checkstr[2]=='H' && checkstr[3]=='N')||
-     (checkstr[2]=='C' && checkstr[3]=='H')) {
+    
+    switch (getFormat(sfile)) {
+      case FormatTRACK:
+        break;
+      case FormatTRACKINS:
+        triggerfx(1);
+        popbox=PopupBox("Error","todo");
+        return 1;
+        break;
+      case FormatMOD:
         return ImportMOD(sfile);
-      } else {
+        break;
+      case FormatS3M:
+        return ImportS3M(sfile);
+        break;
+      case FormatIT:
+        return ImportIT(sfile);
+        break;
+      case FormatXM:
+        return ImportXM(sfile);
+        break;
+      default:
         printf("error: not a compatible file!\n");fclose(sfile);
-    #ifdef SOUNDS
-    triggerfx(1);
-    #endif
-    popbox=PopupBox("Error","not a compatible file!");
-    return 1;
-      }
+        triggerfx(1);
+        popbox=PopupBox("Error","not a compatible file!");
+        return 1;
+        break;
     }
-    }
+    
     oplaymode=playmode;
     playmode=0;
     CleanupPatterns();
     //printf("%d ",ftell(sfile));
+    fseek(sfile,8,SEEK_SET);
     TVER=fgetsh(sfile); // version
     printf("module version %d\n",TVER);
     origin=strFormat("soundtracker dev%d\n",TVER);
