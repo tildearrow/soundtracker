@@ -125,8 +125,8 @@ unsigned char CurrentIns=1;
 unsigned char CurrentEnv=0;
 // init tracker stuff
 int pattern=0;
-unsigned char patid[256]={};
-unsigned char* patlength;
+unsigned char patid[256];
+unsigned char patlength[256];
 string tempInsName;
 struct Instrument {
   char name[32];
@@ -1137,7 +1137,7 @@ int FreeChannel() {
   }
   // failed? 3. find channel with lowest volume
   int candidate=0;
-  for (int ii=1;ii<32;ii++) {
+  for (int ii=1;ii<8;ii++) {
     if (cvol[candidate]>cvol[ii]) {candidate=ii;}
   }
   return candidate;
@@ -1359,15 +1359,13 @@ void NextRow() {
       // is it a pcm instrument? (pcm check)
       if (instrument[Mins[loop]].DFM&8) {
         // set channel mode to PCM
-        chip[0].chan[loop].flags.pcm=1;
-                                //chip[0].pcmmult[loop]=127;
-                                chip[0].chan[loop].flags.pcmloop=instrument[Mins[loop]].pcmMult>>7;
-        //chip[0].pcmmult[loop]|=(instrument[Mins[loop]][0x21]&128);
-        chip[0].chan[loop].pcmrst=*(unsigned short*)instrument[Mins[loop]].pcmPos+*(unsigned short*)instrument[Mins[loop]].pcmLoop;
+        chip[loop>>3].chan[loop&7].flags.pcm=1;
+        chip[loop>>3].chan[loop&7].flags.pcmloop=instrument[Mins[loop]].pcmMult>>7;
+        chip[loop>>3].chan[loop&7].pcmrst=*(unsigned short*)instrument[Mins[loop]].pcmPos+*(unsigned short*)instrument[Mins[loop]].pcmLoop;
         // set respective PCM pointers
-        chip[0].chan[loop].pcmpos=*(unsigned short*)instrument[Mins[loop]].pcmPos;
-        chip[0].chan[loop].pcmbnd=minval(0xfeff,(*(unsigned short*)instrument[Mins[loop]].pcmPos)+instrument[Mins[loop]].pcmLen);
-      } else {chip[0].chan[loop].flags.pcm=0;}
+        chip[loop>>3].chan[loop&7].pcmpos=*(unsigned short*)instrument[Mins[loop]].pcmPos;
+        chip[loop>>3].chan[loop&7].pcmbnd=minval(0xfeff,(*(unsigned short*)instrument[Mins[loop]].pcmPos)+instrument[Mins[loop]].pcmLen);
+      } else {chip[loop>>3].chan[loop&7].flags.pcm=0;}
       // is ringmod on? (ringmod check)
       if (instrument[Mins[loop]].DFM&16) {
         // set ring modulation to on
@@ -1697,11 +1695,11 @@ void NextTick() {
       // is it a pcm instrument? (pcm check)
       if (instrument[Mins[loop2]].DFM&8) {
         // set channel mode to PCM
-        chip[0].chan[loop2].flags.pcm=1;
+        chip[loop2>>3].chan[loop2&7].flags.pcm=1;
         // set respective PCM pointers
-        chip[0].chan[loop2].pcmpos=*(unsigned short*)instrument[Mins[loop2]].pcmPos;
-        chip[0].chan[loop2].pcmbnd=*(unsigned short*)instrument[Mins[loop2]].pcmPos+instrument[Mins[loop2]].pcmLen;
-      } else {chip[0].chan[loop2].flags.pcm=0;}
+        chip[loop2>>3].chan[loop2&7].pcmpos=*(unsigned short*)instrument[Mins[loop2]].pcmPos;
+        chip[loop2>>3].chan[loop2&7].pcmbnd=*(unsigned short*)instrument[Mins[loop2]].pcmPos+instrument[Mins[loop2]].pcmLen;
+      } else {chip[loop2>>3].chan[loop2&7].flags.pcm=0;}
       // is oscreset on? (osc reset check)
       if (instrument[Mins[loop2]].flags&1) {crstep[loop2]=1;} // osc reset
       // volume (if turned on and effect isn't S77, or effect is S78)
@@ -2073,6 +2071,7 @@ void CleanupPatterns() {
   }
   // default variables
   defspeed=6;
+  deftempo=0;
   songdf=0;
   channels=8;
   songlength=255;
@@ -3347,6 +3346,9 @@ int ImportMOD(FILE* mod) {
     if (fread(chip[0].pcm,1,65280,mod)==65280) {
       popbox=PopupBox("Warning","out of PCM memory to load all samples!");
     }
+    memcpy(chip[1].pcm,chip[0].pcm,65280);
+    memcpy(chip[2].pcm,chip[0].pcm,65280);
+    memcpy(chip[3].pcm,chip[0].pcm,65280);
     printf("---PATTERNS---\n");
     if (karsten) {
       fseek(mod,sizeof(ClassicMODHeader),SEEK_SET);
@@ -3622,11 +3624,15 @@ struct XMInstrHeader {
   char samples[2];
 };
 
+struct XMEnvPoint {
+  unsigned short pos, val;
+};
+
 struct XMInstrContHeader {
   int size;
   char sample[96];
-  char envVol[48];
-  char envPan[48];
+  XMEnvPoint envVol[12];
+  XMEnvPoint envPan[12];
   char envVolCount;
   char envPanCount;
   char volSus, volLoopStart, volLoopEnd;
@@ -3719,6 +3725,8 @@ int ImportXM(FILE* xm) {
   XMSampleHeader sh;
   unsigned char patData[65536];
   int sk, curChan, curRow, nextNote, vol, fx, fxval;
+  short delta;
+  int sampleSeek=0;
   printf("loading XM\n");
   fseek(xm,0,SEEK_SET);
   fread(&h,1,sizeof(XMHeader),xm);
@@ -3735,20 +3743,18 @@ int ImportXM(FILE* xm) {
     if (h.name[i+17]==0) break;
     origin+=h.name[i+17];
   }
+
+  for (int i=0; i<32; i++) {
+    defchanpan[i]=0;
+  }
   
-  for (int i=0; i<256; i++) {
+  for (int i=0; i<h.orders; i++) {
     patid[i]=h.ord[i];
   }
   songlength=h.orders-1;
   channels=h.chans;
   defspeed=h.speed;
-  
-  if (h.size!=(sizeof(XMHeader)-60)) {
-    popbox=PopupBox("Error",strFormat("header size mismatch! %d != %d",h.size,sizeof(XMHeader)-60));
-    triggerfx(1);
-    fclose(xm);
-    return 1;
-  }
+  deftempo=h.tempo;
   
   printf("seeking to %d\n",60+h.size);
   fseek(xm,60+h.size,SEEK_SET);
@@ -3811,8 +3817,80 @@ int ImportXM(FILE* xm) {
   for (int i=0; i<h.instrs; i++) {
     fread(&ih,1,29,xm);
     memcpy(instrument[i+1].name,ih.name,22);
-    if (ih.samples[0]>0) {
-      fread(&ich,1,sizeof(XMInstrContHeader),xm);
+    printf("ins %d: %d samples. header is %d bytes\n",i,ih.samples[0],ih.size);
+    fread(&ich,1,214,xm);
+    fseek(xm,-243,SEEK_CUR);
+    // convert envelopes
+    printf("volenv: %d panenv: %d\n",ich.envVolCount,ich.envPanCount);
+    if (ich.volType&1) {
+      int point=0;
+      for (int j=0; (point<ich.envVolCount && j<253); j++) {
+        if (point<1) {
+          bytable[0][i+1][j]=minval(255,ich.envVol[point].val*4);
+        } else {
+          bytable[0][i+1][j]=minval(255,interpolate(float(ich.envVol[point-1].val),float(ich.envVol[point].val),(float(j-ich.envVol[point-1].pos)/float(ich.envVol[point].pos-ich.envVol[point-1].pos)))*4);
+        }
+        if (j>=ich.envVol[point].pos) point++;
+      }
+      bytable[0][i+1][253]=minval(252,ich.envVol[ich.envVolCount-1].pos);
+      instrument[i+1].env[0]=i+1;
+      instrument[i+1].activeEnv|=1;
+      printf("volsus %d\n",ich.volSus);
+      if (ich.volType&2) {
+        bytable[0][i+1][255]=minval(252,ich.envVol[ich.volSus].pos);
+      }
+    }
+    // load samples (only the first one is loaded)
+    fseek(xm,ih.size,SEEK_CUR);
+    for (int j=0; j<ih.samples[0]; j++) {
+      printf("%lx\n",ftell(xm));
+      fread(&sh,1,40,xm);
+      if (sh.flags&16) {
+        printf("16-bit sample!\n");
+        sh.loopStart>>=1;
+        sh.loopSize>>=1;
+        sh.size>>=1;
+      }
+      printf("sample %d: %d %d %d vol %d fine %d\n",j,sh.size,sh.loopStart,sh.loopSize,sh.vol,sh.pitch);
+      if (j==0 && sampleSeek<65280) {
+        instrument[i+1].pcmPos[1]=sampleSeek>>8;
+        instrument[i+1].pcmPos[0]=sampleSeek&0xff;
+        if (sh.flags&3) {
+          instrument[i+1].pcmLen=minval(sh.size,sh.loopStart+sh.loopSize);
+        } else {
+          instrument[i+1].pcmLen=sh.size;
+        }
+        instrument[i+1].pcmLoop[1]=sh.loopStart>>8;
+        instrument[i+1].pcmLoop[0]=sh.loopStart&0xff;
+        delta=0;
+        for (int k=0; k<sh.size; k++) {
+          if (sh.flags&16) {
+            delta+=fgetsh(xm);
+            chip[0].pcm[sampleSeek]=delta>>8;
+            chip[1].pcm[sampleSeek]=delta>>8;
+            chip[2].pcm[sampleSeek]=delta>>8;
+            chip[3].pcm[sampleSeek]=delta>>8;
+          } else {
+            delta+=(signed char)(fgetc(xm));
+            chip[0].pcm[sampleSeek]=delta;
+            chip[1].pcm[sampleSeek]=delta;
+            chip[2].pcm[sampleSeek]=delta;
+            chip[3].pcm[sampleSeek]=delta;
+          }
+          sampleSeek++;
+          if (sampleSeek>=65280) {
+            popbox=PopupBox("Warning","out of PCM memory to load all samples!");
+            break;
+          }
+        }
+        if (sh.flags&3) {
+          instrument[i+1].pcmMult|=128;
+        }
+        instrument[i+1].DFM|=8;
+        instrument[i+1].noteOffset=sh.note+24;
+      } else {
+        fseek(xm,(sh.flags&16)?(sh.size*2):(sh.size),SEEK_CUR);
+      }
     }
   }
   
@@ -4307,12 +4385,18 @@ int LoadFile(const char* filename) {
     }
     fseek(sfile,0x36,SEEK_SET); // seek to 0x36
     memset(chip[0].pcm,0,65280); // clean PCM memory
+    memset(chip[1].pcm,0,65280); // clean PCM memory
+    memset(chip[2].pcm,0,65280); // clean PCM memory
+    memset(chip[3].pcm,0,65280); // clean PCM memory
     pcmpointer=fgeti(sfile);
     if (pcmpointer!=0) {
       fseek(sfile,pcmpointer,SEEK_SET);
       fread(&maxpcmread,4,1,sfile);
       if (maxpcmread>65280) maxpcmread=65280;
       fread(chip[0].pcm,1,maxpcmread,sfile);
+      memcpy(chip[1].pcm,chip[0].pcm,65280);
+      memcpy(chip[2].pcm,chip[0].pcm,65280);
+      memcpy(chip[3].pcm,chip[0].pcm,65280);
     }
     fseek(sfile,0x180,SEEK_SET);
     for (int ii=0;ii<256;ii++) {
@@ -6905,9 +6989,6 @@ int main(int argc, char **argv) {
     scrW=800;
     scrH=450;
   }
-  // create memory blocks
-  patlength=new unsigned char[256];
-
   printf("initializing SDL\n");
   if (!g.preinit()) {
     fprintf(stderr,"failed to initialize SDL!\n");
@@ -7037,8 +7118,6 @@ int main(int argc, char **argv) {
 #endif
   printf("destroying display\n");
   g.quit();
-  printf("destroying some buffers\n");
-  delete[] patlength;
   printf("finished\n");
   return 0;
 }
