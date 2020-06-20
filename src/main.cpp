@@ -3287,7 +3287,8 @@ int ImportMOD(FILE* mod) {
       int repeatlen;
       repeatlen=h.ins[ii].loopLen*2;
       printf("sample %d size: %.5x repeat: %.4x replen: %.4x\n",ii,tempsize,repeatpos,repeatlen);
-      
+      printf("finetune %d vol %d\n",h.ins[ii].pitch,h.ins[ii].vol);      
+
       if (karsten) {
         instrument[ii+1].pcmPos[1]=(CurrentSampleSeek+repeatpos)>>8;
         instrument[ii+1].pcmPos[0]=(CurrentSampleSeek+repeatpos)%256;
@@ -3358,7 +3359,7 @@ int ImportMOD(FILE* mod) {
           // import pattern row
           fread(noteVal,1,4,mod);
           NPERIOD=((noteVal[0]&0x0f)<<8)+noteVal[1];
-          NINS=(noteVal[0]>>3)+(noteVal[2]>>4);
+          NINS=(noteVal[0]&0xf0)+(noteVal[2]>>4);
           NFX=noteVal[2]&0x0f;
           NFXVAL=noteVal[3];
           // conversion stuff
