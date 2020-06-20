@@ -2980,14 +2980,20 @@ void Play() {
 }
 unsigned char ITVolumeConverter(unsigned char itvol) {
   if (itvol<65) {return minval(itvol+64,127);} // 64-127
-  if (itvol<193 && itvol>127) {return itvol;} // 128-192
-  switch((itvol-65)/10) {
-  case 0: return itvol-65; break; // 1-10
-  case 1: return itvol-65; break; // 11-20
-  case 2: return itvol-65; break; // 21-30
-  case 3: return itvol-65; break; // 31-40
-  case 4: return itvol-65; break; // 41-50
-  case 5: return itvol-65; break; // 51-60
+  if (itvol<193 && itvol>127) {return minval(itvol,191);} // 128-192
+  if (itvol>192) {
+    switch ((itvol-193)/10) {
+      case 0: return 0xe0+(itvol-193); break; // 1-10
+      case 1: return 0xf0+(itvol-203); break; // 11-20
+    }
+  }
+  switch ((itvol-65)/10) {
+    case 0: return itvol-65; break; // 1-10
+    case 1: return 0x10+itvol-75; break; // 11-20
+    case 2: return 0x20+itvol-85; break; // 21-30
+    case 3: return 0x30+itvol-95; break; // 31-40
+    case 4: return 0xc0+(itvol-105); break; // 41-50
+    case 5: return 0xd0+(itvol-115); break; // 51-60
   }
   return itvol;
 }
