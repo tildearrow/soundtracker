@@ -1616,11 +1616,14 @@ void SkipPattern(int chanval) {
   }
 }
 
+// wooow, this code is so terribly formatted... :<
 void UpdateEnvelope(int channel, int envid) {
   if (!IRP[channel][envid] || released[channel] ||
     (bytable[envid][instrument[Mins[channel]].env[envid]][254])<(bytable[envid][instrument[Mins[channel]].env[envid]][255])) {
-  inspos[channel][envid]++;
-  if (inspos[channel][envid]==bytable[envid][instrument[Mins[channel]].env[envid]][255]) {IRP[channel][envid]=true;}
+    if (inspos[channel][envid]==bytable[envid][instrument[Mins[channel]].env[envid]][255]) {IRP[channel][envid]=true;}
+    if (!IRP[channel][envid] || released[channel] || (bytable[envid][instrument[Mins[channel]].env[envid]][254]<252)) {
+      inspos[channel][envid]++;
+    }
   }
   if (inspos[channel][envid]>
     ((IRP[channel][envid] && !released[channel])?(minval(252,bytable[envid][instrument[Mins[channel]].env[envid]][255])):(minval(252,bytable[envid][instrument[Mins[channel]].env[envid]][253]))
