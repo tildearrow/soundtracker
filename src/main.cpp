@@ -173,6 +173,7 @@ bool EnvelopesRunning[32][8]={}; // EnvelopesRunning[channel][envelope]
 
 string name; // song name
 unsigned char defspeed=6; // default song speed
+unsigned char deftempo=0; // default song tempo (0=none)
 unsigned char speed=6; // current speed
 signed char playmode=0; // playmode (-1: reverse, 0: stopped, 1: playing, 2: paused)
 int curstep=0; // current step
@@ -2918,11 +2919,15 @@ void Play() {
   // set speed to song speed and other variables
   if (!speedlock) {speed=defspeed;}
   if (!tempolock) {
-  if (ntsc) {
-    tempo=150;
-  } else {
-    tempo=125;
-  }
+    if (deftempo) {
+      tempo=deftempo;
+    } else {
+      if (ntsc) {
+        tempo=150;
+      } else {
+        tempo=125;
+      }
+    }
   }
   for (int ii=0;ii<32;ii++) {
     if (pat[patid[curpat]][0][ii][3]==20)
@@ -3610,6 +3615,37 @@ struct XMPatternHeader {
   unsigned char len[2];
 };
 
+struct XMInstrHeader {
+  int size;
+  char name[22];
+  char type;
+  char samples[2];
+};
+
+struct XMInstrContHeader {
+  int size;
+  char sample[96];
+  char envVol[48];
+  char envPan[48];
+  char envVolCount;
+  char envPanCount;
+  char volSus, volLoopStart, volLoopEnd;
+  char panSus, panLoopStart, panLoopEnd;
+  char volType, panType;
+  char vibType, vibSweep, vibDepth, vibSpeed;
+  short volFade, unused;
+};
+
+struct XMSampleHeader {
+  int size;
+  int loopStart, loopSize;
+  char vol, pitch;
+  char flags;
+  char pan;
+  char note;
+  char unused;
+};
+
 int XMVolume(int val) {
   switch (val>>4) {
     case 0: return 0; break;
@@ -3678,6 +3714,9 @@ int XMEffect(int fx, int fxv) {
 int ImportXM(FILE* xm) {
   XMHeader h;
   XMPatternHeader ph;
+  XMInstrHeader ih;
+  XMInstrContHeader ich;
+  XMSampleHeader sh;
   unsigned char patData[65536];
   int sk, curChan, curRow, nextNote, vol, fx, fxval;
   printf("loading XM\n");
@@ -3766,6 +3805,15 @@ int ImportXM(FILE* xm) {
         curRow++;
       }
     } while (sk<(ph.len[0]+(ph.len[1]<<8)));
+  }
+
+  // decode instruments
+  for (int i=0; i<h.instrs; i++) {
+    fread(&ih,1,29,xm);
+    memcpy(instrument[i+1].name,ih.name,22);
+    if (ih.samples[0]>0) {
+      fread(&ich,1,sizeof(XMInstrContHeader),xm);
+    }
   }
   
   fclose(xm);
