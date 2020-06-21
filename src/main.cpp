@@ -1665,10 +1665,21 @@ void NextTick() {
      if (retrig[loop2]==0) {retrig[loop2]=retrigger[loop2]%16;
      doretrigger[loop2]=false;
      if (nfxid[loop2]==17) {doretrigger[loop2]=true;} else {
+       printf("MINS IS %d and NVOLU is %d\n",Mins[loop2],nvolu[loop2]);
       if (nvolu[loop2]!=0 && nvolu[loop2]>63 && nvolu[loop2]<128) {
-      // set note volume
-      Mvol[loop2]=(nvolu[loop2]%64)*2;
-    }
+      // set note volume TODO PLEASE FIX THIS!
+        if (EnvelopesRunning[loop2][0]) {
+          Mvol[loop2]=(nvolu[loop2]%64)*2;
+        } else {
+          cvol[loop2]=(nvolu[loop2]%64)*2;
+        }
+       } else if (nvolu[loop2]==0 && Mins[loop2]!=0) {
+         if (EnvelopesRunning[loop2][0]) {
+          Mvol[loop2]=minval(instrument[Mins[loop2]].vol,63)*2;
+        } else {
+          cvol[loop2]=minval(instrument[Mins[loop2]].vol,63)*2;
+        }
+       }
      }
      if (nfxid[loop2]==17) {
       // process RVCT
@@ -1689,6 +1700,7 @@ void NextTick() {
         case 15: Mvol[loop2]*=2; if (Mvol[loop2]>126) {Mvol[loop2]=126;}; break;
       }
      }
+     if (nfxid[loop2]==17 || curnote[loop2]>0) {
       // reset all envelope cursors if effect isn't Gxx/Lxx/gxx
       if (nfxid[loop2]!=7 && nfxid[loop2]!=12 && !(nvolu[loop2]>192 && nvolu[loop2]<203)) {
       // is there a new instrument value, along with the new note? if yes then change instrument
@@ -1802,7 +1814,7 @@ void NextTick() {
       curvibpos[loop2]=0;
       }
       continue;
-     }}
+     }}}
     // volume
     if (EnvelopesRunning[loop2][0]) {
       UpdateEnvelope(loop2,0);
