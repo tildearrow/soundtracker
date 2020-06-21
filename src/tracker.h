@@ -49,6 +49,10 @@ char utf8csize(const unsigned char* c);
 wstring utf8To16(const char* in);
 string utf16To8(const wchar_t* in);
 
+#ifdef _WIN32
+unsigned short ntohs(unsigned short orig);
+#endif
+
 bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky);
 
 enum SupportedFormats {

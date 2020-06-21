@@ -1284,10 +1284,10 @@ void NextRow() {
     }
     ninst=pat[patid[curpat]][curstep][loop][1]; // finds out next instrument
     nvolu[loop]=pat[patid[curpat]][curstep][loop][2]|((pat[patid[curpat]][curstep][loop][3]&0x80)<<1); // finds out next volume value
-    // is there a note and instrument, but no volume value? assume instrument volume
-    if ((nnote%16)!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13 && nvolu[loop]==0 && ninst!=0) {nvolu[loop]=0x40+minval(instrument[ninst].vol,63);}
     nfxid[loop]=pat[patid[curpat]][curstep][loop][3]&0x7f; // finds out next effect
     nfxvl[loop]=pat[patid[curpat]][curstep][loop][4]; // finds out next effect value
+    // is there a note and instrument, but no volume value? assume instrument volume
+    if ((nnote%16)!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13 && nvolu[loop]==0 && ninst!=0 && !(nfxid[loop]==19 && (nfxvl[loop]>>4)==0x0d)) {nvolu[loop]=0x40+minval(instrument[ninst].vol,63);}
     // Txx
     if (nfxid[loop]==20)
     {if (nfxvl[loop]!=0)
@@ -1673,12 +1673,13 @@ void NextTick() {
         } else {
           cvol[loop2]=(nvolu[loop2]%64)*2;
         }
-       } else if (nvolu[loop2]==0 && Mins[loop2]!=0) {
+       } else if (nvolu[loop2]==0) {
+         nvolu[loop2]=0x40+minval(instrument[Mins[loop2]].vol,63);
          if (EnvelopesRunning[loop2][0]) {
-          Mvol[loop2]=minval(instrument[Mins[loop2]].vol,63)*2;
-        } else {
-          cvol[loop2]=minval(instrument[Mins[loop2]].vol,63)*2;
-        }
+           Mvol[loop2]=minval(instrument[Mins[loop2]].vol,63)*2;
+         } else {
+           cvol[loop2]=minval(instrument[Mins[loop2]].vol,63)*2;
+         }
        }
      }
      if (nfxid[loop2]==17) {
@@ -3628,6 +3629,7 @@ struct XMHeader {
   int size;
   short orders, loop, chans, pats, instrs, flags, speed, tempo;
   char ord[256];
+  char padding[256];
 };
 
 struct XMPatternHeader {
@@ -3635,6 +3637,7 @@ struct XMPatternHeader {
   unsigned char packType;
   unsigned char rows[2];
   unsigned char len[2];
+  char padding[256];
 };
 
 struct XMInstrHeader {
@@ -3642,6 +3645,7 @@ struct XMInstrHeader {
   char name[22];
   char type;
   char samples[2];
+  char padding[256];
 };
 
 struct XMEnvPoint {
@@ -3660,6 +3664,7 @@ struct XMInstrContHeader {
   unsigned char volType, panType;
   char vibType, vibSweep, vibDepth, vibSpeed;
   short volFade, unused;
+  char padding[256];
 };
 
 struct XMSampleHeader {
@@ -3670,6 +3675,7 @@ struct XMSampleHeader {
   char pan;
   char note;
   char unused;
+  char padding[256];
 };
 
 int XMVolume(int val) {
@@ -3749,7 +3755,7 @@ int ImportXM(FILE* xm) {
   int sampleSeek=0;
   printf("loading XM\n");
   fseek(xm,0,SEEK_SET);
-  fread(&h,1,sizeof(XMHeader),xm);
+  fread(&h,1,336,xm);
   
   CleanupPatterns();
   name="";
@@ -3809,7 +3815,7 @@ int ImportXM(FILE* xm) {
         if (nextNote&16) fxval=patData[sk++];
         
         pat[i][curRow][curChan][2]=XMVolume(vol);
-        pat[i][curRow][curChan][3]=XMEffect(fx,fxval);
+        pat[i][curRow][curChan][3]=(XMVolume(vol)>>1)|XMEffect(fx,fxval);
         pat[i][curRow][curChan][4]=fxval;
       } else {
         if (nextNote>=96) {
@@ -3900,7 +3906,6 @@ int ImportXM(FILE* xm) {
           sampleSeek++;
           if (sampleSeek>=65280) {
             popbox=PopupBox("Warning","out of PCM memory to load all samples!");
-            break;
           }
         }
         if (sh.flags&3) {
