@@ -2713,7 +2713,11 @@ void drawsong() {
   
   // tempo
   g.tPos(81,5);
-  g.printf("%d",125);
+  if (deftempo==0) {
+    g.printf("N/A");
+  } else {
+    g.printf("%d",deftempo);
+  }
   
   // speed
   g.tPos(95,5);
@@ -3329,7 +3333,8 @@ int ImportMOD(FILE* mod) {
         if (patid[sk]>patterns) {patterns=patid[sk];}
       }
       songlength=(*((ClassicMODHeader*)&h)).len;
-      printf("the secret bit is: %d\n",(*((ClassicMODHeader*)&h)).loop);
+      // BPM if it is set
+      deftempo=(5*716*1024)/((240-(*((ClassicMODHeader*)&h)).loop)*122*2);
     } else {
       for (sk=0;sk<128;sk++) {
         patid[sk]=h.ord[sk];
@@ -3636,11 +3641,11 @@ struct XMInstrContHeader {
   char sample[96];
   XMEnvPoint envVol[12];
   XMEnvPoint envPan[12];
-  char envVolCount;
-  char envPanCount;
-  char volSus, volLoopStart, volLoopEnd;
-  char panSus, panLoopStart, panLoopEnd;
-  char volType, panType;
+  unsigned char envVolCount;
+  unsigned char envPanCount;
+  unsigned char volSus, volLoopStart, volLoopEnd;
+  unsigned char panSus, panLoopStart, panLoopEnd;
+  unsigned char volType, panType;
   char vibType, vibSweep, vibDepth, vibSpeed;
   short volFade, unused;
 };
