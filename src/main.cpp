@@ -4036,7 +4036,7 @@ int SaveFile() {
     fputc(songlength,sfile); // orders
     fputc(defspeed,sfile); // speed
     fputc(seqs,sfile); // sequences
-    fputc(125,sfile); // tempo
+    fputc(deftempo,sfile); // tempo
     fputs(name.c_str(),sfile); // name
     fseek(sfile,48,SEEK_SET); // seek to 0x30
     fputc(0,sfile); // default filter mode
@@ -4320,7 +4320,10 @@ int LoadFile(const char* filename) {
     if (TVER<146) {printf("-applying no channel count compatibility\n");}
     if (TVER<147) {printf("-applying no song length compatibility\n");}
     if (TVER<148) {printf("-applying instrument volume compatibility\n");}
-    if (TVER<150) {printf("-applying old volume effects compatibility\n");}
+    if (TVER<150) {
+      printf("-applying old volume effects compatibility\n");
+      printf("-applying no tempo compatibility\n");
+    }
     //if (TVER<??) {printf("-applying legacy instrument compatibility\n");}
     //printf("%d ",ftell(sfile));
     instruments=fgetc(sfile); // instruments
@@ -4328,6 +4331,9 @@ int LoadFile(const char* filename) {
     songlength=fgetc(sfile); // orders
     defspeed=fgetc(sfile); // speed
     seqs=fgetc(sfile); // sequences
+    if (TVER>=150) {
+      deftempo=fgetc(sfile); // tempo
+    }
     //fputc(sfile,125); // tempo
     fseek(sfile,16,SEEK_SET);
     name="";
