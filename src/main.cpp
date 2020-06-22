@@ -210,6 +210,7 @@ int insrelease[32]={}; // checks if the instrument is on its release state
 int inspos[32][8]={}; // current instrument position per envelope, inspos[chan][env]
 int curvol[32]={}; // current volume of a step
 int curchanvol[32]={}; // current volume of a channel
+unsigned char nnote[32]={}; // next note
 float curnote[32]={}; // current note of a channel
 int curvibdepth[32]={}; // current vibrato offset
 int curvibspeed[32]={}; // current vibrato speed
@@ -1223,6 +1224,7 @@ string seqToSS(int insid, int seqid) {
   return ret;
 }
 
+// TODO: possibly rewrite this horrible thing
 void NextRow() {
   //// PROCESS NEXT ROW ////
   // forward code
@@ -1267,7 +1269,6 @@ void NextRow() {
   // MAKE SURE PATTERNS ARE UPDATED
   UPDATEPATTERNS=true;
   // next note and instrument
-  unsigned char nnote;
   unsigned char nnnote;
   unsigned char ninst;
   unsigned char SEMINOTE;
@@ -1275,7 +1276,7 @@ void NextRow() {
   // run playback routine over 32 channels
   for (int loop=0;loop<32;loop++) {
     // get next row variables
-    nnote=pat[patid[curpat]][curstep][loop][0]; // finds out next note
+    nnote[loop]=pat[patid[curpat]][curstep][loop][0]; // finds out next note
     if (curstep!=(getpatlen(patid[curpat])-1)) {
     nnnote=pat[patid[curpat]][curstep+1][loop][0]; // finds out next note past next note
     } else {nnnote=0;}
@@ -1287,7 +1288,9 @@ void NextRow() {
     nfxid[loop]=pat[patid[curpat]][curstep][loop][3]&0x7f; // finds out next effect
     nfxvl[loop]=pat[patid[curpat]][curstep][loop][4]; // finds out next effect value
     // is there a note and instrument, but no volume value? assume instrument volume
-    if ((nnote%16)!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13 && nvolu[loop]==0 && ninst!=0 && !(nfxid[loop]==19 && (nfxvl[loop]>>4)==0x0d)) {nvolu[loop]=0x40+minval(instrument[ninst].vol,63);}
+    if ((nnote[loop]%16)!=0 && (nnote[loop]%16)!=15 && (nnote[loop]%16)!=14 && (nnote[loop]%16)!=13 && nvolu[loop]==0 && ninst!=0 && !(nfxid[loop]==19 && (nfxvl[loop]>>4)==0x0d)) {
+      nvolu[loop]=0x40+minval(instrument[ninst].vol,63);
+    }
     // Txx
     if (nfxid[loop]==20)
     {if (nfxvl[loop]!=0)
@@ -1306,7 +1309,7 @@ void NextRow() {
       else {EnvelopesRunning[loop][0]=false;cvol[loop]=Mvol[loop];}
     }
     // is there a new instrument? if yes then reset volume
-    if (ninst!=0 && (nnote%16)!=15 && (nnote%16)!=14 && (nnote%16)!=13) {
+    if (ninst!=0 && (nnote[loop]%16)!=15 && (nnote[loop]%16)!=14 && (nnote[loop]%16)!=13 && !(nfxid[loop]==19 && (nfxvl[loop]>>4)==0x0d)) {
       if (nvolu[loop]==0) {
         if (EnvelopesRunning[loop][0]) {
           Mvol[loop]=minval(instrument[ninst].vol,63)*2;
@@ -1318,7 +1321,7 @@ void NextRow() {
     if (ninst!=0) {
       Mins[loop]=ninst;
     }
-    if ((nnote%16)==15) {
+    if ((nnote[loop]%16)==15) {
       Mvol[loop]=0;
       cvol[loop]=0;
       EnvelopesRunning[loop][0]=false;EnvelopesRunning[loop][1]=false;
@@ -1330,13 +1333,13 @@ void NextRow() {
     }
     // is there SDx? if yes then don't trigger note
     // is there a new note?
-    if ((nnote%16)!=0 && !(nfxid[loop]==19 && (nfxvl[loop]>>4)==0x0d)) {
+    if ((nnote[loop]%16)!=0 && !(nfxid[loop]==19 && (nfxvl[loop]>>4)==0x0d)) {
       // is new note a release note? set released flag to true and exit if yes
-      if ((nnote%16)==13) {released[loop]=true; reservedevent[loop]=1; offinstead[loop]=1; continue;}
+      if ((nnote[loop]%16)==13) {released[loop]=true; reservedevent[loop]=1; offinstead[loop]=1; continue;}
       // is new note a NOTE, and effect isn't Gxx/Lxx/gxx?
-      if ((nnote%16)!=13 && (nnote%16)!=14 && (nnote%16)!=15 && nfxid[loop]!=7 && nfxid[loop]!=12 && !(nvolu[loop]>192 && nvolu[loop]<203)) {
+      if ((nnote[loop]%16)!=13 && (nnote[loop]%16)!=14 && (nnote[loop]%16)!=15 && nfxid[loop]!=7 && nfxid[loop]!=12 && !(nvolu[loop]>=0xe0 && nvolu[loop]<0xf0)) {
       // set current note
-      curnote[loop]=mscale(nnote);
+      curnote[loop]=mscale(nnote[loop]);
       }
       // reset the "release" flags
       // this won't happen if note is a release note
@@ -1349,13 +1352,13 @@ void NextRow() {
       if (nvolu[loop]!=0 && nvolu[loop]>63 && nvolu[loop]<128) {
       // set note volume
       Mvol[loop]=(nvolu[loop]%64)*2;
-      } else {if ((nnote%16)!=15 && ninst!=0) {Mvol[loop]=126;}} // no volume, assuming v3f if not a note release
+      } else {if ((nnote[loop]%16)!=15 && ninst!=0) {Mvol[loop]=126;}} // no volume, assuming v3f if not a note release
       // set seminote
-      SEMINOTE=((nnote%16)+((nnote>>4)*12));
+      SEMINOTE=((nnote[loop]%16)+((nnote[loop]>>4)*12));
       // set portamento note
       portastatic[loop]=SEMINOTE;
       // reset all envelope cursors if effect isn't Gxx/Lxx/gxx
-      if (nfxid[loop]!=7 && nfxid[loop]!=12 && !(nvolu[loop]>192 && nvolu[loop]<203)) {
+      if (nfxid[loop]!=7 && nfxid[loop]!=12 && !(nvolu[loop]>=0xe0 && nvolu[loop]<0xf0)) {
       // is it a pcm instrument? (pcm check)
       if (instrument[Mins[loop]].DFM&8) {
         // set channel mode to PCM
@@ -1437,18 +1440,18 @@ void NextRow() {
       else {EnvelopesRunning[loop][5]=false;}
       }
       // is it a note cut? if yes, set volume to 0
-      if ((nnote%16)==15) {Mvol[loop]=0;} else 
+      if ((nnote[loop]%16)==15) {Mvol[loop]=0;} else 
       {
         // set note frequency if effect isn't Gxx/Lxx/gxx and pitch/finepitch envelopes are disabled
-      if (nfxid[loop]!=7 && nfxid[loop]!=12 && !(nvolu[loop]>192 && nvolu[loop]<203) && !((instrument[Mins[loop]].activeEnv&32)>>5) && !((instrument[Mins[loop]].activeEnv&64)>>6)) {
-      SEMINOTE=((nnote%16)+((nnote>>4)*12))+(((unsigned char)instrument[Mins[loop]].noteOffset)-48);
+      if (nfxid[loop]!=7 && nfxid[loop]!=12 && !(nvolu[loop]>=0xe0 && nvolu[loop]<0xf0) && !((instrument[Mins[loop]].activeEnv&32)>>5) && !((instrument[Mins[loop]].activeEnv&64)>>6)) {
+      SEMINOTE=((nnote[loop]%16)+((nnote[loop]>>4)*12))+(((unsigned char)instrument[Mins[loop]].noteOffset)-48);
       cfreq[loop]=mnoteperiod(SEMINOTE,loop); // sets the frequency to match the current note and applies instrument transposition
       oldperiod[loop]=newperiod[loop];
       newperiod[loop]=cfreq[loop];
       }
       }
       // only reset envelope positions if effect isn't Gxx/Lxx/gxx
-      if (nfxid[loop]!=7 && nfxid[loop]!=12 && !(nvolu[loop]>192 && nvolu[loop]<203)) {
+      if (nfxid[loop]!=7 && nfxid[loop]!=12 && !(nvolu[loop]>=0xe0 && nvolu[loop]<0xf0)) {
       // check for Oxx effect
       if (nfxid[loop]!=15) {
       inspos[loop][0]=0; // sets the instrument position to 0
@@ -1490,7 +1493,7 @@ void NextRow() {
       else {retrig[loop]=(retrigger[loop]%16);}}
     } else {
       if (nfxid[loop]==19 && (nfxvl[loop]>>4)==0x0d) {
-        curnote[loop]=mscale(nnote);
+        //curnote[loop]=mscale(nnote[loop]);
         doretrigger[loop]=true;retrigger[loop]=128+(nfxvl[loop]%16);retrig[loop]=maxval(1,retrigger[loop]%16);
       }
     }
@@ -1665,7 +1668,7 @@ void NextTick() {
      if (retrig[loop2]==0) {retrig[loop2]=retrigger[loop2]%16;
      doretrigger[loop2]=false;
      if (nfxid[loop2]==17) {doretrigger[loop2]=true;} else {
-       printf("MINS IS %d and NVOLU is %d\n",Mins[loop2],nvolu[loop2]);
+       curnote[loop2]=mscale(nnote[loop2]);
       if (nvolu[loop2]!=0 && nvolu[loop2]>63 && nvolu[loop2]<128) {
       // set note volume TODO PLEASE FIX THIS!
         if (EnvelopesRunning[loop2][0]) {
@@ -1674,12 +1677,12 @@ void NextTick() {
           cvol[loop2]=(nvolu[loop2]%64)*2;
         }
        } else if (nvolu[loop2]==0) {
-         nvolu[loop2]=0x40+minval(instrument[Mins[loop2]].vol,63);
-         if (EnvelopesRunning[loop2][0]) {
+         //nvolu[loop2]=0x40+minval(instrument[Mins[loop2]].vol,63);
+         ///if (EnvelopesRunning[loop2][0]) {
            Mvol[loop2]=minval(instrument[Mins[loop2]].vol,63)*2;
-         } else {
+         //} else {
            cvol[loop2]=minval(instrument[Mins[loop2]].vol,63)*2;
-         }
+         //}
        }
      }
      if (nfxid[loop2]==17) {
@@ -1703,7 +1706,7 @@ void NextTick() {
      }
      if (nfxid[loop2]==17 || curnote[loop2]>0) {
       // reset all envelope cursors if effect isn't Gxx/Lxx/gxx
-      if (nfxid[loop2]!=7 && nfxid[loop2]!=12 && !(nvolu[loop2]>192 && nvolu[loop2]<203)) {
+      if (nfxid[loop2]!=7 && nfxid[loop2]!=12 && !(nvolu[loop2]>=0xe0 && nvolu[loop2]<0xf0)) {
       // is there a new instrument value, along with the new note? if yes then change instrument
       if (pat[patid[curpat]][curstep][loop2][1]!=0) {
       Mins[loop2]=pat[patid[curpat]][curstep][loop2][1];
@@ -1775,11 +1778,11 @@ void NextTick() {
       EnvelopesRunning[loop2][5]=true;}
       else {EnvelopesRunning[loop2][5]=false;}
       }
-      if (nfxid[loop2]!=7 && nfxid[loop2]!=12 && !(nvolu[loop2]>192 && nvolu[loop2]<203) && !((instrument[Mins[loop2]].activeEnv&32)>>5) && !((instrument[Mins[loop2]].activeEnv&64)>>6)) {
+      if (nfxid[loop2]!=7 && nfxid[loop2]!=12 && !(nvolu[loop2]>0xe0 && nvolu[loop2]<0xf0) && !((instrument[Mins[loop2]].activeEnv&32)>>5) && !((instrument[Mins[loop2]].activeEnv&64)>>6)) {
       cfreq[loop2]=mnoteperiod(((hscale(curnote[loop2])%16)+((hscale(curnote[loop2])>>4)*12))+(((unsigned char)instrument[Mins[loop2]].noteOffset)-48),loop2);
       }
       // only reset envelope positions if effect isn't Gxx/Lxx/gxx
-      if (nfxid[loop2]!=7 && nfxid[loop2]!=12 && !(nvolu[loop2]>192 && nvolu[loop2]<203)) {
+      if (nfxid[loop2]!=7 && nfxid[loop2]!=12 && !(nvolu[loop2]>=0xe0 && nvolu[loop2]<0xf0)) {
       // check for Oxx effect
       if (nfxid[loop2]!=15) {
       inspos[loop2][0]=0; // sets the instrument position to 0
@@ -1929,19 +1932,25 @@ void NextTick() {
             cfreq[looper]=ProcessPitch(looper,0)+(int)((float)sine[(curvibpos[looper]*curvibspeed[looper]*4)%256]*((float)curvibdepth[looper]/16));
             }}}}
   // Gxx
-  if (nfxid[looper]==7 || nfxid[looper]==12 || (nvolu[looper]>192 && nvolu[looper]<203))
-  {if (nfxvl[looper]!=0 && nfxid[looper]!=12 && !(nvolu[looper]>193 && nvolu[looper]<203)) {Mport[looper]=nfxvl[looper];} // portamento memory
-  if (nvolu[looper]>193 && nvolu[looper]<203) {
+  if (nfxid[looper]==7 || nfxid[looper]==12 || (nvolu[looper]>=0xe0 && nvolu[looper]<0xf0))
+  {if (nfxvl[looper]!=0 && nfxid[looper]!=12 && !(nvolu[looper]>=0xe0 && nvolu[looper]<0xf0)) {Mport[looper]=nfxvl[looper];} // portamento memory
+  if (nvolu[looper]>0xe0 && nvolu[looper]<0xf0) {
     switch (nvolu[looper]) {
-      case 194: Mport[looper]=1; break;
-      case 195: Mport[looper]=4; break;
-      case 196: Mport[looper]=8; break;
-      case 197: Mport[looper]=16; break;
-      case 198: Mport[looper]=32; break;
-      case 199: Mport[looper]=64; break;
-      case 200: Mport[looper]=96; break;
-      case 201: Mport[looper]=128; break;
-      case 202: Mport[looper]=255; break;
+      case 0xe1: Mport[looper]=1; break;
+      case 0xe2: Mport[looper]=4; break;
+      case 0xe3: Mport[looper]=8; break;
+      case 0xe4: Mport[looper]=16; break;
+      case 0xe5: Mport[looper]=32; break;
+      case 0xe6: Mport[looper]=64; break;
+      case 0xe7: Mport[looper]=96; break;
+      case 0xe8: Mport[looper]=128; break;
+      case 0xe9: Mport[looper]=148; break;
+      case 0xea: Mport[looper]=168; break;
+      case 0xeb: Mport[looper]=188; break;
+      case 0xec: Mport[looper]=208; break;
+      case 0xed: Mport[looper]=228; break;
+      case 0xee: Mport[looper]=248; break;
+      case 0xef: Mport[looper]=255; break;
   }}
     if (!linearslides) {
     if (cfreq[looper]>mnoteperiod(portastatic[looper],looper)) {
@@ -3740,6 +3749,7 @@ int XMEffect(int fx, int fxv) {
       return 0; // todo
       break;
   }
+  printf("this effect\n");
   return 0;
 }
 
@@ -3815,7 +3825,7 @@ int ImportXM(FILE* xm) {
         if (nextNote&16) fxval=patData[sk++];
         
         pat[i][curRow][curChan][2]=XMVolume(vol);
-        pat[i][curRow][curChan][3]=(XMVolume(vol)>>1)|XMEffect(fx,fxval);
+        pat[i][curRow][curChan][3]=((XMVolume(vol)&0x100)>>1)|XMEffect(fx,fxval);
         pat[i][curRow][curChan][4]=fxval;
       } else {
         if (nextNote>=96) {
