@@ -3551,6 +3551,7 @@ int ImportS3M(FILE* s3m) {
     fread(memblock,1,size,s3m);
     fclose(s3m);
     printf("success, now importing file\n");
+    CleanupPatterns();
   for (int nonsense=0;nonsense<256;nonsense++) {
     patlength[nonsense]=64;
     //instrument[nonsense].env[envPan]=48;
