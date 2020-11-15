@@ -1,4 +1,4 @@
-package com.github.tildearrow.soundtracker;
+package org.tildearrow.soundtracker;
 
 import org.libsdl.app.SDLActivity;
 

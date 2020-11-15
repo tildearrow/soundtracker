@@ -3,7 +3,7 @@
      com.gamemaker.game
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.github.tildearrow.soundtracker"
+    package="org.tildearrow.soundtracker"
     android:versionCode="145"
     android:versionName="dev145"
     android:installLocation="auto">
