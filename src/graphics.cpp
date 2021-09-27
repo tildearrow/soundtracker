@@ -396,7 +396,7 @@ bool Graphics::init(int width, int height) {
 
   if (SDL_InitSubSystem(SDL_INIT_VIDEO)==-1) return false;
   
-  dpiScale=getScale();
+  dpiScale=round(getScale());
 
 #ifdef ANDROID
   // workaround for https://bugzilla.libsdl.org/show_bug.cgi?id=2291

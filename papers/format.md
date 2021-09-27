@@ -1,6 +1,9 @@
----TRACKER'S FILE FORMAT SPECIFICATION---
 ─ │ ┌ ┐ └ ┘ ├ ┤ ┬ ┴ ┼
-1. Header, 384 bytes:
+# ---TRACKER'S FILE FORMAT SPECIFICATION---
+
+this document should help you read the soundtracker file format.
+
+## Header, 384 bytes
 ---- -0- -1- -2- -3- -4- -5- -6- -7- -8- -9- -A- -B- -C- -D- -E- -F-
     ┌───┬───┬───┬───┬───┬───┬───┬───┬───────┬───┬───┬───┬───┬───┬───┐
   00│ T │ R │ A │ C │ K │ 8 │ B │ T │Version│Ins│Pat│Ord│Spd│Seq│Tmp│
@@ -17,7 +20,7 @@
     ├───────────────────────────────────────────────────────────────┤
  180│ pointers to instruments, 4 bytes per pointer                  │
     ├───────────────────────────────────────────────────────────────┤
-xxxx│ pointers to sequence tables, 4 bytes per pointer              │
+xxxx│ pointers to macros or sequence tables (pre-r152), 4 bytes/ptr │
     ├───────────────────────────────────────────────────────────────┤
 xxxx│ pointers to patterns, 4 bytes per pointer                     │
     └───────────────────────────────────────────────────────────────┘
@@ -25,42 +28,84 @@ xxxx│ pointers to patterns, 4 bytes per pointer                     │
           Flags: bit 0: NTSC
                  bit 1: NTSC50
                  bit 2: 
+
+## Macros, new format
+read macros like this:
+
+1. read the macro length (4 bytes).
+2. read the "jump on release" position (4 bytes).
+  * if this is -1, then it is "don't jump".
+3. skip 8 bytes (reserved section).
+4. read the type. then switch based on it:
+  - 0: end of macro.
+  - 1: set. read four bytes for value.
+  - 2: wait. read four bytes for length.
+  - 3: wait for release.
+  - 4: loop. read the position (4 bytes).
+  - 5: loop until release. read the position (4 bytes).
+  - 6: add. read four bytes for value.
+  - 7: subtract. read four bytes for value.
+  * if bit 7 is set, then it means end of tick (ignored on wait).
  
-2. Sequence tables, Seq*2048
+## Sequence tables, legacy (pre-r152) format, 2048 bytes each
 ---- -0- -1- -2- -3- -4- -5- -6- -7- -8- -9- -A- -B- -C- -D- -E- -F-
     ┌───────────────────────────────────────────────────────────────┐
   00│ main sequence, 253 bytes                                      │
     ├───────────────────────────────────────────────────┬───┬───┬───┤
   F0│                                                   │Len│Lps│Rps│
     └───────────────────────────────────────────────────┴───┴───┴───┘
-    
-3. Instruments, new format, Ins*64:
 
+read 8 times to get the tables in this order:
+- 0: volume
+- 1: cutoff
+- 2: resonance
+- 3: duty
+- 4: shape
+- 5: pitch
+- 6: fine pitch
+- 7: panning
+    
+## Instruments, new format, 80 bytes each
 ---- -0- -1- -2- -3- -4- -5- -6- -7- -8- -9- -A- -B- -C- -D- -E- -F-
     ┌───────────────────────────────────────────────────────────────┐
   00│ instrument name, 32 bytes, padded with 0x00s                  │
-    ├───────────────────────────────────────────────────┬───┬───┬───┤
-  20│Ins│PCm│Env│Fun|               │  Unused!  |Off│FPt│FPR│DFM│LFO│
-    ├───────────────────────────────────────────────────┴───┴───┴───┤
-  30│Vol│Pit│PCMSlen|FilterH|Res|PCMSptr│PCMloop│FTm│Version│flg│RMF│
-    ├───────────────────────────────────────────────────────┴───┴───┤
-  40│ Function data; see ssformat.md for details...                 │
-    └───────────────────────────────────────────────────────────────┘
+    ├───┬───┬───┬───────────────────────────────┬───┬───┬───┬───┬───┤
+  20│Ins│PCm│volumeM|cutoffM|resonaM|pitchM |???│Off│FPt│FPR│DFM│LFO│
+    ├───┼───┼───┴───┬───────┬───┬───────┬───────┼───┼───┴───┼───┼───┤
+  30│Vol│Pit│PCMSlen│FilterH│Res│PCMSptr│PCMloop│FTm│Version│flg│RMF│
+    ├───┼───┼───────┼───────┼───┼───────┼───────┼───┼───────┼───┼───┤
+  40│finepiM|shapeM | dutyM | panM  |filterM|pcmptrM|   reserved!   |
+    └───┴───┴───────┴───────┴───┴───────┴───────┴───┴───────┴───┴───┘
     
-Fun determines the number of ssinter functions in the instrument.
+NOTE: Instrument files start with a header which is 8 bytes long and reads "TRACKINS".
+      Also, instrument files don't require the envelope IDs as they're saved along with the file.
+NOTE: If (DFM&8) then it's a PCM instrument.
+      If (DFM&16) then enable ring modulation and LFO sets the ring modulation frequency.
+      RMF sets the ring modulator flags:
+      (RMF&7): waveform
+      the rest of bits: duty
+      Also, (DFM&128) will be used for the MSB of PCMSptr and (DFM&64) the MSB of PCMloop.
+      Also, (DFM&32) enables looping.
+      PCm: PCM multiplier. Max value is 127.
+      PCm&128: MSB of length
+      flg: other flags:
+        bit 0: reset oscillator on new note
+        bit 1: MSB of duty
+        bit 2: reset filter on new note
+        bit 3: reset RM oscillator on new note
+        bit 4: sync modulation
+        bit 5: PCM loop enabled
+        bit 6-7: auto-cut
 
-NOTE: Version must have MSB set. otherwise treated as legacy instrument.
-NOTE 2: Function data is a chain of Fun null-terminated strings.
-
-3. Instruments, legacy (pre-r144) format, Ins*64
+## Instruments, legacy (pre-r152) format, 64 bytes each
 ---- -0- -1- -2- -3- -4- -5- -6- -7- -8- -9- -A- -B- -C- -D- -E- -F-
     ┌───────────────────────────────────────────────────────────────┐
   00│ instrument name, 32 bytes, padded with 0x00s                  │
-    ├───────────────────────────────────────────────────┬───┬───┬───┤
+    ├───┬───┬───┬───────────────────────────────┬───┬───┬───┬───┬───┤
   20│Ins│PCm│Env│vol cut res dty shp pit hpi pan│Off│FPt│FPR│DFM│LFO│
-    ├───────────────────────────────────────────────────┴───┴───┴───┤
-  30│Vol│Pit│PCMSlen|FilterH|Res|PCMSptr│PCMloop│FTm│Version│flg│RMF│
-    └───────────────────────────────────────────────────────┴───┴───┘
+    ├───┼───┼───┴───┬───────┬───┬───────┬───────┼───┼───┴───┼───┼───┤
+  30│Vol│Pit│PCMSlen│FilterH│Res│PCMSptr│PCMloop│FTm│Version│flg│RMF│
+    └───┴───┴───────┴───────┴───┴───────┴───────┴───┴───────┴───┴───┘
     
 NOTE: Instrument files start with a header which is 8 bytes long and reads "TRACKINS".
       Also, instrument files don't require the envelope IDs as they're saved along with the file.
@@ -82,12 +127,12 @@ NOTE: If (DFM&8) then it's a PCM instrument.
         bit 5: PCM loop enabled
         bit 6-7: auto-cut
       
-4. Patterns, Pat*(16+(Len*min(#CH,4)*8))
+## Patterns, 16 byte header
 ---- -0- -1- -2- -3- -4- -5- -6- -7- -8- -9- -A- -B- -C- -D- -E- -F-
     ┌───────────────────────────────────────────────────────────────┐
   00│PID│     Length    |Siz| Reserved, 11 bytes                    |
     ├───────────────────────────────────────────────────────────────┤
-  10│ Pattern data, Len*min(#CH,4)*8 bytes                          │
+  10│ Pattern data                                                  │
     └───────────────────────────────────────────────────────────────┘
 
 Pattern data is organized like this:
@@ -114,8 +159,8 @@ VOLU: channel's volume value:
 -224-239: high offset
 -240: panning (0)
 -241: panning (64)
--242-248: panning slide left (0-7)*2
--249-255: panning slide right (0-7)*2
+-242-248: panning slide left (0-7)\*2
+-249-255: panning slide right (0-7)\*2
 FXID: channel's effect number
 FXVL: channel's effect value
 
@@ -129,9 +174,9 @@ in case you don't know how ST3 "packs" patterns, here it is:
 4. if (maskbyte&32) then read NOTE and INSTRUMENT
 5. if (maskbyte&64) then read VOLUME
 6. if (maskbyte&128) then read EFFECT and EFFECTVALUE
-7. repeat until pattern is done or seek>size
+7. repeat until pattern is done or `seek>size`
 
-5. Sound effect structure
+## Sound effect structure (perhaps legacy, I don't remember)
 ---- -0- -1- -2- -3- -4- -5- -6- -7- -8- -9- -A- -B- -C- -D- -E- -F-
     ┌───────────────────────────────────────────────────────────────┐
   00│ Packed effect data                                            |
@@ -146,6 +191,3 @@ and this is how soundtracker packs sound effects:
 4. if (maskbyte&8) then RM, RMPERIOD (hl), RMSHAPE and RMDUTY follows
 5. if (maskbyte&16) then PCMpos, PCMbound and PCMloop follow
 6. if (maskbyte&32) then FILTERMODE, CUTOFF and RESONANCE follow
-
-
--tildearrow

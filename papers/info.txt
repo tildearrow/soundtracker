@@ -75,7 +75,7 @@ Playback is done like this:
 - Zxx: Apply MIDI macro. However they are not stored in the resulting file.
 
 ## File Format's Specifications.
-check format.txt.
+check format.md.
 
 ## Note Periods.
 no longer used.

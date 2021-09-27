@@ -43,6 +43,7 @@ void soundchip::NextSample(short* l, short* r) {
               chan[i].pcmpos=chan[i].pcmrst;
             }
           }
+          chan[i].pcmpos&=(SOUNDCHIP_PCM_SIZE-1);
         } else if (chan[i].flags.pcmloop) {
           chan[i].pcmpos=chan[i].pcmrst;
         }
@@ -101,8 +102,7 @@ void soundchip::NextSample(short* l, short* r) {
     //ns[i]=(char)((short)ns[i]*(short)vol[i]/256);
     fns[i]=ns[i]*chan[i].vol*2;
     if (chan[i].flags.fmode!=0) {
-      float f=2*sin(3.141592653589*(((float)chan[i].cutoff)/2.5)/297500);
-      int ff=f*65536;
+      int ff=chan[i].cutoff;
       nslow[i]=nslow[i]+(((ff)*nsband[i])>>16);
       nshigh[i]=fns[i]-nslow[i]-(((256-chan[i].reson)*nsband[i])>>8);
       nsband[i]=(((ff)*nshigh[i])>>16)+nsband[i];
@@ -229,9 +229,7 @@ void soundchip::NextSample(short* l, short* r) {
 
 void soundchip::Init() {
   Reset();
-  for (int i=0; i<65280; i++) {
-    pcm[i]=0;
-  }
+  memset(pcm,0,SOUNDCHIP_PCM_SIZE);
   ShapeFunctions[0]=SCsaw;
   ShapeFunctions[1]=SCsaw;
   ShapeFunctions[2]=SCsine;

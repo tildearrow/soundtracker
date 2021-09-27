@@ -591,4 +591,11 @@ class NumberPad {
   Button bUp;
   Button bDown;
 };
+
+// NEW STUFF BEGIN //
+struct Song {
+  string name, author, comment;
+  unsigned char speed, tempo;
+};
+// NEW STUFF END //
 #endif

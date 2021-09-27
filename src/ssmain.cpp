@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
     speed=103103; // NTSC. 103000 for no colorburst compensation
   }
   
-  if ((f=fopen(argv[which],"r"))==NULL) {
+  if ((f=fopen(argv[which],"rb"))==NULL) {
     printf("not exist\n");
     return 1;
   }

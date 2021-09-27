@@ -7,15 +7,9 @@
 //>++++++++++-+-++-*.*-++-+-++++++++++<//
 
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
+// and 2021~
 
 #define PROGRAM_NAME "soundtracker"
-float rt1=0;
-float rt2=0;
-
-float rt3=0;
-float rt4=0;
-double time1=0;
-double time2=0;
 
 //// DEFINITIONS ////
 #define minval(a,b) (((a)<(b))?(a):(b)) // for Linux compatibility
@@ -25,7 +19,6 @@ double time2=0;
 //#define NTSC // define for NTSC mode
 #define SOUNDS
 int dpiScale;
-//#define PRESERVE_INS
 
 #ifdef _WIN32
 #define DIR_SEPARATOR '\\'
@@ -34,7 +27,6 @@ int dpiScale;
 #define DIR_SEPARATOR '/'
 #define SDIR_SEPARATOR "/"
 #endif
-
 
 bool ntsc=false;
 
@@ -115,9 +107,6 @@ bool AlreadySkipped=false;
 enum filters {
   fNone, fLowPass, fHighPass, fNotch, fBandPass, fLowBand, fHighBand, fAllPass
 };
-float cseek[32]={};
-float crseek[32]={};
-int rngpgv[32]={0};
 int scrollpos=0;
 int valuewidth=4;
 int oldpat=-1;
@@ -152,8 +141,6 @@ unsigned char songlength=255;
 int instruments=0;
 int patterns=0;
 int seqs=255;
-signed char chpan[32]={};
-signed char chvol[32]={};
 bool muted[32]={};
 bool leftpress=false;
 bool rightpress=false;
@@ -362,7 +349,7 @@ bool rightclickprev=false;
 int prevZ=0;
 int channels=8;
 int hover[16]={}; // hover time per button
-int16_t ver=150; // version number
+int16_t ver=151; // version number
 unsigned char chs0[5000];
 string comments;
 int inputcurpos=0;
@@ -1142,86 +1129,6 @@ int FreeChannel() {
     if (cvol[candidate]>cvol[ii]) {candidate=ii;}
   }
   return candidate;
-}
-
-// convert sequence into ssinter format
-string seqToSS(int insid, int seqid) {
-  string ret;
-  if (!(instrument[insid].activeEnv&(1<<seqid))) return "";
-  int iseq=instrument[insid].env[seqid];
-  int len=bytable[seqid][iseq][253];
-  ret="$~";
-  switch (seqid) {
-    case 0: // volume
-      for (int i=0; i<=len; i++) {
-        ret+=strFormat("V%.2x;",bytable[seqid][iseq][i]>>1);
-      }
-      break;
-    case 1: // cutoff
-      ret+=strFormat("I%d",instrument[insid].DFM&7);
-      if (!(instrument[insid].activeEnv&4)) {
-        ret+="r30";
-      }
-      for (int i=0; i<=len; i++) {
-        ret+=strFormat("c%.4x;",(bytable[seqid][iseq][i]*(65535-instrument[insid].filterH))/255);
-      }
-      break;
-    case 2: // resonance
-      for (int i=0; i<=len; i++) {
-        ret+=strFormat("r%.2x;",bytable[seqid][iseq][i]);
-      }
-      break;
-    case 3: // duty
-      for (int i=0; i<=len; i++) {
-        ret+=strFormat("Y%.2x;",bytable[seqid][iseq][i]>>1);
-      }
-      break;
-    case 4: // shape
-      for (int i=0; i<=len; i++) {
-        ret+=strFormat("S%d;",bytable[seqid][iseq][i]>>5);
-      }
-      break;
-    case 5: // pitch
-      for (int i=0; i<=len; i++) {
-        if (instrument[insid].activeEnv&64) {
-          if (bytable[seqid][iseq][i]<0x40) { // up
-            ret+=strFormat("f(* xf (trans (+ f %d));",bytable[seqid][iseq][i]);
-          } else if (bytable[seqid][iseq][i]<0x80) { // down
-            ret+=strFormat("f(* xf (trans (+ f -%d)));",bytable[seqid][iseq][i]-0x40);
-          } else { // note
-            ret+=strFormat("f(note (+ f %d));",bytable[seqid][iseq][i]-0x80);
-          }
-        } else {
-          if (bytable[seqid][iseq][i]<0x40) { // up
-            ret+=strFormat("f(* xf (trans %d));",bytable[seqid][iseq][i]);
-          } else if (bytable[seqid][iseq][i]<0x80) { // down
-            ret+=strFormat("f(* xf (trans -%d));",bytable[seqid][iseq][i]-0x40);
-          } else { // note
-            ret+=strFormat("f(note %d);",bytable[seqid][iseq][i]-0x80);
-          }
-        }
-      }
-      break;
-    case 6: // fine pitch
-      ret+="=(setq f 0)";
-      for (int i=0; i<=len; i++) {
-        ret+=strFormat("=(setq f (+ f %d))",(signed char)bytable[seqid][iseq][i]);
-        if (instrument[insid].activeEnv&32) {
-          ret+=";";
-        } else {
-          ret+="f(* xf (trans f))";
-        }
-      }
-      break;
-    case 7: // pan
-      for (int i=0; i<=len; i++) {
-        ret+=strFormat("P%d;",bytable[seqid][iseq][i]);
-      }
-      break;
-    default: // invalid
-      return "";
-  }
-  return ret;
 }
 
 // TODO: possibly rewrite this horrible thing
@@ -3286,7 +3193,7 @@ int ImportMOD(FILE* mod) {
     } else if ((h.ident&0xffff0000)==0x48430000) { // ..CH
       printf("multi-channel module detected\n");
       origin="FastTracker";
-      chans=(h.ident&0xff)-'0'+((((h.ident&0xff00)>>8)-'0')*10);
+      chans=10*((h.ident&0xff)-'0')+((((h.ident&0xff00)>>8)-'0'));
     } else if ((h.ident&0xffff0000)==0x4e430000) { // ..CN
       printf("multi-channel TakeTracker module detected\n");
       origin="TakeTracker";
@@ -3373,12 +3280,12 @@ int ImportMOD(FILE* mod) {
     } else {
       fseek(mod,sizeof(MODHeader)+((patterns+1)*chans*64*4),SEEK_SET);
     }
-    if (fread(chip[0].pcm,1,65280,mod)==65280) {
+    if (fread(chip[0].pcm,1,SOUNDCHIP_PCM_SIZE,mod)==SOUNDCHIP_PCM_SIZE) {
       popbox=PopupBox("Warning","out of PCM memory to load all samples!");
     }
-    memcpy(chip[1].pcm,chip[0].pcm,65280);
-    memcpy(chip[2].pcm,chip[0].pcm,65280);
-    memcpy(chip[3].pcm,chip[0].pcm,65280);
+    memcpy(chip[1].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
+    memcpy(chip[2].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
+    memcpy(chip[3].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
     printf("---PATTERNS---\n");
     if (karsten) {
       fseek(mod,sizeof(ClassicMODHeader),SEEK_SET);
@@ -3400,70 +3307,10 @@ int ImportMOD(FILE* mod) {
           NFX=noteVal[2]&0x0f;
           NFXVAL=noteVal[3];
           // conversion stuff
-          switch (NPERIOD) {
-            case 56: if (verbose) printf("B-7 "); pat[importid][indxr][ichan][0]=0x7c; break;
-            case 60: if (verbose) printf("A#7 "); pat[importid][indxr][ichan][0]=0x7b; break;
-            case 63: if (verbose) printf("A-7 "); pat[importid][indxr][ichan][0]=0x7a; break;
-            case 67: if (verbose) printf("G#7 "); pat[importid][indxr][ichan][0]=0x79; break;
-            case 71: if (verbose) printf("G-7 "); pat[importid][indxr][ichan][0]=0x78; break;
-            case 75: if (verbose) printf("F#7 "); pat[importid][indxr][ichan][0]=0x77; break;
-            case 80: if (verbose) printf("F-7 "); pat[importid][indxr][ichan][0]=0x76; break;
-            case 85: if (verbose) printf("E-7 "); pat[importid][indxr][ichan][0]=0x75; break;
-            case 90: if (verbose) printf("D#7 "); pat[importid][indxr][ichan][0]=0x74; break;
-            case 95: if (verbose) printf("D-7 "); pat[importid][indxr][ichan][0]=0x73; break;
-            case 101: if (verbose) printf("C#7 "); pat[importid][indxr][ichan][0]=0x72; break;
-            case 107: if (verbose) printf("C-7 "); pat[importid][indxr][ichan][0]=0x71; break;
-            case 113: if (verbose) printf("B-6 "); pat[importid][indxr][ichan][0]=0x6c; break;
-            case 120: if (verbose) printf("A#6 "); pat[importid][indxr][ichan][0]=0x6b; break;
-            case 127: if (verbose) printf("A-6 "); pat[importid][indxr][ichan][0]=0x6a; break;
-            case 135: if (verbose) printf("G#6 "); pat[importid][indxr][ichan][0]=0x69; break;
-            case 143: if (verbose) printf("G-6 "); pat[importid][indxr][ichan][0]=0x68; break;
-            case 151: if (verbose) printf("F#6 "); pat[importid][indxr][ichan][0]=0x67; break;
-            case 160: if (verbose) printf("F-6 "); pat[importid][indxr][ichan][0]=0x66; break;
-            case 170: if (verbose) printf("E-6 "); pat[importid][indxr][ichan][0]=0x65; break;
-            case 180: if (verbose) printf("D#6 "); pat[importid][indxr][ichan][0]=0x64; break;
-            case 190: if (verbose) printf("D-6 "); pat[importid][indxr][ichan][0]=0x63; break;
-            case 202: if (verbose) printf("C#6 "); pat[importid][indxr][ichan][0]=0x62; break;
-            case 214: if (verbose) printf("C-6 "); pat[importid][indxr][ichan][0]=0x61; break;
-            case 226: if (verbose) printf("B-5 "); pat[importid][indxr][ichan][0]=0x5c; break;
-            case 240: if (verbose) printf("A#5 "); pat[importid][indxr][ichan][0]=0x5b; break;
-            case 254: if (verbose) printf("A-5 "); pat[importid][indxr][ichan][0]=0x5a; break;
-            case 269: if (verbose) printf("G#5 "); pat[importid][indxr][ichan][0]=0x59; break;
-            case 285: if (verbose) printf("G-5 "); pat[importid][indxr][ichan][0]=0x58; break;
-            case 302: if (verbose) printf("F#5 "); pat[importid][indxr][ichan][0]=0x57; break;
-            case 320: if (verbose) printf("F-5 "); pat[importid][indxr][ichan][0]=0x56; break;
-            case 339: if (verbose) printf("E-5 "); pat[importid][indxr][ichan][0]=0x55; break;
-            case 360: if (verbose) printf("D#5 "); pat[importid][indxr][ichan][0]=0x54; break;
-            case 381: if (verbose) printf("D-5 "); pat[importid][indxr][ichan][0]=0x53; break;
-            case 404: if (verbose) printf("C#5 "); pat[importid][indxr][ichan][0]=0x52; break;
-            case 428: if (verbose) printf("C-5 "); pat[importid][indxr][ichan][0]=0x51; break;
-            case 453: if (verbose) printf("B-4 "); pat[importid][indxr][ichan][0]=0x4c; break;
-            case 480: if (verbose) printf("A#4 "); pat[importid][indxr][ichan][0]=0x4b; break;
-            case 508: if (verbose) printf("A-4 "); pat[importid][indxr][ichan][0]=0x4a; break;
-            case 538: if (verbose) printf("G#4 "); pat[importid][indxr][ichan][0]=0x49; break;
-            case 570: if (verbose) printf("G-4 "); pat[importid][indxr][ichan][0]=0x48; break;
-            case 604: if (verbose) printf("F#4 "); pat[importid][indxr][ichan][0]=0x47; break;
-            case 640: if (verbose) printf("F-4 "); pat[importid][indxr][ichan][0]=0x46; break;
-            case 678: if (verbose) printf("E-4 "); pat[importid][indxr][ichan][0]=0x45; break;
-            case 720: if (verbose) printf("D#4 "); pat[importid][indxr][ichan][0]=0x44; break;
-            case 762: if (verbose) printf("D-4 "); pat[importid][indxr][ichan][0]=0x43; break;
-            case 808: if (verbose) printf("C#4 "); pat[importid][indxr][ichan][0]=0x42; break;
-            case 856: if (verbose) printf("C-4 "); pat[importid][indxr][ichan][0]=0x41; break;
-            case 906: if (verbose) printf("B-3 "); pat[importid][indxr][ichan][0]=0x3c; break;
-            case 907: if (verbose) printf("B-3 "); pat[importid][indxr][ichan][0]=0x3c; break; // OpenMPT?
-            case 960: if (verbose) printf("A#3 "); pat[importid][indxr][ichan][0]=0x3b; break;
-            case 1016: if (verbose) printf("A-3 "); pat[importid][indxr][ichan][0]=0x3a; break;
-            case 1076: if (verbose) printf("G#3 "); pat[importid][indxr][ichan][0]=0x39; break;
-            case 1140: if (verbose) printf("G-3 "); pat[importid][indxr][ichan][0]=0x38; break;
-            case 1208: if (verbose) printf("F#3 "); pat[importid][indxr][ichan][0]=0x37; break;
-            case 1280: if (verbose) printf("F-3 "); pat[importid][indxr][ichan][0]=0x36; break;
-            case 1356: if (verbose) printf("E-3 "); pat[importid][indxr][ichan][0]=0x35; break;
-            case 1440: if (verbose) printf("D#3 "); pat[importid][indxr][ichan][0]=0x34; break;
-            case 1524: if (verbose) printf("D-3 "); pat[importid][indxr][ichan][0]=0x33; break;
-            case 1616: if (verbose) printf("C#3 "); pat[importid][indxr][ichan][0]=0x32; break;
-            case 1712: if (verbose) printf("C-3 "); pat[importid][indxr][ichan][0]=0x31; break;
-            case 0: if (verbose) printf("--- "); pat[importid][indxr][ichan][0]=0x00; break;
-            default: if (verbose) printf("??? "); pat[importid][indxr][ichan][0]=0x00; printf("invalid note! %d at row %d channel %d\n",NPERIOD,indxr,ichan); break;
+          if (NPERIOD==0) {
+            pat[importid][indxr][ichan][0]=0;
+          } else {
+            pat[importid][indxr][ichan][0]=hscale(round((log(float(894841.0/NPERIOD)/65.406391325149658669)/log(2.0))*12));
           }
           pat[importid][indxr][ichan][1]=NINS;
           switch(NFX) {
@@ -3889,7 +3736,7 @@ int ImportXM(FILE* xm) {
         sh.size>>=1;
       }
       printf("sample %d: %d %d %d vol %d fine %d\n",j,sh.size,sh.loopStart,sh.loopSize,sh.vol,sh.pitch);
-      if (j==0 && sampleSeek<65280) {
+      if (j==0 && sampleSeek<SOUNDCHIP_PCM_SIZE) {
         instrument[i+1].pcmPos[1]=sampleSeek>>8;
         instrument[i+1].pcmPos[0]=sampleSeek&0xff;
         if (sh.flags&3) {
@@ -3915,7 +3762,7 @@ int ImportXM(FILE* xm) {
             chip[3].pcm[sampleSeek]=delta;
           }
           sampleSeek++;
-          if (sampleSeek>=65280) {
+          if (sampleSeek>=SOUNDCHIP_PCM_SIZE) {
             popbox=PopupBox("Warning","out of PCM memory to load all samples!");
           }
         }
@@ -4187,7 +4034,7 @@ int SaveFile() {
     pcmpointer=ftell(sfile);
     bool IS_PCM_DATA_BLANK=true;
     int maxpcmwrite=0;
-    for (int ii=0;ii<65280;ii++) {
+    for (int ii=0;ii<SOUNDCHIP_PCM_SIZE;ii++) {
       if (chip[0].pcm[ii]!=0) {IS_PCM_DATA_BLANK=false; maxpcmwrite=ii;}
     }
     if (!IS_PCM_DATA_BLANK) {
@@ -4357,6 +4204,9 @@ int LoadFile(const char* filename) {
       printf("-applying old volume effects compatibility\n");
       printf("-applying no tempo compatibility\n");
     }
+    if (TVER<151) {
+      printf("-applying old cutoff curve compatibility\n");
+    }
     //if (TVER<??) {printf("-applying legacy instrument compatibility\n");}
     //printf("%d ",ftell(sfile));
     instruments=fgetc(sfile); // instruments
@@ -4426,19 +4276,19 @@ int LoadFile(const char* filename) {
       }
     }
     fseek(sfile,0x36,SEEK_SET); // seek to 0x36
-    memset(chip[0].pcm,0,65280); // clean PCM memory
-    memset(chip[1].pcm,0,65280); // clean PCM memory
-    memset(chip[2].pcm,0,65280); // clean PCM memory
-    memset(chip[3].pcm,0,65280); // clean PCM memory
+    memset(chip[0].pcm,0,SOUNDCHIP_PCM_SIZE); // clean PCM memory
+    memset(chip[1].pcm,0,SOUNDCHIP_PCM_SIZE); // clean PCM memory
+    memset(chip[2].pcm,0,SOUNDCHIP_PCM_SIZE); // clean PCM memory
+    memset(chip[3].pcm,0,SOUNDCHIP_PCM_SIZE); // clean PCM memory
     pcmpointer=fgeti(sfile);
     if (pcmpointer!=0) {
       fseek(sfile,pcmpointer,SEEK_SET);
       fread(&maxpcmread,4,1,sfile);
-      if (maxpcmread>65280) maxpcmread=65280;
+      if (maxpcmread>SOUNDCHIP_PCM_SIZE) maxpcmread=SOUNDCHIP_PCM_SIZE;
       fread(chip[0].pcm,1,maxpcmread,sfile);
-      memcpy(chip[1].pcm,chip[0].pcm,65280);
-      memcpy(chip[2].pcm,chip[0].pcm,65280);
-      memcpy(chip[3].pcm,chip[0].pcm,65280);
+      memcpy(chip[1].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
+      memcpy(chip[2].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
+      memcpy(chip[3].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
     }
     fseek(sfile,0x180,SEEK_SET);
     for (int ii=0;ii<256;ii++) {
@@ -4474,6 +4324,10 @@ int LoadFile(const char* filename) {
       // version<148 instrument volume
       if (TVER<148) {
         instrument[ii].vol=64;
+      }
+      // version<151 cutoff curve
+      if (TVER<151) {
+        instrument[ii].filterH=65535-(unsigned short)(2.0*sin(3.141592653589*(((double)(65535-instrument[ii].filterH))/2.5)/297500.0)*65535.0);
       }
 
       // version<145 panning
@@ -4513,26 +4367,26 @@ int LoadFile(const char* filename) {
       }
       // version<106 loop point fix conversion
       if (TVER<106) {
-      IS_SEQ_BLANK[ii]=true;
-      for (int ii1=0; ii1<8; ii1++) {
-        for (int ii2=0; ii2<256; ii2++) {
-            if (ii2==254 || ii2==255) {
-              if (bytable[ii1][ii][ii2]!=255) {IS_SEQ_BLANK[ii]=false;break;}
-            } else {
-              if (bytable[ii1][ii][ii2]!=0) {IS_SEQ_BLANK[ii]=false;break;}
-            }
+        IS_SEQ_BLANK[ii]=true;
+        for (int ii1=0; ii1<8; ii1++) {
+          for (int ii2=0; ii2<256; ii2++) {
+              if (ii2==254 || ii2==255) {
+                if (bytable[ii1][ii][ii2]!=255) {IS_SEQ_BLANK[ii]=false;break;}
+              } else {
+                if (bytable[ii1][ii][ii2]!=0) {IS_SEQ_BLANK[ii]=false;break;}
+              }
+          }
+          if (!IS_SEQ_BLANK[ii]) {break;}
         }
-        if (!IS_SEQ_BLANK[ii]) {break;}
-      }
-      if (!IS_SEQ_BLANK[ii]) {
-        if (bytable[0][ii][254]<252) {bytable[0][ii][254]=1;}
-        if (bytable[1][ii][254]<252) {bytable[1][ii][254]=1;}
-        if (bytable[2][ii][254]<252) {bytable[2][ii][254]=1;}
-        if (bytable[3][ii][254]<252) {bytable[3][ii][254]=1;}
-        if (bytable[4][ii][254]<252) {bytable[4][ii][254]=1;}
-        if (bytable[5][ii][254]<252) {bytable[5][ii][254]=1;}
-        if (bytable[6][ii][254]<252) {bytable[6][ii][254]=1;}
-      }
+        if (!IS_SEQ_BLANK[ii]) {
+          if (bytable[0][ii][254]<252) {bytable[0][ii][254]=1;}
+          if (bytable[1][ii][254]<252) {bytable[1][ii][254]=1;}
+          if (bytable[2][ii][254]<252) {bytable[2][ii][254]=1;}
+          if (bytable[3][ii][254]<252) {bytable[3][ii][254]=1;}
+          if (bytable[4][ii][254]<252) {bytable[4][ii][254]=1;}
+          if (bytable[5][ii][254]<252) {bytable[5][ii][254]=1;}
+          if (bytable[6][ii][254]<252) {bytable[6][ii][254]=1;}
+        }
       }
     }
   } else {
@@ -4620,21 +4474,6 @@ int LoadFile(const char* filename) {
       g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
     }
     
-    // debug conversion
-    for (int i=1; i<255; i++) {
-      if (instrument[i].activeEnv) {
-        printf("--INSTRUMENT %d--\n",i);
-        printf("vol: %s\n",seqToSS(i,0).c_str());
-        printf("cut: %s\n",seqToSS(i,1).c_str());
-        printf("res: %s\n",seqToSS(i,2).c_str());
-        printf("duty: %s\n",seqToSS(i,3).c_str());
-        printf("shape: %s\n",seqToSS(i,4).c_str());
-        printf("finepitch: %s\n",seqToSS(i,6).c_str());
-        printf("pitch: %s\n",seqToSS(i,5).c_str());
-        printf("pan: %s\n",seqToSS(i,7).c_str());
-      }
-    }
-    
     return 0;
   } else {
     perror("can't open file");
@@ -4701,7 +4540,7 @@ void LoadRawSample(const char* filename,int position) {
   sfile=ps_fopen(filename,"rb");
   samplelength=fsize(sfile);
   printf("%x bytes",samplelength);
-  if (samplelength<(65280-position)) {
+  if (samplelength<(SOUNDCHIP_PCM_SIZE-position)) {
     //for (int ii=0;ii<samplelength;ii++) {
       fseek(sfile,position,SEEK_SET);
       fread(chip[0].pcm+position,1,samplelength,sfile);
@@ -5256,7 +5095,7 @@ void ClickEvents() {
         LoadRawSample(rfn,writeposition);
       }
       if (iface!=UIMobile && !PIR(0,scrH-24,scrW,scrH,mstate.x,mstate.y)) for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+((int)(scrH/12)-12),filenames.size()); ii++) {
-        if (PIR(0,120+(ii*12)-(diskopscrollpos*12),scrW-8,131+(ii*12)-(diskopscrollpos*12),mstate.x,mstate.y)) {
+        if (PIR(0,120+(ii*12)-(diskopscrollpos*12),scrW-8,133+(ii*12)-(diskopscrollpos*12),mstate.x,mstate.y)) {
           if (selectedfileindex==ii+1) {
             if (filenames[ii].isdir) {
               if (strcmp(curdir,"")!=0) {

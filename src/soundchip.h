@@ -3,6 +3,8 @@
 #include <math.h>
 #include <assert.h>
 
+#define SOUNDCHIP_PCM_SIZE 65536
+
 class soundchip {
   signed char SCsaw[257];
   signed char SCsine[257];
@@ -93,7 +95,7 @@ class soundchip {
       unsigned short wc;
       unsigned short restimer;
     } chan[8];
-    signed char pcm[65280];
+    signed char pcm[SOUNDCHIP_PCM_SIZE];
     void NextSample(short* l, short* r);
     void Init();
     void Reset();
