@@ -16,7 +16,6 @@ class soundchip {
   int rcycle[8];
   unsigned int lfsr[8];
   signed char ns[8];
-  bool randmem[8][128];
   char randpos[8];
   int fns[8];
   int nsL[8];

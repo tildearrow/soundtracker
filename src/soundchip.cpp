@@ -17,17 +17,17 @@ void soundchip::NextSample(short* l, short* r) {
       case 0:
         ns[i]=(((cycle[i]>>15)&127)>chan[i].duty)*127;
         break;
-      case 1: case 2: case 3:
+      case 1:
+        ns[i]=cycle[i]>>14;
+        break;
+      case 2: case 3:
         ns[i]=(short)ShapeFunctions[(chan[i].flags.shape)][(cycle[i]>>14)&255];
         break;
       case 4: case 5:
         ns[i]=(lfsr[i]&1)*127;
         break;
-      case 6:
-        ns[i]=randmem[i][(cycle[i]>>15)&127]*127;
-        break;
-      default:
-        ns[i]=(short)ShapeFunctions[(chan[i].flags.shape)][(cycle[i]>>14)&255];
+      case 6: case 7:
+        ns[i]=((((cycle[i]>>15)&127)>chan[i].duty)*127)^(short)ShapeFunctions[(chan[i].flags.shape)][(cycle[i]>>14)&255];
         break;
     }
     
@@ -110,15 +110,6 @@ void soundchip::NextSample(short* l, short* r) {
     }
     nsL[i]=(fns[i]*SCpantabL[(unsigned char)chan[i].pan])>>8;
     nsR[i]=(fns[i]*SCpantabR[(unsigned char)chan[i].pan])>>8;
-    /*
-    if ((chan[i].freq>>8)!=(oldfreq[i]>>8) || oldflags[i]!=chan[i].flags.flags) {
-      bool feed=((lfsr[i]) ^ (lfsr[i] >> 2) ^ (lfsr[i] >> 3) ^ (lfsr[i] >> 5) ) & 1;
-      for (int j=0; j<127; j++) {
-        randmem[i][j]=randmem[i][j+1];
-      }
-      randmem[i][127]=lfsr[i]&1;
-      lfsr[i]=(lfsr[i]>>1|feed<<31);
-    }*/
     oldfreq[i]=chan[i].freq;
     oldflags[i]=chan[i].flags.flags;
     if (chan[i].flags.swvol) {
@@ -236,8 +227,8 @@ void soundchip::Init() {
   ShapeFunctions[3]=SCtriangle;
   ShapeFunctions[4]=SCsaw;
   ShapeFunctions[5]=SCsaw;
-  ShapeFunctions[6]=SCsaw;
-  ShapeFunctions[7]=SCsaw;
+  ShapeFunctions[6]=SCsine;
+  ShapeFunctions[7]=SCtriangle;
   for (int i=0; i<256; i++) {
     SCsaw[i]=i;
     SCsine[i]=sin((i/128.0f)*M_PI)*127;
@@ -250,9 +241,6 @@ void soundchip::Init() {
     SCpantabR[128+i]=i-1;
   }
   SCpantabR[128]=0;
-  for (int i=0; i<1024; i++) {
-    randmem[i>>7][i&127]=rand()&1;
-  }
 }
 
 void soundchip::Reset() {

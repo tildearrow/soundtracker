@@ -594,8 +594,77 @@ class NumberPad {
 
 // NEW STUFF BEGIN //
 struct Song {
-  string name, author, comment;
-  unsigned char speed, tempo;
+  char header[8];
+  unsigned short version;
+  unsigned char ins, pat, orders, speed, flags, tempo;
+  char name[32];
+  unsigned char DFM, channels;
+  unsigned short macros;
+  unsigned char globalVol, globalPan;
+  unsigned short pcmPtr[2];
+  unsigned short commentPtr[2];
+  signed char detune;
+  unsigned char len;
+  unsigned char defaultVol[32];
+  signed char defaultPan[32];
+  unsigned char order[256];
+};
+
+struct LegacyInstrument {
+  char name[32];
+  unsigned char id, pcmMult, activeEnv;
+  unsigned char env[8];
+  unsigned char noteOffset;
+  unsigned char FPt, FPR, DFM, LFO;
+  unsigned char vol, pitch;
+  unsigned short pcmLen, filterH;
+  unsigned char res;
+  unsigned char pcmPos[2]; // alignment
+  unsigned char pcmLoop[2];
+  unsigned char FTm;
+  unsigned short ver;
+  unsigned char flags, RMf;
+};
+
+struct Instrument {
+  char name[32];
+  unsigned char id, unused;
+  unsigned short volMacro, cutMacro, resMacro, pitchMacro;
+  unsigned char unused1, noteOffset;
+  unsigned char FPt, FPR, filterMode, LFO;
+  unsigned char vol, pitch;
+  unsigned short pcmLen, filterH;
+  unsigned char res;
+  unsigned char pcmPos[2]; // alignment
+  unsigned char pcmLoop[2];
+  unsigned char FTm;
+  unsigned short ver;
+  unsigned char flags, RMf;
+  unsigned short finePitchMacro, shapeMacro, dutyMacro, panMacro, filterModeMacro, volSweepMacro, freqSweepMacro, cutSweepMacro;
+  unsigned short pcmPosMacro;
+  unsigned short unused2;
+  unsigned int unused3[3];
+};
+
+enum MacroCommandType {
+  cmdEnd=0,
+  cmdSet,
+  cmdWait,
+  cmdWaitRel,
+  cmdLoop,
+  cmdLoopRel,
+  cmdAdd,
+  cmdSub
+};
+
+struct MacroCommand {
+  unsigned char type;
+  unsigned int value;
+};
+
+struct Macro {
+  int jumpRelease;
+  std::vector<MacroCommand> cmds;
 };
 // NEW STUFF END //
 #endif

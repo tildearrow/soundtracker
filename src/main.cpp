@@ -58,7 +58,6 @@ int prevSample[2]={0,0};
 short bbOut[2][32768];
 
 const bool verbose=false; // change this to turn on verbose mode
-signed char songdf=0;
 double FPS=50;
 int tempo;
 
@@ -117,27 +116,11 @@ int pattern=0;
 unsigned char patid[256];
 unsigned char patlength[256];
 string tempInsName;
-struct Instrument {
-  char name[32];
-  unsigned char id, pcmMult, activeEnv;
-  unsigned char env[8];
-  unsigned char noteOffset;
-  unsigned char FPt, FPR, DFM, LFO;
-  unsigned char vol, pitch;
-  unsigned short pcmLen, filterH;
-  unsigned char res;
-  unsigned char pcmPos[2]; // alignment
-  unsigned char pcmLoop[2];
-  unsigned char FTm;
-  unsigned short ver;
-  unsigned char flags, RMf;
-};
-Instrument instrument[256]; // instrument[id][position]
-Instrument blankIns;
+LegacyInstrument instrument[256]; // instrument[id][position]
+LegacyInstrument blankIns;
 unsigned char bytable[8][256][256]={}; // bytable[table][indextab][position]
 unsigned char pat[256][256][32][5]={}; // pat[patid][patpos][channel][bytepos]
 int scroll[32][7]={}; // scroll[channel][envelope]
-unsigned char songlength=255;
 int instruments=0;
 int patterns=0;
 int seqs=255;
@@ -159,8 +142,6 @@ int Mins[32]={};
 bool EnvelopesRunning[32][8]={}; // EnvelopesRunning[channel][envelope]
 
 string name; // song name
-unsigned char defspeed=6; // default song speed
-unsigned char deftempo=0; // default song tempo (0=none)
 unsigned char speed=6; // current speed
 signed char playmode=0; // playmode (-1: reverse, 0: stopped, 1: playing, 2: paused)
 int curstep=0; // current step
@@ -251,14 +232,6 @@ int finepitch[32]={0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0}; // fine pitch envelope value
 int finedelay=0;
-unsigned char defchanvol[32]={128,128,128,128,128,128,128,128,
-                  128,128,128,128,128,128,128,128,
-                  128,128,128,128,128,128,128,128,
-                  128,128,128,128,128,128,128,128}; // default channel volume
-signed char defchanpan[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // default channel panning
 bool doretrigger[32]={0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,
@@ -468,6 +441,10 @@ Button bdSave;
 Swiper diskopSwiper;
 float doScroll;
 
+// new things
+Song song;
+std::vector<Macro> macros;
+
 // NEW VARIABLES END //
 
 void Playback();
@@ -585,8 +562,8 @@ static void nothing(void* userdata, Uint8* stream, int len) {
       chip[j].NextSample(&stemp[0],&stemp[1]);
       temp[0]+=stemp[0]; temp[1]+=stemp[1];
     }
-    blip_add_delta(bb[0],i,(short)(temp[0]-prevSample[0]));
-    blip_add_delta(bb[1],i,(short)(temp[1]-prevSample[1]));
+    if (temp[0]!=prevSample[0]) blip_add_delta(bb[0],i,(short)(temp[0]-prevSample[0]));
+    if (temp[1]!=prevSample[1]) blip_add_delta(bb[1],i,(short)(temp[1]-prevSample[1]));
     prevSample[0]=temp[0];
     prevSample[1]=temp[1];
   }
@@ -1050,11 +1027,11 @@ string getVisPat(unsigned char p) {
 // chipClock is 297500 (PAL)
 // or 309000 (NTSC)
 unsigned int mnoteperiod(float note, int chan) {
-  return (int)((6203.34-(songdf*2))*(pow(2.0f,(float)(((float)note-58)/12.0f))));
+  return (int)((6203.34-(song.detune*2))*(pow(2.0f,(float)(((float)note-58)/12.0f))));
 }
 
 int msnoteperiod(float note, int chan) {
-  return ((297500+(songdf*100))/(440*(pow(2.0f,(float)(((float)note-58)/12)))));
+  return ((297500+(song.detune*100))/(440*(pow(2.0f,(float)(((float)note-58)/12)))));
 }
 
 int AllocateSequence(int seqid) {
@@ -1149,7 +1126,7 @@ void NextRow() {
          plpos[ii]=0;
        }
        // did we reach end of song? if yes then restart song
-       if (curpat>songlength) {curpat=0;}
+       if (curpat>song.orders) {curpat=0;}
   }
   } else {
     // backward code
@@ -1170,7 +1147,7 @@ void NextRow() {
         curstep=-1;
       }
       // did we reach end of song? if yes then restart song
-      if (curpat>songlength) {curpat=0;}
+      if (curpat>song.orders) {curpat=0;}
     }
   }
   // MAKE SURE PATTERNS ARE UPDATED
@@ -1517,7 +1494,7 @@ void NextRow() {
          plcount[ii]=0;
          plpos[ii]=0;
        }
-       if (curpat>songlength) {curpat=0;}
+       if (curpat>song.orders) {curpat=0;}
   }*/
 }
 void SkipPattern(int chanval) {
@@ -1998,15 +1975,15 @@ void CleanupPatterns() {
   blankIns.vol=64;
   // default vol/pan
   for (int j=0; j<32; j++) {
-    defchanvol[j]=0x80;
-    defchanpan[j]=((j+1)&2)?96:-96;
+    song.defaultVol[j]=0x80;
+    song.defaultPan[j]=((j+1)&2)?96:-96;
   }
   // default variables
-  defspeed=6;
-  deftempo=0;
-  songdf=0;
+  song.speed=6;
+  song.tempo=0;
+  song.detune=0;
   channels=8;
-  songlength=255;
+  song.orders=255;
   origin="Unknown";
 }
 
@@ -2461,11 +2438,11 @@ void drawmixer() {
     g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset,scrH-4,104+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((128+(minval(0,(float)cpan[chantodraw+curedpage])))/128))*((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
     
     g.tColor(14);
-    g.printf("   %.2x",defchanvol[chantodraw+curedpage]);
+    g.printf("   %.2x",song.defaultVol[chantodraw+curedpage]);
     g.tColor(12);
     g.printf("   %.2x%c\n",cduty[chantodraw+curedpage]%256,shapeSym(cshape[chantodraw+curedpage]));
     g.tColor(14);
-    g.printf("   %.2x   ",(unsigned char)defchanpan[chantodraw+curedpage]);
+    g.printf("   %.2x   ",(unsigned char)song.defaultPan[chantodraw+curedpage]);
     switch (cfmode[chantodraw+curedpage]) {
       case 0: g.printf("   \n\n"); break;
       case 1: g.printf("  l\n\n"); break;
@@ -2634,23 +2611,23 @@ void drawsong() {
   
   // detune
   g.tPos(54,5);
-  g.printf("%.2x",(unsigned char)songdf);
+  g.printf("%.2x",(unsigned char)song.detune);
   
   // length
   g.tPos(68,5);
-  g.printf("%.2x",songlength);
+  g.printf("%.2x",song.orders);
   
   // tempo
   g.tPos(81,5);
-  if (deftempo==0) {
+  if (song.tempo==0) {
     g.printf("N/A");
   } else {
-    g.printf("%d",deftempo);
+    g.printf("%d",song.tempo);
   }
   
   // speed
   g.tPos(95,5);
-  g.printf("%.2X",defspeed);
+  g.printf("%.2X",song.speed);
 }
 
 // CONCEPT FOR NEW CONFIG BEGIN //
@@ -2852,10 +2829,10 @@ void StepPlay() {
 void Play() {
   //// PLAY SONG ////
   // set speed to song speed and other variables
-  if (!speedlock) {speed=defspeed;}
+  if (!speedlock) {speed=song.speed;}
   if (!tempolock) {
-    if (deftempo) {
-      tempo=deftempo;
+    if (song.tempo) {
+      tempo=song.tempo;
     } else {
       if (ntsc) {
         tempo=150;
@@ -2905,9 +2882,9 @@ void Play() {
   released[su]=false;
   plcount[su]=0;
   plpos[su]=0;
-  chanvol[su]=defchanvol[su];
+  chanvol[su]=song.defaultVol[su];
   doretrigger[su]=false;
-  chanpan[su]=defchanpan[su];
+  chanpan[su]=song.defaultPan[su];
   //if ((su+1)&2) {chanpan[su]=96;} else {chanpan[su]=-96;} // amiga auto-pan logic
   //if (su&1) {chanpan[su]=96;} else {chanpan[su]=-96;} // normal auto-pan logic
   finedelay=0;
@@ -2981,26 +2958,26 @@ int ImportIT(FILE* it) {
     origin="Impulse Tracker";
     // orders, instruments, samples and patterns
     printf("%d orders, %d instruments, %d samples, %d patterns\n",(int)memblock[0x20],(int)memblock[0x22],(int)memblock[0x24],(int)memblock[0x26]);
-    songlength=(unsigned char)memblock[0x20]; instruments=(unsigned char)memblock[0x22]; patterns=(unsigned char)memblock[0x26]; samples=(unsigned char)memblock[0x24];
+    song.orders=(unsigned char)memblock[0x20]; instruments=(unsigned char)memblock[0x22]; patterns=(unsigned char)memblock[0x26]; samples=(unsigned char)memblock[0x24];
     //cout << (int)memblock[0x29] << "." << (int)memblock[0x28];
     printf("\n");
     //cout << "volumes: global " << (int)(unsigned char)memblock[0x30] << ", mixing " << (int)(unsigned char)memblock[0x31] << "\n";
     //cout << "speeds: " << (int)memblock[0x32] << ":" << (int)(unsigned char)memblock[0x33] << "\n";
-    defspeed=memblock[0x32];
+    song.speed=memblock[0x32];
     printf("---pans---\n");
     for (sk=0x40;sk<0x60;sk++) {
-      defchanpan[sk-64]=memblock[sk];
+      song.defaultPan[sk-64]=memblock[sk];
       printf("%d ",(int)memblock[sk]);
     }
     printf("\n");
     printf("---volumes---\n");
     for (sk=0x80;sk<0xa0;sk++) {
-      defchanvol[sk-128]=memblock[sk]*2;
+      song.defaultVol[sk-128]=memblock[sk]*2;
       printf("%d ",(int)memblock[sk]);
     }
     printf("\n");
     printf("---ORDER LIST---\n");
-    for (sk=0xc0;sk<(0xc0+songlength);sk++) {
+    for (sk=0xc0;sk<(0xc0+song.orders);sk++) {
       patid[sk-0xc0]=memblock[sk];
       switch(memblock[sk]) {
       case -2: printf("+++ "); break;
@@ -3012,7 +2989,7 @@ int ImportIT(FILE* it) {
     // pointers
     printf("\n---POINTERS---\n");
     for (sk=0;sk<patterns;sk++) {
-    patparas[sk]=((unsigned char)memblock[0xc0+songlength+(instruments*4)+(samples*4)+(sk*4)])+(((unsigned char)memblock[0xc0+songlength+(instruments*4)+(samples*4)+(sk*4)+1])*256)+(((unsigned char)memblock[0xc0+songlength+(instruments*4)+(samples*4)+(sk*4)+2])*65536)+(((unsigned char)memblock[0xc0+songlength+(instruments*4)+(samples*4)+(sk*4)+3])*16777216);
+    patparas[sk]=((unsigned char)memblock[0xc0+song.orders+(instruments*4)+(samples*4)+(sk*4)])+(((unsigned char)memblock[0xc0+song.orders+(instruments*4)+(samples*4)+(sk*4)+1])*256)+(((unsigned char)memblock[0xc0+song.orders+(instruments*4)+(samples*4)+(sk*4)+2])*65536)+(((unsigned char)memblock[0xc0+song.orders+(instruments*4)+(samples*4)+(sk*4)+3])*16777216);
     printf("pattern %d offset: ",sk);
     printf("%d\n",patparas[sk]);
     }
@@ -3102,7 +3079,7 @@ int ImportIT(FILE* it) {
   } else {
     g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
   }
-  songlength--;
+  song.orders--;
   return 0;
 }
 
@@ -3261,9 +3238,9 @@ int ImportMOD(FILE* mod) {
       for (sk=0;sk<128;sk++) {
         if (patid[sk]>patterns) {patterns=patid[sk];}
       }
-      songlength=(*((ClassicMODHeader*)&h)).len;
+      song.orders=(*((ClassicMODHeader*)&h)).len;
       // BPM if it is set
-      deftempo=(5*716*1024)/((240-(*((ClassicMODHeader*)&h)).loop)*122*2);
+      song.tempo=(5*716*1024)/((240-(*((ClassicMODHeader*)&h)).loop)*122*2);
     } else {
       for (sk=0;sk<128;sk++) {
         patid[sk]=h.ord[sk];
@@ -3272,7 +3249,7 @@ int ImportMOD(FILE* mod) {
       for (sk=0;sk<128;sk++) {
         if (patid[sk]>patterns) {patterns=patid[sk];}
       }
-      songlength=h.len;
+      song.orders=h.len;
     }
     printf("putting samples to PCM memory if possible\n");
     if (karsten) {
@@ -3367,7 +3344,7 @@ int ImportMOD(FILE* mod) {
     }
   }
   else {/*cout << "error while importing file! file doesn't exist\n";*/ return 1;}
-  songdf=0x1b; // Amiga compat
+  song.detune=0x1b; // Amiga compat
   if (!playermode && !fileswitch) {curpat=0;}
   if (playmode==1) {Play();}
   if (name=="") {
@@ -3376,7 +3353,7 @@ int ImportMOD(FILE* mod) {
     g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
   }
   channels=chans;
-  songlength--;
+  song.orders--;
   return 0;
 }
 int ImportS3M(FILE* s3m) {
@@ -3409,13 +3386,13 @@ int ImportS3M(FILE* s3m) {
     name+=memblock[sk];
   }
   printf("module name is %s\n",name.c_str());
-  songlength=memblock[0x20];
+  song.orders=memblock[0x20];
   instruments=memblock[0x22];
   patterns=memblock[0x24]*2;
-  printf("%d orders, %d instruments, %d patterns\n",songlength,instruments,patterns);
+  printf("%d orders, %d instruments, %d patterns\n",song.orders,instruments,patterns);
   // order list
   printf("---ORDER LIST---\n");
-  for (sk=0x60;sk<songlength+0x60;sk++) {
+  for (sk=0x60;sk<song.orders+0x60;sk++) {
     patid[sk-0x60]=memblock[sk];
     switch(memblock[sk]) {
       case -2: printf("+++ "); break;
@@ -3425,15 +3402,15 @@ int ImportS3M(FILE* s3m) {
     }
   // pointers
   printf("\n---POINTERS---\n");
-  for (sk=0x60+songlength;sk<(0x60+songlength+instruments);sk+=2) {
-    insparas[(sk-(0x60+songlength))/2]=((unsigned char)memblock[sk]*16)+((unsigned char)memblock[sk+1]*4096);
-    printf("instrument %d offset: ",(sk-(0x60+songlength))/2);
-    printf("%d\n",insparas[(sk-(0x60+songlength))/2]);
+  for (sk=0x60+song.orders;sk<(0x60+song.orders+instruments);sk+=2) {
+    insparas[(sk-(0x60+song.orders))/2]=((unsigned char)memblock[sk]*16)+((unsigned char)memblock[sk+1]*4096);
+    printf("instrument %d offset: ",(sk-(0x60+song.orders))/2);
+    printf("%d\n",insparas[(sk-(0x60+song.orders))/2]);
     }
-  for (sk=0x60+songlength+(instruments*2);sk<(0x60+songlength+(instruments*2)+patterns);sk+=2) {
-    patparas[(sk-(0x60+songlength+(instruments*2)))/2]=((unsigned char)memblock[sk]*16)+((unsigned char)memblock[sk+1]*4096);
-    printf("pattern %d offset: ",(sk-(0x60+songlength+(instruments*2)))/2);
-    printf("%d\n",patparas[(sk-(0x60+songlength+(instruments*2)))/2]);
+  for (sk=0x60+song.orders+(instruments*2);sk<(0x60+song.orders+(instruments*2)+patterns);sk+=2) {
+    patparas[(sk-(0x60+song.orders+(instruments*2)))/2]=((unsigned char)memblock[sk]*16)+((unsigned char)memblock[sk+1]*4096);
+    printf("pattern %d offset: ",(sk-(0x60+song.orders+(instruments*2)))/2);
+    printf("%d\n",patparas[(sk-(0x60+song.orders+(instruments*2)))/2]);
     }
   // unpack patterns
   for (int pointer=0;pointer<(patterns/2);pointer++) {
@@ -3629,16 +3606,16 @@ int ImportXM(FILE* xm) {
   }
 
   for (int i=0; i<32; i++) {
-    defchanpan[i]=0;
+    song.defaultPan[i]=0;
   }
   
   for (int i=0; i<h.orders; i++) {
     patid[i]=h.ord[i];
   }
-  songlength=h.orders-1;
+  song.orders=h.orders-1;
   channels=h.chans;
-  defspeed=h.speed;
-  deftempo=h.tempo;
+  song.speed=h.speed;
+  song.tempo=h.tempo;
   
   printf("seeking to %d\n",60+h.size);
   fseek(xm,60+h.size,SEEK_SET);
@@ -3913,10 +3890,10 @@ int SaveFile() {
     fwrite(&ver,2,1,sfile); // version
     fputc(instruments,sfile); // instruments
     fputc(patterns,sfile); // patterns
-    fputc(songlength,sfile); // orders
-    fputc(defspeed,sfile); // speed
+    fputc(song.orders,sfile); // orders
+    fputc(song.speed,sfile); // speed
     fputc(seqs,sfile); // sequences
-    fputc(deftempo,sfile); // tempo
+    fputc(song.tempo,sfile); // tempo
     fputs(name.c_str(),sfile); // name
     fseek(sfile,48,SEEK_SET); // seek to 0x30
     fputc(0,sfile); // default filter mode
@@ -3928,10 +3905,10 @@ int SaveFile() {
     fwrite("\0\0\0\0",4,1,sfile); // PCM data pointer
     fwrite("\0\0",2,1,sfile); // reserved
     fseek(sfile,0x3e,SEEK_SET); // seek to 0x3e
-    fputc(songdf,sfile); // detune factor
+    fputc(song.detune,sfile); // detune factor
     fseek(sfile,0x40,SEEK_SET); // seek to 0x40
-    fwrite(defchanvol,1,32,sfile); // channel volume
-    fwrite(defchanpan,1,32,sfile); // channel panning
+    fwrite(song.defaultVol,1,32,sfile); // channel volume
+    fwrite(song.defaultPan,1,32,sfile); // channel panning
     fseek(sfile,0x80,SEEK_SET); // seek to 0x80
     for (int ii=0; ii<256; ii++) {
       fputc(patid[ii],sfile); // order list
@@ -4131,7 +4108,7 @@ int getFormat(FILE* sfile) {
   return FormatMOD;
 }
 
-int LoadFile(const char* filename) {
+int LoadFile(const char* filename, Song& song) {
   // load file
   FILE *sfile;
   int sk=0;
@@ -4145,11 +4122,11 @@ int LoadFile(const char* filename) {
   int commentpointer=0;
   int pcmpointer=0;
   size_t maxpcmread=0;
-  int TVER;
   int oplaymode;
   bool IS_SEQ_BLANK[256];
   bool detectChans=false;
   char *checkstr=new char[8];
+
   sfile=ps_fopen(filename,"rb");
   if (sfile!=NULL) { // LOAD the file
     fseek(sfile,0,SEEK_SET); // seek to 0
@@ -4183,89 +4160,75 @@ int LoadFile(const char* filename) {
         break;
     }
     
+    // stop the song
     oplaymode=playmode;
     playmode=0;
     CleanupPatterns();
-    //printf("%d ",ftell(sfile));
-    fseek(sfile,8,SEEK_SET);
-    TVER=fgetsh(sfile); // version
-    printf("module version %d\n",TVER);
-    origin=strFormat("soundtracker dev%d\n",TVER);
-    if (TVER<60) {printf("-applying filter mode compatibility\n");}
-    if (TVER<65) {printf("-applying volume column compatibility\n");}
-    if (TVER<106) {printf("-applying loop point fix compatibility\n");}
-    if (TVER<143) {printf("-applying old sequence format compatibility\n");}
-    if (TVER<144) {printf("-applying endianness compatibility\n");}
-    if (TVER<145) {printf("-applying channel pan/vol compatibility\n");}
-    if (TVER<146) {printf("-applying no channel count compatibility\n");}
-    if (TVER<147) {printf("-applying no song length compatibility\n");}
-    if (TVER<148) {printf("-applying instrument volume compatibility\n");}
-    if (TVER<150) {
+
+    fseek(sfile,0,SEEK_SET);
+    if (fread(&song,1,sizeof(Song),sfile)!=sizeof(Song)) {
+      printf("error: invalid song header!\n");
+      fclose(sfile);
+      triggerfx(1);
+      popbox=PopupBox("Error","invalid song header!");
+      return 1;
+    }
+
+    printf("module version %d\n",song.version);
+    origin=strFormat("soundtracker dev%d\n",song.version);
+    if (song.version<60) {printf("-applying filter mode compatibility\n");}
+    if (song.version<65) {printf("-applying volume column compatibility\n");}
+    if (song.version<106) {printf("-applying loop point fix compatibility\n");}
+    if (song.version<143) {printf("-applying old sequence format compatibility\n");}
+    if (song.version<144) {printf("-applying endianness compatibility\n");}
+    if (song.version<145) {printf("-applying channel pan/vol compatibility\n");}
+    if (song.version<146) {printf("-applying no channel count compatibility\n");}
+    if (song.version<147) {printf("-applying no song length compatibility\n");}
+    if (song.version<148) {printf("-applying instrument volume compatibility\n");}
+    if (song.version<150) {
       printf("-applying old volume effects compatibility\n");
       printf("-applying no tempo compatibility\n");
     }
-    if (TVER<151) {
+    if (song.version<151) {
       printf("-applying old cutoff curve compatibility\n");
     }
-    //if (TVER<??) {printf("-applying legacy instrument compatibility\n");}
-    //printf("%d ",ftell(sfile));
-    instruments=fgetc(sfile); // instruments
-    patterns=fgetc(sfile); // patterns
-    songlength=fgetc(sfile); // orders
-    defspeed=fgetc(sfile); // speed
-    seqs=fgetc(sfile); // sequences
-    if (TVER>=150) {
-      deftempo=fgetc(sfile); // tempo
+
+    instruments=song.ins; // instruments
+    patterns=song.pat; // patterns
+    if (song.version<152) {
+      seqs=song.flags; // sequences
+    } else {
+      seqs=song.macros;
     }
-    //fputc(sfile,125); // tempo
-    fseek(sfile,16,SEEK_SET);
+    if (song.version<150) {
+      song.tempo=125; // tempo
+    }
     name="";
-    int ncache;
     for (int i=0; i<32; i++) {
-      ncache=fgetc(sfile);
-      if (ncache==0) break;
-      name+=ncache;
+      if (song.name[i]==0) break;
+      name+=song.name[i];
     }
-    //printf("%d ",ftell(sfile));
-    fseek(sfile,49,SEEK_SET); // seek to 0x31
-    //printf("%d ",ftell(sfile));
-    //fputc(sfile,0); // default filter mode
-    if (TVER<146) {
+    if (song.version<146) {
       detectChans=true;
       channels=1;
     } else {
-      channels=fgetc(sfile); // channels
+      channels=song.channels; // channels
     }
-    //fputsh(sfile,0); // flags
-    //fputc(sfile,128); // global volume
-    //fputc(sfile,0); // global panning
-    //fputi(sfile,0); // mute flags
-    //fputi(sfile,0); // PCM data pointer
-    //fputsh(sfile,0); // reserved
-    fseek(sfile,0x3e,SEEK_SET); // seek to 0x3e
-    songdf=fgetc(sfile); // detune factor
-    fseek(sfile,0x40,SEEK_SET); // seek to 0x40
-    fread(defchanvol,1,32,sfile); // channel volume
-    fread(defchanpan,1,32,sfile); // channel panning
-    fseek(sfile,0x80,SEEK_SET); // seek to 0x80
-    for (int ii=0; ii<256; ii++) {
-      patid[ii]=fgetc(sfile); // order list
-    }
-    if (TVER<147) {
+    memcpy(patid,song.order,256); // order list
+    if (song.version<147) {
       // detect song length.
-      songlength=255;
+      song.orders=255;
       for (int i=255; i>0; i--) {
         if (patid[i]==0) {
-          songlength=i;
+          song.orders=i;
         } else {
           break;
         }
       }
-      songlength--;
+      song.orders--;
     }
-    fseek(sfile,0x3a,SEEK_SET); // seek to 0x3a
     comments=""; // clean comments
-    commentpointer=fgeti(sfile);
+    commentpointer=song.commentPtr[0]|(song.commentPtr[1]<<16);
     if (commentpointer!=0) {
       int v;
       fseek(sfile,commentpointer,SEEK_SET);
@@ -4275,12 +4238,11 @@ int LoadFile(const char* filename) {
         comments+=v;
       }
     }
-    fseek(sfile,0x36,SEEK_SET); // seek to 0x36
     memset(chip[0].pcm,0,SOUNDCHIP_PCM_SIZE); // clean PCM memory
     memset(chip[1].pcm,0,SOUNDCHIP_PCM_SIZE); // clean PCM memory
     memset(chip[2].pcm,0,SOUNDCHIP_PCM_SIZE); // clean PCM memory
     memset(chip[3].pcm,0,SOUNDCHIP_PCM_SIZE); // clean PCM memory
-    pcmpointer=fgeti(sfile);
+    pcmpointer=song.pcmPtr[0]|(song.pcmPtr[1]<<16);
     if (pcmpointer!=0) {
       fseek(sfile,pcmpointer,SEEK_SET);
       fread(&maxpcmread,4,1,sfile);
@@ -4307,11 +4269,11 @@ int LoadFile(const char* filename) {
       if (insparas[ii]==0) {continue;}
       fread(&instrument[ii],1,64,sfile);
       // version<60 filter mode fix
-      if (TVER<60) {
+      if (song.version<60) {
         if (instrument[ii].activeEnv&2) {instrument[ii].DFM^=1;}
       }
       // version<144 endianness
-      if (TVER<144) {
+      if (song.version<144) {
         instrument[ii].pcmLen=bswapu16(instrument[ii].pcmLen);
         instrument[ii].pcmPos[0]^=instrument[ii].pcmPos[1];
         instrument[ii].pcmPos[1]^=instrument[ii].pcmPos[0];
@@ -4322,32 +4284,32 @@ int LoadFile(const char* filename) {
         instrument[ii].filterH=bswapu16(instrument[ii].filterH);
       }
       // version<148 instrument volume
-      if (TVER<148) {
+      if (song.version<148) {
         instrument[ii].vol=64;
       }
       // version<151 cutoff curve
-      if (TVER<151) {
+      if (song.version<151) {
         instrument[ii].filterH=65535-(unsigned short)(2.0*sin(3.141592653589*(((double)(65535-instrument[ii].filterH))/2.5)/297500.0)*65535.0);
       }
 
       // version<145 panning
-      if (TVER<145) {
+      if (song.version<145) {
         for (int j=0; j<32; j++) {
-          defchanpan[j]=((j+1)&2)?96:-96;
-          defchanvol[j]=0x80;
+          song.defaultPan[j]=((j+1)&2)?96:-96;
+          song.defaultVol[j]=0x80;
         }
       }
       
       // version<75 mono
-      if (TVER<75) {
+      if (song.version<75) {
         for (int j=0; j<32; j++) {
-          defchanpan[j]=0;
+          song.defaultPan[j]=0;
         }
       }
       
       // version<?? force legacy instrument
       /*
-      if (TVER<144) {
+      if (song.version<144) {
         instrument[ii].ver&=~0x8000;
       }
       if (instrument[ii].ver&0x8000) { // new instrument
@@ -4355,7 +4317,7 @@ int LoadFile(const char* filename) {
       }*/
     }
     //printf("reading sequences...\n");
-    if (TVER<143) { // old sequence format
+    if (song.version<143) { // old sequence format
     for (int ii=0; ii<256; ii++) { // right now this is a full dump... we'll later fix this
       fseek(sfile,seqparas[ii],SEEK_SET);
       // is it blank?
@@ -4366,7 +4328,7 @@ int LoadFile(const char* filename) {
         }
       }
       // version<106 loop point fix conversion
-      if (TVER<106) {
+      if (song.version<106) {
         IS_SEQ_BLANK[ii]=true;
         for (int ii1=0; ii1<8; ii1++) {
           for (int ii2=0; ii2<256; ii2++) {
@@ -4441,11 +4403,11 @@ int LoadFile(const char* filename) {
       a++;
       pat[pointer][CurrentRow][NextChannel][2]=fgetc(sfile);
       // version<65 volume fix
-      if (TVER<65) {
+      if (song.version<65) {
         if (pat[pointer][CurrentRow][NextChannel][0]!=0 && pat[pointer][CurrentRow][NextChannel][2]==0x7f) {pat[pointer][CurrentRow][NextChannel][2]=0;}
       }
       // version<150 old volume effects
-      if (TVER<150) {
+      if (song.version<150) {
         votn=volOldToNew(pat[pointer][CurrentRow][NextChannel][2]);
         pat[pointer][CurrentRow][NextChannel][2]=votn;
       }
@@ -4456,7 +4418,7 @@ int LoadFile(const char* filename) {
       a++;
       pat[pointer][CurrentRow][NextChannel][4]=fgetc(sfile);
     }
-    if (TVER<150) {
+    if (song.version<150) {
       pat[pointer][CurrentRow][NextChannel][3]&=0x7f;
       pat[pointer][CurrentRow][NextChannel][3]|=(votn&0x100)>>1;
       votn=0;
@@ -4671,7 +4633,7 @@ void ClickEvents() {
         }
         // skip right button
         if (PIR((scrW/2)+82,13,(scrW/2)+112,47,mstate.x,mstate.y)) {
-          if (curpat<songlength) {
+          if (curpat<song.orders) {
             curpat++;
           } else {
             curpat=0;
@@ -4758,7 +4720,7 @@ void ClickEvents() {
       if (PIR(168,24,176,35,mstate.x,mstate.y)) {tempo++; if (tempo>255) {tempo=255;}; FPS=tempo/2.5;}
       if (PIR(160,36,167,48,mstate.x,mstate.y)) {if (curpat>0) curpat--; if (playmode==1) Play();}
       if (PIR(168,36,176,48,mstate.x,mstate.y)) {
-        if (curpat<songlength) {
+        if (curpat<song.orders) {
           curpat++;
         } else {
           curpat=0;
@@ -5046,7 +5008,7 @@ void ClickEvents() {
       }
       
       if (PIR(168,60,200,72,mstate.x,mstate.y)) {
-        int success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
+        int success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str(),song);
         if (success==0) {
           loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
         }
@@ -5115,7 +5077,7 @@ void ClickEvents() {
               }
             } else {
               int success;
-              success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
+              success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str(),song);
               if (success==0) {
                 loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
                 // adjust channel count if needed
@@ -5200,7 +5162,7 @@ void ClickEvents() {
               } else {
                 int success;
                 selectedfileindex=-1;
-                success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
+                success=LoadFile((S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str(),song);
                 if (success==0) {
                   loadedfname=S(curdir)+S(SDIR_SEPARATOR)+curfname;
                   // adjust channel count if needed
@@ -5237,20 +5199,20 @@ void ClickEvents() {
       setInputRect();
       SDL_StartTextInput();
     }
-    if (PIR(760,60,767,72,mstate.x,mstate.y)) {defspeed--;if (defspeed<1) {defspeed=1;};speed=defspeed;}
-    if (PIR(768,60,776,72,mstate.x,mstate.y)) {defspeed++;if (defspeed<1) {defspeed=1;};speed=defspeed;}
-    if (PIR(456,60,463,72,mstate.x,mstate.y)) {songdf--;}
-    if (PIR(464,60,472,72,mstate.x,mstate.y)) {songdf++;}
-    if (PIR(568,60,575,72,mstate.x,mstate.y)) {songlength--;}
-    if (PIR(576,60,584,72,mstate.x,mstate.y)) {songlength++;}
+    if (PIR(760,60,767,72,mstate.x,mstate.y)) {song.speed--;if (song.speed<1) {song.speed=1;};speed=song.speed;}
+    if (PIR(768,60,776,72,mstate.x,mstate.y)) {song.speed++;if (song.speed<1) {song.speed=1;};speed=song.speed;}
+    if (PIR(456,60,463,72,mstate.x,mstate.y)) {song.detune--;}
+    if (PIR(464,60,472,72,mstate.x,mstate.y)) {song.detune++;}
+    if (PIR(568,60,575,72,mstate.x,mstate.y)) {song.orders--;}
+    if (PIR(576,60,584,72,mstate.x,mstate.y)) {song.orders++;}
     if (PIR(184,276,248,288,mstate.x,mstate.y)) {playmode=2;curtick=1;cvol[0]=127;cpcmpos[0]=0;cmode[0]=1;cfreq[0]=2300;cbound[0]=131071;cloop[0]=0;}
     if (PIR(32,276,64,288,mstate.x,mstate.y)) {screen=11;}
     }
     if (leftclick) {
-    if (PIR(440,60,447,72,mstate.x,mstate.y)) {songdf--;}
-    if (PIR(448,60,455,72,mstate.x,mstate.y)) {songdf++;}
-    if (PIR(552,60,559,72,mstate.x,mstate.y)) {songlength--;}
-    if (PIR(560,60,567,72,mstate.x,mstate.y)) {songlength++;}
+    if (PIR(440,60,447,72,mstate.x,mstate.y)) {song.detune--;}
+    if (PIR(448,60,455,72,mstate.x,mstate.y)) {song.detune++;}
+    if (PIR(552,60,559,72,mstate.x,mstate.y)) {song.orders--;}
+    if (PIR(560,60,567,72,mstate.x,mstate.y)) {song.orders++;}
     }
   }
   // events only in mixer view
@@ -5258,10 +5220,10 @@ void ClickEvents() {
     int mixerdrawoffset=(scrW/2)-chanstodisplay*48-12;
     if (leftclick) {
       for (int ii=0;ii<chanstodisplay;ii++) {
-        if (PIR(56+(ii*96)+mixerdrawoffset,84,63+(ii*96)+mixerdrawoffset,95,mstate.x,mstate.y)) {defchanvol[ii+curedpage]++;if (defchanvol[ii+curedpage]>128) {defchanvol[ii+curedpage]=128;}}
-        if (PIR(64+(ii*96)+mixerdrawoffset,84,72+(ii*96)+mixerdrawoffset,95,mstate.x,mstate.y)) {defchanvol[ii+curedpage]--;if (defchanvol[ii+curedpage]>250) {defchanvol[ii+curedpage]=0;}}
-        if (PIR(56+(ii*96)+mixerdrawoffset,96,63+(ii*96)+mixerdrawoffset,108,mstate.x,mstate.y)) {defchanpan[ii+curedpage]++;}
-        if (PIR(64+(ii*96)+mixerdrawoffset,96,72+(ii*96)+mixerdrawoffset,108,mstate.x,mstate.y)) {defchanpan[ii+curedpage]--;}
+        if (PIR(56+(ii*96)+mixerdrawoffset,84,63+(ii*96)+mixerdrawoffset,95,mstate.x,mstate.y)) {song.defaultVol[ii+curedpage]++;if (song.defaultVol[ii+curedpage]>128) {song.defaultVol[ii+curedpage]=128;}}
+        if (PIR(64+(ii*96)+mixerdrawoffset,84,72+(ii*96)+mixerdrawoffset,95,mstate.x,mstate.y)) {song.defaultVol[ii+curedpage]--;if (song.defaultVol[ii+curedpage]>250) {song.defaultVol[ii+curedpage]=0;}}
+        if (PIR(56+(ii*96)+mixerdrawoffset,96,63+(ii*96)+mixerdrawoffset,108,mstate.x,mstate.y)) {song.defaultPan[ii+curedpage]++;}
+        if (PIR(64+(ii*96)+mixerdrawoffset,96,72+(ii*96)+mixerdrawoffset,108,mstate.x,mstate.y)) {song.defaultPan[ii+curedpage]--;}
       }
     }
     if (leftpress) {
@@ -6561,7 +6523,7 @@ void drawdisp() {
     g.tColor(15);
     g.printf(" %.2x/%.2x\n",curtick,speed);
     g.printf(" %.2x/%.2x\n",maxval(0,curstep),patlength[patid[curpat]]);
-    g.printf(" %.2x:%.2x",patid[curpat],curpat,songlength);
+    g.printf(" %.2x:%.2x",patid[curpat],curpat,song.orders);
     // draw orders
     // -128, 192, 255, +191, 128
     g._WRAP_set_clipping_rectangle(184,16,16,36);
@@ -6579,10 +6541,10 @@ void drawdisp() {
       g.printf("\n");
     }
     g.tColor(255-delta); g.printf("%s\n",getVisPat(patid[(int)patseek]).c_str());
-    if (((int)patseek)<songlength) {
+    if (((int)patseek)<song.orders) {
       g.tColor(249+delta); g.printf("%s\n",getVisPat(patid[minval((int)patseek+1,255)]).c_str());
     }
-    if (((int)patseek+1)<songlength) {
+    if (((int)patseek+1)<song.orders) {
       g.tColor(244+delta); g.printf("%s",getVisPat(patid[maxval((int)patseek+2,0)]).c_str());
     }
     g._WRAP_reset_clipping_rectangle();
@@ -6967,7 +6929,7 @@ int main(int argc, char **argv) {
     drawpatterns(true);
   }
   if (playermode || fileswitch) {
-    if (LoadFile(argv[filearg])) return 1;
+    if (LoadFile(argv[filearg],song)) return 1;
       if (playermode) {
         Play();
         printf("playing: %s\n",name.c_str());

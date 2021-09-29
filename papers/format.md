@@ -65,17 +65,19 @@ read 8 times to get the tables in this order:
 - 6: fine pitch
 - 7: panning
     
-## Instruments, new format, 80 bytes each
+## Instruments, new format, 96 bytes each
 ---- -0- -1- -2- -3- -4- -5- -6- -7- -8- -9- -A- -B- -C- -D- -E- -F-
     ┌───────────────────────────────────────────────────────────────┐
   00│ instrument name, 32 bytes, padded with 0x00s                  │
-    ├───┬───┬───┬───────────────────────────────┬───┬───┬───┬───┬───┤
-  20│Ins│PCm│volumeM|cutoffM|resonaM|pitchM |???│Off│FPt│FPR│DFM│LFO│
-    ├───┼───┼───┴───┬───────┬───┬───────┬───────┼───┼───┴───┼───┼───┤
+    ├───┬───┬───────┬───────┬───────┬───────┬───┬───┬───┬───┬───┬───┤
+  20│Ins│???│volumeM│cutoffM│resonaM│pitchM │???│Off│FPt│FPR│DFM│LFO│
+    ├───┼───┼───────┼───────┼───┬───┴───┬───┴───┼───┼───┴───┼───┼───┤
   30│Vol│Pit│PCMSlen│FilterH│Res│PCMSptr│PCMloop│FTm│Version│flg│RMF│
-    ├───┼───┼───────┼───────┼───┼───────┼───────┼───┼───────┼───┼───┤
-  40│finepiM|shapeM | dutyM | panM  |filterM|pcmptrM|   reserved!   |
-    └───┴───┴───────┴───────┴───┴───────┴───────┴───┴───────┴───┴───┘
+    ├───┴───┼───────┼───────┼───┴───┬───┴───┬───┴───┼───────┼───┴───┤
+  40│finepiM│shapeM │ dutyM │ panM  │filterM│volswpM│frqswpM│cutswpM│
+    ├───────┼───────┴───────┴───────┴───────┴───────┴───────┴───────┤
+  50│pcmposM│                     r e s e r v e d                   │
+    └───────┴───────────────────────────────────────────────────────┘
     
 NOTE: Instrument files start with a header which is 8 bytes long and reads "TRACKINS".
       Also, instrument files don't require the envelope IDs as they're saved along with the file.
