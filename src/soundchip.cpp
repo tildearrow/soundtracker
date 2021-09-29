@@ -20,14 +20,20 @@ void soundchip::NextSample(short* l, short* r) {
       case 1:
         ns[i]=cycle[i]>>14;
         break;
-      case 2: case 3:
-        ns[i]=(short)ShapeFunctions[(chan[i].flags.shape)][(cycle[i]>>14)&255];
+      case 2:
+        ns[i]=SCsine[(cycle[i]>>14)&255];
+        break;
+      case 3:
+        ns[i]=SCtriangle[(cycle[i]>>14)&255];
         break;
       case 4: case 5:
         ns[i]=(lfsr[i]&1)*127;
         break;
-      case 6: case 7:
-        ns[i]=((((cycle[i]>>15)&127)>chan[i].duty)*127)^(short)ShapeFunctions[(chan[i].flags.shape)][(cycle[i]>>14)&255];
+      case 6:
+        ns[i]=((((cycle[i]>>15)&127)>chan[i].duty)*127)^(short)SCsine[(cycle[i]>>14)&255];
+        break;
+      case 7:
+        ns[i]=((((cycle[i]>>15)&127)>chan[i].duty)*127)^(short)SCtriangle[(cycle[i]>>14)&255];
         break;
     }
     
@@ -212,25 +218,12 @@ void soundchip::NextSample(short* l, short* r) {
   
   *l=minval(32767,maxval(-32767,tnsL));//(2047*(pnsL+tnsL-ppsL))>>11;
   *r=minval(32767,maxval(-32767,tnsR));//(2047*(pnsR+tnsR-ppsR))>>11;
-  pnsL=*l;
-  pnsR=*r;
-  ppsL=tnsL;
-  ppsR=tnsR;
 }
 
 void soundchip::Init() {
   Reset();
   memset(pcm,0,SOUNDCHIP_PCM_SIZE);
-  ShapeFunctions[0]=SCsaw;
-  ShapeFunctions[1]=SCsaw;
-  ShapeFunctions[2]=SCsine;
-  ShapeFunctions[3]=SCtriangle;
-  ShapeFunctions[4]=SCsaw;
-  ShapeFunctions[5]=SCsaw;
-  ShapeFunctions[6]=SCsine;
-  ShapeFunctions[7]=SCtriangle;
   for (int i=0; i<256; i++) {
-    SCsaw[i]=i;
     SCsine[i]=sin((i/128.0f)*M_PI)*127;
     SCtriangle[i]=(i>127)?(255-i):(i);
     SCpantabL[i]=127;

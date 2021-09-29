@@ -8,9 +8,11 @@ float intens[6]={
   0, 0.37, 0.53, 0.68, 0.84, 1
 };
 
+#ifndef ntohs
 unsigned short ntohs(unsigned short orig) {
   return (orig>>8)|(orig<<8);
 }
+#endif
 
 double getScale() {
   char* env;

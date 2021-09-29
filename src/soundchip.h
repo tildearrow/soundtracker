@@ -6,11 +6,10 @@
 #define SOUNDCHIP_PCM_SIZE 65536
 
 class soundchip {
-  signed char SCsaw[257];
-  signed char SCsine[257];
-  signed char SCtriangle[257];
-  signed char SCpantabL[257];
-  signed char SCpantabR[257];
+  signed char SCsine[256];
+  signed char SCtriangle[256];
+  signed char SCpantabL[256];
+  signed char SCpantabR[256];
   unsigned int ocycle[8];
   unsigned int cycle[8];
   int rcycle[8];
@@ -23,8 +22,7 @@ class soundchip {
   int nslow[8];
   int nshigh[8];
   int nsband[8];
-  int pnsL, pnsR, ppsL, ppsR, tnsL, tnsR;
-  signed char* ShapeFunctions[8];
+  int tnsL, tnsR;
   unsigned short oldfreq[8];
   unsigned short oldflags[8];
   public:
