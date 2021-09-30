@@ -660,6 +660,9 @@ enum MacroCommandType {
 struct MacroCommand {
   unsigned char type;
   unsigned int value;
+  MacroCommand(MacroCommandType t, int v, bool endTick):
+    type(t|(endTick<<7)),
+    value(v) {}
 };
 
 struct Macro {

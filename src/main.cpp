@@ -4316,56 +4316,74 @@ int LoadFile(const char* filename, Song& song) {
         
       }*/
     }
-    //printf("reading sequences...\n");
-    if (song.version<143) { // old sequence format
-    for (int ii=0; ii<256; ii++) { // right now this is a full dump... we'll later fix this
-      fseek(sfile,seqparas[ii],SEEK_SET);
-      // is it blank?
-      if (seqparas[ii]==0) {continue;}
-      for (int jj=0; jj<8; jj++) {
-        for (int kk=0; kk<256; kk++) {
-          bytable[jj][ii][kk]=fgetc(sfile); // seqtable
+    // version<152 legacy sequences
+    if (song.version<152) {
+      if (song.version<143) { // old sequence format
+      for (int ii=0; ii<256; ii++) { // right now this is a full dump... we'll later fix this
+        fseek(sfile,seqparas[ii],SEEK_SET);
+        // is it blank?
+        if (seqparas[ii]==0) {continue;}
+        for (int jj=0; jj<8; jj++) {
+          for (int kk=0; kk<256; kk++) {
+            bytable[jj][ii][kk]=fgetc(sfile); // seqtable
+          }
+        }
+        // version<106 loop point fix conversion
+        if (song.version<106) {
+          IS_SEQ_BLANK[ii]=true;
+          for (int ii1=0; ii1<8; ii1++) {
+            for (int ii2=0; ii2<256; ii2++) {
+                if (ii2==254 || ii2==255) {
+                  if (bytable[ii1][ii][ii2]!=255) {IS_SEQ_BLANK[ii]=false;break;}
+                } else {
+                  if (bytable[ii1][ii][ii2]!=0) {IS_SEQ_BLANK[ii]=false;break;}
+                }
+            }
+            if (!IS_SEQ_BLANK[ii]) {break;}
+          }
+          if (!IS_SEQ_BLANK[ii]) {
+            if (bytable[0][ii][254]<252) {bytable[0][ii][254]=1;}
+            if (bytable[1][ii][254]<252) {bytable[1][ii][254]=1;}
+            if (bytable[2][ii][254]<252) {bytable[2][ii][254]=1;}
+            if (bytable[3][ii][254]<252) {bytable[3][ii][254]=1;}
+            if (bytable[4][ii][254]<252) {bytable[4][ii][254]=1;}
+            if (bytable[5][ii][254]<252) {bytable[5][ii][254]=1;}
+            if (bytable[6][ii][254]<252) {bytable[6][ii][254]=1;}
+          }
         }
       }
-      // version<106 loop point fix conversion
-      if (song.version<106) {
-        IS_SEQ_BLANK[ii]=true;
-        for (int ii1=0; ii1<8; ii1++) {
-          for (int ii2=0; ii2<256; ii2++) {
-              if (ii2==254 || ii2==255) {
-                if (bytable[ii1][ii][ii2]!=255) {IS_SEQ_BLANK[ii]=false;break;}
-              } else {
-                if (bytable[ii1][ii][ii2]!=0) {IS_SEQ_BLANK[ii]=false;break;}
-              }
+    } else {
+      for (int ii=0; ii<256; ii++) {
+        fseek(sfile,seqparas[ii],SEEK_SET);
+        // is it blank?
+        if (seqparas[ii]==0) {continue;}
+        for (int jj=0; jj<8; jj++) {
+          bytable[jj][ii][253]=fgetc(sfile);
+          bytable[jj][ii][254]=fgetc(sfile);
+          bytable[jj][ii][255]=fgetc(sfile);
+          for (int kk=0; kk<bytable[jj][ii][253]+1; kk++) {
+            // seqtable
+            bytable[jj][ii][kk]=fgetc(sfile);
           }
-          if (!IS_SEQ_BLANK[ii]) {break;}
         }
-        if (!IS_SEQ_BLANK[ii]) {
-          if (bytable[0][ii][254]<252) {bytable[0][ii][254]=1;}
-          if (bytable[1][ii][254]<252) {bytable[1][ii][254]=1;}
-          if (bytable[2][ii][254]<252) {bytable[2][ii][254]=1;}
-          if (bytable[3][ii][254]<252) {bytable[3][ii][254]=1;}
-          if (bytable[4][ii][254]<252) {bytable[4][ii][254]=1;}
-          if (bytable[5][ii][254]<252) {bytable[5][ii][254]=1;}
-          if (bytable[6][ii][254]<252) {bytable[6][ii][254]=1;}
+      }
+    }
+    // convert sequences into macros
+    for (int i=0; i<256; i++) {
+      if (seqparas[i]==0) continue;
+      for (int j=0; j<8; j++) {
+        Macro m=Macro();
+        for (int k=0; k<bytable[j][i][253]+1; k++) {
+          m.cmds.push_back(MacroCommand(cmdSet,bytable[j][i][k],true));
+          if (k==bytable[j][i][254]) {
+            m.cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][k],false));
+          }
         }
+        macros.push_back(m);
       }
     }
   } else {
-    for (int ii=0; ii<256; ii++) {
-      fseek(sfile,seqparas[ii],SEEK_SET);
-      // is it blank?
-      if (seqparas[ii]==0) {continue;}
-      for (int jj=0; jj<8; jj++) {
-        bytable[jj][ii][253]=fgetc(sfile);
-        bytable[jj][ii][254]=fgetc(sfile);
-        bytable[jj][ii][255]=fgetc(sfile);
-        for (int kk=0; kk<bytable[jj][ii][253]+1; kk++) {
-          // seqtable
-          bytable[jj][ii][kk]=fgetc(sfile);
-        }
-      }
-    }
+    // version>=152 macros
   }
   // unpack patterns
   for (int pointer=0;pointer<256;pointer++) {
