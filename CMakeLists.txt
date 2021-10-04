@@ -16,6 +16,7 @@ add_executable(ssbench src/soundchip.cpp src/ssinter.cpp src/ssbench.cpp)
 set(TRACKER_SRC src/blip_buf.c
                 src/unifontfull.cpp
                 src/soundchip.cpp
+                src/song.cpp
                 src/hlesoundchip.cpp
                 src/graphics.cpp
                 src/ssinter.cpp

@@ -35,6 +35,8 @@ extern "C" {
 
 #include "fextra.h"
 
+#define TRACKER_VER 151
+
 typedef std::string string;
 typedef std::wstring wstring;
 #define S(x) string(x)
@@ -593,23 +595,6 @@ class NumberPad {
 };
 
 // NEW STUFF BEGIN //
-struct Song {
-  char header[8];
-  unsigned short version;
-  unsigned char ins, pat, orders, speed, flags, tempo;
-  char name[32];
-  unsigned char DFM, channels;
-  unsigned short macros;
-  unsigned char globalVol, globalPan;
-  unsigned short pcmPtr[2];
-  unsigned short commentPtr[2];
-  signed char detune;
-  unsigned char len;
-  unsigned char defaultVol[32];
-  signed char defaultPan[32];
-  unsigned char order[256];
-};
-
 struct LegacyInstrument {
   char name[32];
   unsigned char id, pcmMult, activeEnv;
@@ -669,5 +654,40 @@ struct Macro {
   int jumpRelease;
   std::vector<MacroCommand> cmds;
 };
+
+struct Pattern {
+  unsigned short length;
+  unsigned char data[256][32][8];
+  
+  Pattern(): length(64) {
+    memset(data,0,256*32*8);
+  }
+};
+
+struct Song {
+  char header[8];
+  unsigned short version;
+  unsigned char insC, patC, orders, speed, flags, tempo;
+  char name[32];
+  unsigned char DFM, channels;
+  unsigned short macrosC;
+  unsigned char globalVol, globalPan;
+  unsigned short pcmPtr[2];
+  unsigned short commentPtr[2];
+  signed char detune;
+  unsigned char len;
+  unsigned char defaultVol[32];
+  signed char defaultPan[32];
+  unsigned char order[256];
+  Instrument* ins[256];
+  Pattern* pat[256];
+  std::vector<Macro*> macros;
+
+  Pattern* getPattern(unsigned char num, bool create);
+
+  Song();
+  ~Song();
+};
+
 // NEW STUFF END //
 #endif

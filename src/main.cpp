@@ -322,7 +322,7 @@ bool rightclickprev=false;
 int prevZ=0;
 int channels=8;
 int hover[16]={}; // hover time per button
-int16_t ver=151; // version number
+int16_t ver=TRACKER_VER; // version number
 unsigned char chs0[5000];
 string comments;
 int inputcurpos=0;
@@ -4166,7 +4166,7 @@ int LoadFile(const char* filename, Song& song) {
     CleanupPatterns();
 
     fseek(sfile,0,SEEK_SET);
-    if (fread(&song,1,sizeof(Song),sfile)!=sizeof(Song)) {
+    if (fread(&song,1,384,sfile)!=384) {
       printf("error: invalid song header!\n");
       fclose(sfile);
       triggerfx(1);
@@ -4193,12 +4193,12 @@ int LoadFile(const char* filename, Song& song) {
       printf("-applying old cutoff curve compatibility\n");
     }
 
-    instruments=song.ins; // instruments
-    patterns=song.pat; // patterns
+    instruments=song.insC; // instruments
+    patterns=song.patC; // patterns
     if (song.version<152) {
       seqs=song.flags; // sequences
     } else {
-      seqs=song.macros;
+      seqs=song.macrosC;
     }
     if (song.version<150) {
       song.tempo=125; // tempo
