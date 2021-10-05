@@ -32,6 +32,7 @@ extern "C" {
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <mutex>
 
 #include "fextra.h"
 
