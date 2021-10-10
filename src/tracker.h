@@ -36,7 +36,7 @@ extern "C" {
 
 #include "fextra.h"
 
-#define TRACKER_VER 151
+#define TRACKER_VER 152
 
 typedef std::string string;
 typedef std::wstring wstring;
@@ -614,22 +614,50 @@ struct LegacyInstrument {
 
 struct Instrument {
   char name[32];
-  unsigned char id, unused;
+  unsigned char id, pcmMult;
   unsigned short volMacro, cutMacro, resMacro, pitchMacro;
   unsigned char unused1, noteOffset;
   unsigned char FPt, FPR, filterMode, LFO;
   unsigned char vol, pitch;
   unsigned short pcmLen, filterH;
-  unsigned char res;
-  unsigned char pcmPos[2]; // alignment
-  unsigned char pcmLoop[2];
-  unsigned char FTm;
+  unsigned char res, FTm;
+  unsigned short pcmPos;
+  unsigned short pcmLoop;
   unsigned short ver;
   unsigned char flags, RMf;
   unsigned short finePitchMacro, shapeMacro, dutyMacro, panMacro, filterModeMacro, volSweepMacro, freqSweepMacro, cutSweepMacro;
   unsigned short pcmPosMacro;
   unsigned short unused2;
   unsigned int unused3[3];
+  Instrument():
+    id(0),
+    pcmMult(0),
+    volMacro(-1), cutMacro(-1), resMacro(-1), pitchMacro(-1),
+    unused1(0),
+    noteOffset(48),
+    FPt(0),
+    FPR(0),
+    filterMode(0),
+    LFO(0),
+    vol(64),
+    pitch(0),
+    pcmLen(0),
+    filterH(0),
+    res(0),
+    FTm(0),
+    pcmPos(0),
+    pcmLoop(0),
+    ver(TRACKER_VER),
+    flags(0),
+    RMf(0),
+    finePitchMacro(-1), shapeMacro(-1), dutyMacro(-1), panMacro(-1),
+    filterModeMacro(-1), volSweepMacro(-1), freqSweepMacro(-1), cutSweepMacro(-1),
+    pcmPosMacro(-1), unused2(0) {
+      memset(name,0,32);
+      unused3[0]=0;
+      unused3[1]=0;
+      unused3[2]=0;
+    }
 };
 
 enum MacroCommandType {
@@ -646,7 +674,7 @@ enum MacroCommandType {
 struct MacroCommand {
   unsigned char type;
   unsigned int value;
-  MacroCommand(MacroCommandType t, int v, bool endTick):
+  MacroCommand(unsigned char t, int v, bool endTick):
     type(t|(endTick<<7)),
     value(v) {}
 };

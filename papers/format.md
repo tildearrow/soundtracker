@@ -72,7 +72,7 @@ read 8 times to get the tables in this order:
     ├───┬───┬───────┬───────┬───────┬───────┬───┬───┬───┬───┬───┬───┤
   20│Ins│???│volumeM│cutoffM│resonaM│pitchM │???│Off│FPt│FPR│DFM│LFO│
     ├───┼───┼───────┼───────┼───┬───┴───┬───┴───┼───┼───┴───┼───┼───┤
-  30│Vol│Pit│PCMSlen│FilterH│Res│PCMSptr│PCMloop│FTm│Version│flg│RMF│
+  30│Vol│Pit│PCMSlen│FilterH│Res│FTm│PCMSptr│PCMloop│Version│flg│RMF│
     ├───┴───┼───────┼───────┼───┴───┬───┴───┬───┴───┼───────┼───┴───┤
   40│finepiM│shapeM │ dutyM │ panM  │filterM│volswpM│frqswpM│cutswpM│
     ├───────┼───────┴───────┴───────┴───────┴───────┴───────┴───────┤
