@@ -114,8 +114,7 @@ unsigned char CurrentEnv=0;
 // init tracker stuff
 int pattern=0;
 string tempInsName;
-LegacyInstrument blankIns;
-unsigned char bytable[8][256][256]={}; // bytable[table][indextab][position]
+Instrument blankIns;
 int scroll[32][7]={}; // scroll[channel][envelope]
 int instruments=0;
 int patterns=0;
@@ -1058,18 +1057,6 @@ void CleanupPatterns() {
     song=NULL;
   }
   song=new Song;
-  // envelopes DEPRECATED
-  memset(bytable,0,8*256*256);
-  for (int kk=0;kk<8;kk++) {
-    for (int jj=0;jj<256;jj++) {
-      bytable[kk][jj][254]=255;
-      bytable[kk][jj][255]=255;
-    }
-  }
-  // instruments
-  memset(&blankIns,0,64);
-  blankIns.noteOffset=48;
-  blankIns.vol=64;
   origin="Unknown";
   canUseSong.unlock();
 }
@@ -2671,7 +2658,7 @@ int ImportXM(FILE* xm) {
     fseek(xm,-243,SEEK_CUR);
     // convert envelopes
     printf("volenv: %d panenv: %d\n",ich.envVolCount,ich.envPanCount);
-    if (ich.volType&1) {
+    /*(if (ich.volType&1) {
       int point=0;
       for (int j=0; (point<ich.envVolCount && j<253); j++) {
         if (point<1) {
@@ -2686,7 +2673,7 @@ int ImportXM(FILE* xm) {
       if (ich.volType&2) {
         bytable[0][i+1][255]=minval(252,ich.envVol[ich.volSus].pos);
       }
-    }
+    }*/
     // load samples (only the first one is loaded)
     fseek(xm,ih.size,SEEK_CUR);
     for (int j=0; j<ih.samples[0]; j++) {
@@ -2910,32 +2897,8 @@ int SaveFile() {
       insparas[ii]=ftell(sfile);
       fwrite(&song->ins[ii],1,64,sfile);
     }
-    printf("writing sequences...\n");
-    for (int ii=0; ii<256; ii++) {
-      IS_SEQ_BLANK[ii]=true;
-      for (int ii1=0; ii1<8; ii1++) {
-        for (int ii2=0; ii2<256; ii2++) {
-            if (ii2==254 || ii2==255) {
-              if (bytable[ii1][ii][ii2]!=255) {IS_SEQ_BLANK[ii]=false;break;}
-            } else {
-              if (bytable[ii1][ii][ii2]!=0) {IS_SEQ_BLANK[ii]=false;break;}
-            }
-        }
-        if (!IS_SEQ_BLANK[ii]) {break;}
-      }
-      if (IS_SEQ_BLANK[ii]) {
-        seqparas[ii]=0;continue;
-      }
-      seqparas[ii]=ftell(sfile);
-      for (int jj=0; jj<8; jj++) {
-        fputc(bytable[jj][ii][253],sfile);
-        fputc(bytable[jj][ii][254],sfile);
-        fputc(bytable[jj][ii][255],sfile);
-        for (int kk=0; kk<(bytable[jj][ii][253]+1); kk++) {
-          fputc(bytable[jj][ii][kk],sfile); // seqtable
-        }
-      }
-    }
+    printf("writing macros...\n");
+    // TODO PLEASE: MACROS
     printf("packing/writing patterns...\n");
     // pattern packer
     for (int ii=0; ii<256; ii++) {
@@ -3275,6 +3238,8 @@ int LoadFile(const char* filename) {
     memset(macroMap,-1,8*256*2);
     // version<152 legacy sequences
     if (song->version<152) {
+      unsigned char bytable[8][256][256];
+      memset(bytable,0,8*256*256);
       if (song->version<143) { // old sequence format
         for (int ii=0; ii<256; ii++) { // right now this is a full dump... we'll later fix this
           fseek(sfile,seqparas[ii],SEEK_SET);
