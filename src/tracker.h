@@ -35,6 +35,7 @@ extern "C" {
 #include <mutex>
 
 #include "fextra.h"
+#include "soundchip.h"
 
 #define TRACKER_VER 152
 
@@ -716,6 +717,53 @@ struct Song {
 
   Song();
   ~Song();
+};
+
+class Player;
+
+struct ChannelStatus {
+  bool noteOn;
+  float note;
+  short instr;
+  short vol;
+  unsigned char fx, fxVal;
+
+  ChannelStatus():
+    noteOn(false),
+    note(0),
+    instr(0),
+    vol(0),
+    fx(0),
+    fxVal(0) {}
+};
+
+class Player {
+  Song* song;
+  soundchip* chip;
+
+  public:
+    int pat, step, tick, playMode;
+    int speed, tempo;
+    bool ntsc;
+    ChannelStatus chan[32];
+
+    unsigned int getNoteFreq(float note);
+
+    void noteOn(int channel, int note);
+    void noteOff(int channel);
+    void noteCut(int channel);
+
+    void nextRow();
+
+    void update();
+    void reset();
+    void play();
+    void stop();
+
+    void setSong(Song* s);
+    void bindChips(soundchip* s);
+
+    Player();
 };
 
 // NEW STUFF END //

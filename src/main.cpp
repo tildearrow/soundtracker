@@ -48,7 +48,6 @@ SDL_AudioSpec ar;
 uint32_t jacksr;
 #endif
 
-#include "soundchip.h"
 #include "blip_buf.h"
 soundchip chip[4]; // up to 4 soundchips
 
@@ -139,9 +138,6 @@ bool EnvelopesRunning[32][8]={}; // EnvelopesRunning[channel][envelope]
 string name; // song name
 unsigned char speed=6; // current speed
 signed char playmode=0; // playmode (-1: reverse, 0: stopped, 1: playing, 2: paused)
-int curstep=0; // current step
-unsigned char curpat=0; // current pattern
-int curtick=0; // current tick
 int curins=1; // selected instrument
 int curoctave=2;
 int curedchan=0; // cureditingchannel
@@ -153,7 +149,7 @@ int curzoom=1;
 int selStart=0;
 int selEnd=0;
 bool follow=true;
-int curpatrow=0;
+int patRow=0;
 int chanstodisplay=8;
 int maxCTD=8;
 double patseek=0;
@@ -437,6 +433,7 @@ float doScroll;
 
 // new things
 Song* song=NULL;
+Player player;
 std::mutex canUseSong;
 std::vector<Macro> macros;
 
@@ -534,11 +531,7 @@ static void nothing(void* userdata, Uint8* stream, int len) {
         cshapeprev[ii]=cshape[ii];
       }
 
-      if (playmode>0) {
-        Playback();
-      } else {
-        MuteAllChannels();
-      }
+      player.update();
 
       if (sfxplaying) {
         sfxpos=playfx(sfxdata[cursfx],sfxpos,chantoplayfx);
@@ -1055,8 +1048,10 @@ void CleanupPatterns() {
   if (song!=NULL) {
     delete song;
     song=NULL;
+    player.setSong(NULL);
   }
   song=new Song;
+  player.setSong(song);
   origin="Unknown";
   canUseSong.unlock();
 }
@@ -1082,21 +1077,21 @@ void inputCursor(float x, float y1, float y2) {
 
 void drawpatterns(bool force) {
   if (playermode) {return;}
-  if (follow) {curpatrow=curstep; if (curpatrow<0) curpatrow=0;}
-  //curpatrow=0;
+  if (follow) {patRow=player.step; if (patRow<0) patRow=0;}
+  //patRow=0;
   // will be replaced
-  if ((!UPDATEPATTERNS || playmode==0 || playmode==1) && !force && oldpat==curpat) {oldpat=curpat;return;}
-  oldpat=curpat;
+  if ((!UPDATEPATTERNS || playmode==0 || playmode==1) && !force && oldpat==player.pat) {oldpat=player.pat;return;}
+  oldpat=player.pat;
   UPDATEPATTERNS=true;
   g._WRAP_destroy_bitmap(patternbitmap);
-  Pattern* p=song->getPattern(song->order[curpat],true);
+  Pattern* p=song->getPattern(song->order[player.pat],true);
   patternbitmap=g._WRAP_create_bitmap(24+chanstodisplay*96,((p->length)*12)+4);
   g.setTarget(patternbitmap);
   g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
   g._WRAP_draw_filled_rectangle(0,60,scrW,scrH,g._WRAP_map_rgb(0,0,0));
   for (int i=0;i<p->length;i++) {
-    //if (i>curpatrow+15+((scrH-450)/12)) {continue;}
-    //if (i<curpatrow-16) {continue;}
+    //if (i>patRow+15+((scrH-450)/12)) {continue;}
+    //if (i<patRow-16) {continue;}
     g.tColor(8);
     g.tPos(0,i);
     g.printf("%.2X",i);
@@ -1290,22 +1285,22 @@ void drawinsedit() {
 }
 
 void EditSkip() {
-  Pattern* p=song->getPattern(song->order[curpat],true);
+  Pattern* p=song->getPattern(song->order[player.pat],true);
   // autoinstrument
-  if (p->data[curstep][curedpage+curedchan][0]!=0 && (p->data[curstep][curedpage+curedchan][0]%16)<13) {
-    p->data[curstep][curedpage+curedchan][1]=curins;
+  if (p->data[player.step][curedpage+curedchan][0]!=0 && (p->data[player.step][curedpage+curedchan][0]%16)<13) {
+    p->data[player.step][curedpage+curedchan][1]=curins;
   }
   // skipping
   if (playmode==0) {
-    curtick=1;
-    curstep++;
-    if (curstep>(p->length-1)) {
-      curstep=0;
-      curpat++;
+    player.tick=1;
+    player.step++;
+    if (player.step>(p->length-1)) {
+      player.step=0;
+      player.pat++;
     }
-    selStart=curstep;
-    selEnd=curstep;
-    curpatrow=curstep;
+    selStart=player.step;
+    selEnd=player.step;
+    patRow=player.step;
     curselchan=curedchan;
     curselmode=curedmode;
   }
@@ -1670,7 +1665,7 @@ void drawabout() {
     g.tPos(0,10);
     g.printf("it seems you don't have the logo file!");
   } else {
-    g._WRAP_draw_rotated_bitmap(logo,180,86.5,scrW/2,scrH/2,(sin((((float)curstep*(float)speed)+((float)speed-(float)curtick))/(8*(float)speed)*2*M_PI)/8)*(playmode!=0),0);
+    g._WRAP_draw_rotated_bitmap(logo,180,86.5,scrW/2,scrH/2,(sin((((float)player.step*(float)speed)+((float)speed-(float)player.tick))/(8*(float)speed)*2*M_PI)/8)*(playmode!=0),0);
   }
 }
 
@@ -1821,7 +1816,7 @@ void Play() {
       }
     }
   }
-  Pattern* p=song->getPattern(song->order[curpat],true);
+  Pattern* p=song->getPattern(song->order[player.pat],true);
   for (int ii=0;ii<32;ii++) {
     if (p->data[0][ii][3]==20)
     {if (p->data[0][ii][4]!=0 && !tempolock)
@@ -1830,7 +1825,6 @@ void Play() {
   }
   FPS=tempo/2.5;
   // reset cursor position
-  curtick=2;curstep=-1;playmode=1;
   tickstart=true;
   // reset channels
   for (int su=0;su<32;su++) {
@@ -1873,6 +1867,9 @@ void Play() {
   }
   // reset global volume
   cglobvol=128;
+  
+  // the code above has to be destroyed.
+  player.play();
 }
 unsigned char ITVolumeConverter(unsigned char itvol) {
   if (itvol<65) {return minval(itvol+64,127);} // 64-127
@@ -2052,7 +2049,7 @@ int ImportIT(FILE* it) {
     delete[] memblock;
   }
   else {printf("error while importing file! file doesn't exist\n"); return 1;}
-  if (!playermode && !fileswitch) {curpat=0;}
+  if (!playermode && !fileswitch) {player.pat=0;}
   if (playmode==1) {Play();}
   if (name=="") {
     g.setTitle(PROGRAM_NAME);
@@ -2322,7 +2319,7 @@ int ImportMOD(FILE* mod) {
   }
   else {/*cout << "error while importing file! file doesn't exist\n";*/ return 1;}
   song->detune=0x1b; // Amiga compat
-  if (!playermode && !fileswitch) {curpat=0;}
+  if (!playermode && !fileswitch) {player.pat=0;}
   if (playmode==1) {Play();}
   if (name=="") {
     g.setTitle(PROGRAM_NAME);
@@ -2727,7 +2724,7 @@ int ImportXM(FILE* xm) {
   
   fclose(xm);
   
-  if (!playermode && !fileswitch) {curpat=0;}
+  if (!playermode && !fileswitch) {player.pat=0;}
   if (playmode==1) {Play();}
   if (name=="") {
     g.setTitle(PROGRAM_NAME);
@@ -3454,7 +3451,7 @@ int LoadFile(const char* filename) {
     //printf("%d ",ftell(sfile));
     fclose(sfile);
     printf("done\n");
-    if (!playermode && !fileswitch) {curpat=0;}
+    if (!playermode && !fileswitch) {player.pat=0;}
     if (oplaymode==1) {Play();}
     if (name=="") {
       g.setTitle(PROGRAM_NAME);
@@ -3592,7 +3589,7 @@ void ClickEvents() {
       } else {
         // play button
         if (PIR((scrW/2)-71,13,(scrW/2)-31,47,mstate.x,mstate.y)) {
-          if (curtick==0) {
+          if (player.tick==0) {
             Play();
           } else {
             playmode=1;
@@ -3608,15 +3605,15 @@ void ClickEvents() {
         }
         // skip left button
         if (PIR((scrW/2)-112,13,(scrW/2)-82,47,mstate.x,mstate.y)) {
-          if (curpat>0) curpat--;
+          if (player.pat>0) player.pat--;
           if (playmode==1) Play();
         }
         // skip right button
         if (PIR((scrW/2)+82,13,(scrW/2)+112,47,mstate.x,mstate.y)) {
-          if (curpat<song->orders) {
-            curpat++;
+          if (player.pat<song->orders) {
+            player.pat++;
           } else {
-            curpat=0;
+            player.pat=0;
           }
           if (playmode==1) Play();
         }
@@ -3663,7 +3660,7 @@ void ClickEvents() {
       if (PIR(64,24,88,36,mstate.x,mstate.y)) {screen=10;}
       if (PIR(64,36,88,48,mstate.x,mstate.y)) {screen=12;}
       if (PIR((scrW/2)-61,13,(scrW/2)-21,37,mstate.x,mstate.y)) {
-        if (curtick==0) {
+        if (player.tick==0) {
           Play();
         } else {
           playmode=1;
@@ -3698,24 +3695,24 @@ void ClickEvents() {
       if (PIR(168,12,176,23,mstate.x,mstate.y)) {speed++; if (speed>31) {speed=31;}; if (speed<1) {speed=1;}}
       if (PIR(160,24,167,35,mstate.x,mstate.y)) {tempo--; if (tempo<31) {tempo=31;}; FPS=tempo/2.5;}
       if (PIR(168,24,176,35,mstate.x,mstate.y)) {tempo++; if (tempo>255) {tempo=255;}; FPS=tempo/2.5;}
-      if (PIR(160,36,167,48,mstate.x,mstate.y)) {if (curpat>0) curpat--; if (playmode==1) Play();}
+      if (PIR(160,36,167,48,mstate.x,mstate.y)) {if (player.pat>0) player.pat--; if (playmode==1) Play();}
       if (PIR(168,36,176,48,mstate.x,mstate.y)) {
-        if (curpat<song->orders) {
-          curpat++;
+        if (player.pat<song->orders) {
+          player.pat++;
         } else {
-          curpat=0;
+          player.pat=0;
         }
         if (playmode==1) Play();
       }
-      if (PIR(272,12,279,24,mstate.x,mstate.y)) {song->order[curpat]--; drawpatterns(true);}
-      if (PIR(280,12,288,24,mstate.x,mstate.y)) {song->order[curpat]++; drawpatterns(true);}
+      if (PIR(272,12,279,24,mstate.x,mstate.y)) {song->order[player.pat]--; drawpatterns(true);}
+      if (PIR(280,12,288,24,mstate.x,mstate.y)) {song->order[player.pat]++; drawpatterns(true);}
       if (PIR(272,36,279,48,mstate.x,mstate.y)) {
-        Pattern* p=song->getPattern(song->order[curpat],true);
+        Pattern* p=song->getPattern(song->order[player.pat],true);
         p->length--;
         if (p->length<1) p->length=1;
       }
       if (PIR(280,36,288,48,mstate.x,mstate.y)) {
-        Pattern* p=song->getPattern(song->order[curpat],true);
+        Pattern* p=song->getPattern(song->order[player.pat],true);
         p->length++;
         if (p->length>256) p->length=256;
       }
@@ -3740,12 +3737,12 @@ void ClickEvents() {
   // events only in pattern view
   if (screen==0) {
     float patStartX, patStartY;
-    Pattern* p=song->getPattern(song->order[curpat],true);
+    Pattern* p=song->getPattern(song->order[player.pat],true);
     patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
     patStartY=(60+((scrH*dpiScale)-60)/2);
     if (mstate.y>60) {
       if (leftpress) {
-        selStart=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+curpatrow*12*curzoom)/(12*curzoom));
+        selStart=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+patRow*12*curzoom)/(12*curzoom));
         if (selStart<0) selStart=0;
         if (selStart>=p->length) selStart=p->length-1;
         
@@ -3771,7 +3768,7 @@ void ClickEvents() {
         }
       }
       if (leftclick) {
-        selEnd=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+curpatrow*12*curzoom)/(12*curzoom));
+        selEnd=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+patRow*12*curzoom)/(12*curzoom));
         if (selEnd<0) selEnd=0;
         if (selEnd>=p->length) selEnd=p->length-1;
         
@@ -3800,32 +3797,32 @@ void ClickEvents() {
     }
     if ((mstate.z-prevZ)<0) {
       if (follow) {
-        curstep-=(mstate.z-prevZ);
-        if (curstep>(p->length-1)) {
-          curstep-=p->length;
-          curpat++;
+        player.step-=(mstate.z-prevZ);
+        if (player.step>(p->length-1)) {
+          player.step-=p->length;
+          player.pat++;
         }
       } else {
-        curpatrow-=(mstate.z-prevZ)*3;
-        curpatrow=fmin(curpatrow,p->length-1);
+        patRow-=(mstate.z-prevZ)*3;
+        patRow=fmin(patRow,p->length-1);
       }
       drawpatterns(true);
     }
     if ((mstate.z-prevZ)>0) {
       if (follow) {
-        curstep-=(mstate.z-prevZ);
-        if (curstep<0) {
-          if (curpat!=0) {
-            curpat--;
-            p=song->getPattern(song->order[curpat],true);
-            curstep+=p->length;
+        player.step-=(mstate.z-prevZ);
+        if (player.step<0) {
+          if (player.pat!=0) {
+            player.pat--;
+            p=song->getPattern(song->order[player.pat],true);
+            player.step+=p->length;
           } else {
-            curstep=-1;
+            player.step=-1;
           }
         }
       } else {
-        curpatrow-=(mstate.z-prevZ)*3;
-        curpatrow=fmax(curpatrow,0);
+        patRow-=(mstate.z-prevZ)*3;
+        patRow=fmax(patRow,0);
       }
       drawpatterns(true);
     }
@@ -4137,7 +4134,6 @@ void ClickEvents() {
     if (PIR(464,60,472,72,mstate.x,mstate.y)) {song->detune++;}
     if (PIR(568,60,575,72,mstate.x,mstate.y)) {song->orders--;}
     if (PIR(576,60,584,72,mstate.x,mstate.y)) {song->orders++;}
-    if (PIR(184,276,248,288,mstate.x,mstate.y)) {playmode=2;curtick=1;cvol[0]=127;cpcmpos[0]=0;cmode[0]=1;cfreq[0]=2300;cbound[0]=131071;cloop[0]=0;}
     if (PIR(32,276,64,288,mstate.x,mstate.y)) {screen=11;}
     }
     if (leftclick) {
@@ -4207,133 +4203,133 @@ void ClickEvents() {
   prevZ=mstate.z;
 }
 void FastTracker() {
-  Pattern* p=song->getPattern(song->order[curpat],true);
+  Pattern* p=song->getPattern(song->order[player.pat],true);
   // FT2-like pattern editor
   // scroll code
   if (kbpressed[SDL_SCANCODE_DELETE]) {
   }
   if (curedmode==0) {
   // silences and stuff
-  if (kbpressed[SDL_SCANCODE_EQUALS]) {p->data[curstep][curedpage+curedchan][0]=0x0d;EditSkip();}
-  if (kbpressed[SDL_SCANCODE_1]) {p->data[curstep][curedpage+curedchan][0]=0x0f;EditSkip();}
-  if (kbpressed[SDL_SCANCODE_BACKSLASH]) {p->data[curstep][curedpage+curedchan][0]=0x0e;EditSkip();}
+  if (kbpressed[SDL_SCANCODE_EQUALS]) {p->data[player.step][curedpage+curedchan][0]=0x0d;EditSkip();}
+  if (kbpressed[SDL_SCANCODE_1]) {p->data[player.step][curedpage+curedchan][0]=0x0f;EditSkip();}
+  if (kbpressed[SDL_SCANCODE_BACKSLASH]) {p->data[player.step][curedpage+curedchan][0]=0x0e;EditSkip();}
   // notes, main octave
-  if (kbpressed[SDL_SCANCODE_Z]) {p->data[curstep][curedpage+curedchan][0]=0x01+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_X]) {p->data[curstep][curedpage+curedchan][0]=0x03+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[curstep][curedpage+curedchan][0]=0x05+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_V]) {p->data[curstep][curedpage+curedchan][0]=0x06+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[curstep][curedpage+curedchan][0]=0x08+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_N]) {p->data[curstep][curedpage+curedchan][0]=0x0a+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_M]) {p->data[curstep][curedpage+curedchan][0]=0x0c+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_S]) {p->data[curstep][curedpage+curedchan][0]=0x02+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[curstep][curedpage+curedchan][0]=0x04+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_G]) {p->data[curstep][curedpage+curedchan][0]=0x07+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_H]) {p->data[curstep][curedpage+curedchan][0]=0x09+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_J]) {p->data[curstep][curedpage+curedchan][0]=0x0b+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_Z]) {p->data[player.step][curedpage+curedchan][0]=0x01+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_X]) {p->data[player.step][curedpage+curedchan][0]=0x03+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][0]=0x05+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_V]) {p->data[player.step][curedpage+curedchan][0]=0x06+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][0]=0x08+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_N]) {p->data[player.step][curedpage+curedchan][0]=0x0a+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_M]) {p->data[player.step][curedpage+curedchan][0]=0x0c+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_S]) {p->data[player.step][curedpage+curedchan][0]=0x02+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][0]=0x04+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_G]) {p->data[player.step][curedpage+curedchan][0]=0x07+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_H]) {p->data[player.step][curedpage+curedchan][0]=0x09+minval(curoctave<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_J]) {p->data[player.step][curedpage+curedchan][0]=0x0b+minval(curoctave<<4,0x90);EditSkip();}
   // notes, 2nd octave
-  if (kbpressed[SDL_SCANCODE_Q]) {p->data[curstep][curedpage+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_W]) {p->data[curstep][curedpage+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[curstep][curedpage+curedchan][0]=0x05+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_R]) {p->data[curstep][curedpage+curedchan][0]=0x06+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_T]) {p->data[curstep][curedpage+curedchan][0]=0x08+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_Y]) {p->data[curstep][curedpage+curedchan][0]=0x0a+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_U]) {p->data[curstep][curedpage+curedchan][0]=0x0c+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_2]) {p->data[curstep][curedpage+curedchan][0]=0x02+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_3]) {p->data[curstep][curedpage+curedchan][0]=0x04+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_5]) {p->data[curstep][curedpage+curedchan][0]=0x07+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_6]) {p->data[curstep][curedpage+curedchan][0]=0x09+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_7]) {p->data[curstep][curedpage+curedchan][0]=0x0b+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_I]) {p->data[curstep][curedpage+curedchan][0]=0x01+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_9]) {p->data[curstep][curedpage+curedchan][0]=0x02+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_O]) {p->data[curstep][curedpage+curedchan][0]=0x03+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_0]) {p->data[curstep][curedpage+curedchan][0]=0x04+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_P]) {p->data[curstep][curedpage+curedchan][0]=0x05+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_Q]) {p->data[player.step][curedpage+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_W]) {p->data[player.step][curedpage+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][0]=0x05+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_R]) {p->data[player.step][curedpage+curedchan][0]=0x06+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_T]) {p->data[player.step][curedpage+curedchan][0]=0x08+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_Y]) {p->data[player.step][curedpage+curedchan][0]=0x0a+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_U]) {p->data[player.step][curedpage+curedchan][0]=0x0c+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_2]) {p->data[player.step][curedpage+curedchan][0]=0x02+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_3]) {p->data[player.step][curedpage+curedchan][0]=0x04+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_5]) {p->data[player.step][curedpage+curedchan][0]=0x07+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_6]) {p->data[player.step][curedpage+curedchan][0]=0x09+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_7]) {p->data[player.step][curedpage+curedchan][0]=0x0b+minval((curoctave+1)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_I]) {p->data[player.step][curedpage+curedchan][0]=0x01+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_9]) {p->data[player.step][curedpage+curedchan][0]=0x02+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_O]) {p->data[player.step][curedpage+curedchan][0]=0x03+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_0]) {p->data[player.step][curedpage+curedchan][0]=0x04+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[SDL_SCANCODE_P]) {p->data[player.step][curedpage+curedchan][0]=0x05+minval((curoctave+2)<<4,0x90);EditSkip();}
   /*
-  if (kbpressed[66]) {p->data[curstep][curedpage+curedchan][0]=0x06+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[65]) {p->data[curstep][curedpage+curedchan][0]=0x07+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[66]) {p->data[player.step][curedpage+curedchan][0]=0x06+minval((curoctave+2)<<4,0x90);EditSkip();}
+  if (kbpressed[65]) {p->data[player.step][curedpage+curedchan][0]=0x07+minval((curoctave+2)<<4,0x90);EditSkip();}
   */
   }
   if (curedmode==1) {
-  if (kbpressed[SDL_SCANCODE_0]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {p->data[curstep][curedpage+curedchan][1]=(p->data[curstep][curedpage+curedchan][1]<<4)+15;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_0]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4);drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_1]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+1;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_2]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+2;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_3]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+3;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_4]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+4;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_5]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+5;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_6]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+6;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_7]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+7;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_8]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+8;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_9]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+9;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_A]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+10;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+11;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+12;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+13;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+14;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_F]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+15;drawpatterns(true);}
   }
   if (curedmode==2) {
-  if (kbpressed[SDL_SCANCODE_0]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {p->data[curstep][curedpage+curedchan][2]=(p->data[curstep][curedpage+curedchan][2]<<4)+15;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_0]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4);drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_1]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+1;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_2]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+2;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_3]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+3;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_4]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+4;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_5]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+5;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_6]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+6;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_7]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+7;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_8]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+8;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_9]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+9;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_A]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+10;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+11;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+12;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+13;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+14;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_F]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+15;drawpatterns(true);}
   }
   if (curedmode==3) {
-  if (kbpressed[SDL_SCANCODE_A]) {p->data[curstep][curedpage+curedchan][3]=1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[curstep][curedpage+curedchan][3]=2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[curstep][curedpage+curedchan][3]=3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[curstep][curedpage+curedchan][3]=4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[curstep][curedpage+curedchan][3]=5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {p->data[curstep][curedpage+curedchan][3]=6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_G]) {p->data[curstep][curedpage+curedchan][3]=7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_H]) {p->data[curstep][curedpage+curedchan][3]=8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_I]) {p->data[curstep][curedpage+curedchan][3]=9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_J]) {p->data[curstep][curedpage+curedchan][3]=10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_K]) {p->data[curstep][curedpage+curedchan][3]=11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_L]) {p->data[curstep][curedpage+curedchan][3]=12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_M]) {p->data[curstep][curedpage+curedchan][3]=13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_N]) {p->data[curstep][curedpage+curedchan][3]=14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_O]) {p->data[curstep][curedpage+curedchan][3]=15;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_P]) {p->data[curstep][curedpage+curedchan][3]=16;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Q]) {p->data[curstep][curedpage+curedchan][3]=17;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_R]) {p->data[curstep][curedpage+curedchan][3]=18;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_S]) {p->data[curstep][curedpage+curedchan][3]=19;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_T]) {p->data[curstep][curedpage+curedchan][3]=20;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_U]) {p->data[curstep][curedpage+curedchan][3]=21;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_V]) {p->data[curstep][curedpage+curedchan][3]=22;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_W]) {p->data[curstep][curedpage+curedchan][3]=23;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_X]) {p->data[curstep][curedpage+curedchan][3]=24;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Y]) {p->data[curstep][curedpage+curedchan][3]=25;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Z]) {p->data[curstep][curedpage+curedchan][3]=26;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_A]) {p->data[player.step][curedpage+curedchan][3]=1;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][3]=2;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][3]=3;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][3]=4;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][3]=5;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_F]) {p->data[player.step][curedpage+curedchan][3]=6;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_G]) {p->data[player.step][curedpage+curedchan][3]=7;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_H]) {p->data[player.step][curedpage+curedchan][3]=8;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_I]) {p->data[player.step][curedpage+curedchan][3]=9;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_J]) {p->data[player.step][curedpage+curedchan][3]=10;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_K]) {p->data[player.step][curedpage+curedchan][3]=11;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_L]) {p->data[player.step][curedpage+curedchan][3]=12;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_M]) {p->data[player.step][curedpage+curedchan][3]=13;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_N]) {p->data[player.step][curedpage+curedchan][3]=14;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_O]) {p->data[player.step][curedpage+curedchan][3]=15;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_P]) {p->data[player.step][curedpage+curedchan][3]=16;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_Q]) {p->data[player.step][curedpage+curedchan][3]=17;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_R]) {p->data[player.step][curedpage+curedchan][3]=18;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_S]) {p->data[player.step][curedpage+curedchan][3]=19;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_T]) {p->data[player.step][curedpage+curedchan][3]=20;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_U]) {p->data[player.step][curedpage+curedchan][3]=21;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_V]) {p->data[player.step][curedpage+curedchan][3]=22;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_W]) {p->data[player.step][curedpage+curedchan][3]=23;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_X]) {p->data[player.step][curedpage+curedchan][3]=24;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_Y]) {p->data[player.step][curedpage+curedchan][3]=25;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_Z]) {p->data[player.step][curedpage+curedchan][3]=26;drawpatterns(true);}
   }
   if (curedmode==4) {
-  if (kbpressed[SDL_SCANCODE_0]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {p->data[curstep][curedpage+curedchan][4]=(p->data[curstep][curedpage+curedchan][4]<<4)+15;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_0]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4);drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_1]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+1;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_2]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+2;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_3]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+3;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_4]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+4;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_5]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+5;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_6]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+6;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_7]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+7;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_8]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+8;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_9]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+9;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_A]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+10;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+11;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+12;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+13;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+14;drawpatterns(true);}
+  if (kbpressed[SDL_SCANCODE_F]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+15;drawpatterns(true);}
   }
 }
 void InstrumentTest(int testnote, int testchan) {
@@ -4524,7 +4520,7 @@ void keyEvent_pat(SDL_Event& ev) {
   int firstChan, firstMode;
   int lastChan, lastMode;
   int selTop, selBottom;
-  Pattern* p=song->getPattern(song->order[curpat],true);
+  Pattern* p=song->getPattern(song->order[player.pat],true);
   firstChan=curedchan; firstMode=curedmode;
   lastChan=curselchan; lastMode=curselmode;
   selTop=selStart; selBottom=selEnd;
@@ -4583,14 +4579,14 @@ void keyEvent_pat(SDL_Event& ev) {
     case SDL_SCANCODE_UP:
       // go back
       if (playmode==0) {
-        curtick=1;
-        curstep--;
-        if (curstep<0) {
-          curstep=0;
+        player.tick=1;
+        player.step--;
+        if (player.step<0) {
+          player.step=0;
         }
-        selEnd=curstep;
+        selEnd=player.step;
         if (!(ev.key.keysym.mod&KMOD_SHIFT)) {
-          selStart=curstep;
+          selStart=player.step;
           curselchan=curedchan;
           curselmode=curedmode;
         }
@@ -4600,15 +4596,15 @@ void keyEvent_pat(SDL_Event& ev) {
     case SDL_SCANCODE_DOWN:
       // skipping
       if (playmode==0) {
-        curtick=1;
-        curstep++;
-        if (curstep>(p->length-1)) {
-          curstep=0;
-          curpat++;
+        player.tick=1;
+        player.step++;
+        if (player.step>(p->length-1)) {
+          player.step=0;
+          player.pat++;
         }
-        selEnd=curstep;
+        selEnd=player.step;
         if (!(ev.key.keysym.mod&KMOD_SHIFT)) {
-          selStart=curstep;
+          selStart=player.step;
           curselchan=curedchan;
           curselmode=curedmode;
         }
@@ -4659,8 +4655,8 @@ void keyEvent_pat(SDL_Event& ev) {
         }
       }
       drawpatterns(true);
-      selStart=curstep;
-      selEnd=curstep;
+      selStart=player.step;
+      selEnd=player.step;
       curselchan=curedchan;
       curselmode=curedmode;
       break;
@@ -5080,7 +5076,7 @@ void keyEvent_pat(SDL_Event& ev) {
   }
   // note set
   if (inNote>=0) {
-    curstep=selTop;
+    player.step=selTop;
     if (inNote==13 || inNote==14 || inNote==15) {
       p->data[selTop][curedpage+curedchan][0]=inNote;
     } else {
@@ -5153,7 +5149,7 @@ void keyEvent(SDL_Event& ev) {
   // global keys
   if (!ev.key.repeat) switch (ev.key.keysym.scancode) {
     case SDL_SCANCODE_F5: // play/pause
-      if (curtick==0) {
+      if (player.tick==0) {
         Play();
       } else {
         playmode=1;
@@ -5208,7 +5204,7 @@ void drawdisp() {
   if (screen==0) {
     patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
     patStartY=(60+((scrH*dpiScale)-60)/2);
-    patOffY=(curpatrow*12)*curzoom;
+    patOffY=(patRow*12)*curzoom;
     Color barcol;
     
     // top bar
@@ -5242,9 +5238,9 @@ void drawdisp() {
     
     g._WRAP_set_clipping_rectangle(0,81,scrW,scrH-81);
     g._WRAP_disregard_scale_draw(patternbitmap,0,
-                          0,//maxval(0,curpatrow-16)*12,
+                          0,//maxval(0,patRow-16)*12,
                           g._WRAP_get_bitmap_width(patternbitmap),
-                          scrH*dpiScale-maxval(60,252-(curpatrow*12)),
+                          scrH*dpiScale-maxval(60,252-(patRow*12)),
                           patStartX,
                           patStartY-patOffY,
                           curzoom,
@@ -5275,17 +5271,17 @@ void drawdisp() {
     for (int i=firstChan; i<=lastChan; i++) {
       for (int j=(i==firstChan)?firstMode:0; (j<5 && (i<lastChan || j<=lastMode)); j++) {
         g._WRAP_draw_filled_rectangle((patStartX+(modeOff[j]+(i*96))*curzoom)/dpiScale,
-                               (patStartY+(3*curzoom)-(curpatrow-selTop)*12*curzoom)/dpiScale,
+                               (patStartY+(3*curzoom)-(patRow-selTop)*12*curzoom)/dpiScale,
                                (patStartX+(modeOff[j+1]+(i*96))*curzoom)/dpiScale,
-                               (patStartY+(15*curzoom)-(curpatrow-selBottom)*12*curzoom)/dpiScale,
+                               (patStartY+(15*curzoom)-(patRow-selBottom)*12*curzoom)/dpiScale,
                                g._WRAP_map_rgba(128,128,128,128));
       }
     }
     g._WRAP_draw_filled_rectangle(
       0,
-      ((patStartY+(3*curzoom)+((follow)?(0):(12*(maxval(0,curstep)-curpatrow)*curzoom)))/dpiScale),
+      ((patStartY+(3*curzoom)+((follow)?(0):(12*(maxval(0,player.step)-patRow)*curzoom)))/dpiScale),
       scrW+1,
-      ((patStartY+(15*curzoom)+((follow)?(0):(12*(maxval(0,curstep)-curpatrow)*curzoom)))/dpiScale),
+      ((patStartY+(15*curzoom)+((follow)?(0):(12*(maxval(0,player.step)-patRow)*curzoom)))/dpiScale),
       g._WRAP_map_rgba(64,64,64,128));
     g._WRAP_reset_clipping_rectangle();
   }
@@ -5407,7 +5403,7 @@ void drawdisp() {
     g.printf("dev%d",ver);
   
     // properties - buttons
-    patseek+=(curpat-patseek)/4;
+    patseek+=(player.pat-patseek)/4;
     if (fmod(patseek,1)>0.999 || fmod(patseek,1)<0.001) {
       patseek=round(patseek);
     }
@@ -5436,10 +5432,10 @@ void drawdisp() {
     g.tColor(14);
     g.tPos(18,1); g.printf("%.2X",speed);
     g.tPos(17,2); g.printf("%d",tempo);
-    g.tPos(18,3); g.printf("%.2X",curpat);
-    g.tPos(32,1); g.printf("%.2X",song->order[curpat]);
+    g.tPos(18,3); g.printf("%.2X",player.pat);
+    g.tPos(32,1); g.printf("%.2X",song->order[player.pat]);
     g.tPos(32,2); g.printf("%.2X",curoctave);
-    Pattern* p=song->getPattern(song->order[curpat],true);
+    Pattern* p=song->getPattern(song->order[player.pat],true);
     g.tPos(32,3); g.printf("%.2X",p->length);
     
     g.tNLPos(((float)scrW/8.0)-36);
@@ -5456,9 +5452,9 @@ void drawdisp() {
     g.tNLPos(((float)scrW/8.0)-24);
     g.tPos(0.6666667);
     g.tColor(15);
-    g.printf(" %.2x/%.2x\n",curtick,speed);
-    g.printf(" %.2x/%.2x\n",maxval(0,curstep),p->length);
-    g.printf(" %.2x:%.2x",song->order[curpat],curpat,song->orders);
+    g.printf(" %.2x/%.2x\n",player.tick,speed);
+    g.printf(" %.2x/%.2x\n",maxval(0,player.step),p->length);
+    g.printf(" %.2x:%.2x",song->order[player.pat],player.pat,song->orders);
     // draw orders
     // -128, 192, 255, +191, 128
     g._WRAP_set_clipping_rectangle(184,16,16,36);
@@ -5703,6 +5699,7 @@ int main(int argc, char **argv) {
   chip[1].Init();
   chip[2].Init();
   chip[3].Init();
+  player.bindChips(chip);
   framecounter=0;
   playermode=false;
   
@@ -5737,7 +5734,7 @@ int main(int argc, char **argv) {
         }
         // -o ORDER
         if (argv[i][1]=='o') {
-          curpat=atoi(argv[i+1]);
+          player.pat=atoi(argv[i+1]);
           i++;
         }
         // -f FILE
