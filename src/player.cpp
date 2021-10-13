@@ -12,11 +12,23 @@ unsigned int Player::getNoteFreq(float note) {
   return (int)((6203.34-(song->detune*2))*(pow(2.0f,(float)(((float)note-58)/12.0f))));
 }
 
+unsigned int Player::getNotePeriod(float note) {
+  return ((297500+(song->detune*100))/(440*(pow(2.0f,(float)(((float)note-58)/12)))));
+}
+
+float Player::offsetNote(float note, unsigned char off) {
+  if (off>=128) return off-128;
+  if (off>=64) return note-(off-64);
+  return note+off;
+}
+
 void Player::noteOn(int channel, int note) {
   ChannelStatus& status=chan[channel];
   soundchip::channel& c=chip[channel>>3].chan[channel&7];
 
   Instrument* ins=song->ins[status.instr];
+
+  status.active=true;
 
   if (ins->filterMode&8) {
     c.flags.pcm=1;
@@ -29,6 +41,8 @@ void Player::noteOn(int channel, int note) {
       c.pcmrst=0;
       c.flags.pcmloop=0;
     }
+  } else {
+    c.flags.pcm=0;
   }
   status.note=(note-48)+ins->noteOffset;
 
@@ -42,6 +56,8 @@ void Player::noteOn(int channel, int note) {
     status.macroVol.load(song->macros[ins->volMacro]);
   } else {
     status.macroVol.load(NULL);
+    status.envVol=255;
+    status.volChanged=true;
   }
   if (ins->cutMacro>=0) {
     status.macroCut.load(song->macros[ins->cutMacro]);
@@ -63,9 +79,18 @@ void Player::noteOn(int channel, int note) {
   } else {
     status.macroShape.load(NULL);
   }
+  if (ins->pitchMacro>=0) {
+    status.macroPitch.load(song->macros[ins->pitchMacro]);
+  } else {
+    status.macroPitch.load(NULL);
+  }
 
   c.freq=getNoteFreq(status.note);
-  c.duty=63;
+
+  if (ins->flags&32) {
+    c.flags.restim=true;
+    c.restimer=getNotePeriod(offsetNote(note,ins->LFO));
+  }
 }
 
 void Player::noteOff(int channel) {
@@ -77,6 +102,7 @@ void Player::noteCut(int channel) {
   soundchip::channel& c=chip[channel>>3].chan[channel&7];
   status.vol=0;
   c.vol=0;
+  status.active=false;
 }
 
 void Player::noteAftertouch(int channel, int val) {
@@ -84,18 +110,27 @@ void Player::noteAftertouch(int channel, int val) {
   soundchip::channel& c=chip[channel>>3].chan[channel&7];
   status.vol=val;
   c.vol=status.vol;
+  status.volChanged=true;
 }
 
 void Player::noteProgramChange(int channel, int val) {
   ChannelStatus& status=chan[channel];
   soundchip::channel& c=chip[channel>>3].chan[channel&7];
 
+  c.flags.shape=0;
+  c.duty=63;
   status.instr=val;
   noteAftertouch(channel,minval(127,song->ins[status.instr]->vol*2));
 }
 
 
 void Player::nextRow() {
+  if (nextJump>=0) {
+    pat=nextJump; step=-1;
+    nextJump=-1;
+    if (pat>song->orders) pat=0;
+  }
+
   step++;
 
   Pattern* p=song->getPattern(song->order[pat],false);
@@ -138,6 +173,12 @@ void Player::nextRow() {
       case 1: // Axx: speed
         speed=status.fxVal;
         break;
+      case 2: // Bxx: jump
+        nextJump=status.fxVal;
+        break;
+      case 3: // Cxx: jump to next
+        nextJump=pat+1;
+        break;
     }
   }
   
@@ -155,25 +196,26 @@ void Player::update() {
   
   for (int i=0; i<song->channels; i++) {
     ChannelStatus& status=chan[i];
+    if (!status.active) continue;
+
     soundchip::channel& c=chip[i>>3].chan[i&7];
     Instrument* ins=song->ins[status.instr];
 
     // run macros!
     status.macroVol.next();
     if (status.macroVol.hasChanged) {
-      c.vol=(status.vol*status.macroVol.value)>>8;
+      status.envVol=status.macroVol.value;
+      status.volChanged=true;
     }
 
     status.macroCut.next();
     if (status.macroCut.hasChanged) {
-      c.cutoff=(ins->filterH*status.macroCut.value)>>8;
-      //printf("cutoff is now %d\n",c.cutoff);
+      c.cutoff=(ins->filterH*status.macroCut.value)>>9;
     }
 
     status.macroRes.next();
     if (status.macroRes.hasChanged) {
       c.reson=status.macroRes.value;
-      //printf("resonance is now %d\n",c.reson);
     }
 
     status.macroDuty.next();
@@ -183,7 +225,18 @@ void Player::update() {
 
     status.macroShape.next();
     if (status.macroShape.hasChanged) {
-      c.flags.shape=status.macroShape.value>>5;
+      c.flags.shape=status.macroShape.value;
+    }
+
+    status.macroPitch.next();
+    if (status.macroPitch.hasChanged) {
+      c.freq=getNoteFreq(offsetNote(status.note,status.macroPitch.value));
+    }
+
+    // changes
+    if (status.volChanged) {
+      c.vol=minval(127,(status.vol*status.envVol)>>8);
+      status.volChanged=false;
     }
   }
 }
@@ -193,13 +246,25 @@ void Player::reset() {
   step=-1;
   tick=0;
   playMode=0;
-  speed=6;
-  tempo=ntsc?150:125;
+  nextJump=-1;
+
+  if (song!=NULL) {
+    speed=song->speed;
+    if (song->tempo!=0) {
+      tempo=song->tempo;
+    } else {
+      tempo=ntsc?150:125;
+    }
+  } else {
+    speed=6;
+    tempo=ntsc?150:125;
+  }
 }
 
 void Player::play() {
   playMode=1;
   step=-1;
+  nextJump=-1;
   tick=0;
 }
 
@@ -216,6 +281,7 @@ void Player::bindChips(soundchip* s) {
 }
 
 Player::Player():
+  song(NULL),
   ntsc(false) {
   reset();
 }

@@ -3291,9 +3291,19 @@ int LoadFile(const char* filename) {
         for (int j=0; j<8; j++) {
           Macro* m=new Macro();
           for (int k=0; k<bytable[j][i][253]+1; k++) {
-            m->cmds.push_back(MacroCommand(cmdSet,bytable[j][i][k],true));
+            switch (j) {
+              case 4: // shape
+                m->cmds.push_back(MacroCommand(cmdSet,bytable[j][i][k]>>5,true));
+                break;
+              default:
+                m->cmds.push_back(MacroCommand(cmdSet,bytable[j][i][k],true));
+                break;
+            }
             if (k==bytable[j][i][254]) {
               m->cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][k],false));
+            }
+            if (k==bytable[j][i][255]) {
+              m->cmds.push_back(MacroCommand(cmdWaitRel,0,false));
             }
           }
           song->macros.push_back(m);
@@ -3357,14 +3367,14 @@ int LoadFile(const char* filename) {
         memcpy(song->ins[ii]->name,li.name,32);
         song->ins[ii]->id=li.id;
         song->ins[ii]->pcmMult=li.pcmMult;
-        song->ins[ii]->volMacro=macroMap[0][li.env[0]];
-        song->ins[ii]->cutMacro=macroMap[1][li.env[1]];
-        song->ins[ii]->resMacro=macroMap[2][li.env[2]];
-        song->ins[ii]->dutyMacro=macroMap[3][li.env[3]];
-        song->ins[ii]->shapeMacro=macroMap[4][li.env[4]];
-        song->ins[ii]->pitchMacro=macroMap[5][li.env[5]];
-        song->ins[ii]->finePitchMacro=macroMap[6][li.env[6]];
-        song->ins[ii]->panMacro=macroMap[7][li.env[7]];
+        song->ins[ii]->volMacro=(li.activeEnv&1)?macroMap[0][li.env[0]]:-1;
+        song->ins[ii]->cutMacro=(li.activeEnv&2)?macroMap[1][li.env[1]]:-1;
+        song->ins[ii]->resMacro=(li.activeEnv&4)?macroMap[2][li.env[2]]:-1;
+        song->ins[ii]->dutyMacro=(li.activeEnv&8)?macroMap[3][li.env[3]]:-1;
+        song->ins[ii]->shapeMacro=(li.activeEnv&16)?macroMap[4][li.env[4]]:-1;
+        song->ins[ii]->pitchMacro=(li.activeEnv&32)?macroMap[5][li.env[5]]:-1;
+        song->ins[ii]->finePitchMacro=(li.activeEnv&64)?macroMap[6][li.env[6]]:-1;
+        song->ins[ii]->panMacro=(li.activeEnv&128)?macroMap[7][li.env[7]]:-1;
         song->ins[ii]->noteOffset=li.noteOffset;
         song->ins[ii]->FPt=li.FPt;
         song->ins[ii]->FPR=li.FPR;

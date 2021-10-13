@@ -739,11 +739,14 @@ class MacroStatus {
 };
 
 struct ChannelStatus {
-  bool noteOn;
+  bool active, noteOn;
   float note;
   short instr;
   short vol;
+  short envVol;
   unsigned char fx, fxVal;
+
+  bool volChanged, freqChanged;
 
   MacroStatus macroVol;
   MacroStatus macroCut;
@@ -760,12 +763,16 @@ struct ChannelStatus {
   MacroStatus macroPCM;
 
   ChannelStatus():
+    active(false),
     noteOn(false),
     note(0),
     instr(0),
     vol(0),
+    envVol(255),
     fx(0),
-    fxVal(0) {}
+    fxVal(0),
+    volChanged(false),
+    freqChanged(false) {}
 };
 
 class Player {
@@ -774,11 +781,14 @@ class Player {
 
   public:
     int pat, step, tick, playMode;
-    int speed, tempo;
+    int speed, tempo, nextJump;
     bool ntsc;
     ChannelStatus chan[32];
 
     unsigned int getNoteFreq(float note);
+    unsigned int getNotePeriod(float note);
+
+    float offsetNote(float note, unsigned char off);
 
     void noteOn(int channel, int note);
     void noteOff(int channel);
