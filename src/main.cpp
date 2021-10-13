@@ -12,8 +12,6 @@
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
-#define minval(a,b) (((a)<(b))?(a):(b)) // for Linux compatibility
-#define maxval(a,b) (((a)>(b))?(a):(b)) // for Linux compatibility
 #define sign(a) ((a>0)?(1):((a<0)?(-1):(0)))
 //#define MOUSE_GRID
 //#define NTSC // define for NTSC mode
@@ -435,7 +433,6 @@ float doScroll;
 Song* song=NULL;
 Player player;
 std::mutex canUseSong;
-std::vector<Macro> macros;
 
 // NEW VARIABLES END //
 
@@ -3292,14 +3289,14 @@ int LoadFile(const char* filename) {
       for (int i=0; i<256; i++) {
         if (seqparas[i]==0) continue;
         for (int j=0; j<8; j++) {
-          Macro m=Macro();
+          Macro* m=new Macro();
           for (int k=0; k<bytable[j][i][253]+1; k++) {
-            m.cmds.push_back(MacroCommand(cmdSet,bytable[j][i][k],true));
+            m->cmds.push_back(MacroCommand(cmdSet,bytable[j][i][k],true));
             if (k==bytable[j][i][254]) {
-              m.cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][k],false));
+              m->cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][k],false));
             }
           }
-          macros.push_back(m);
+          song->macros.push_back(m);
           macroMap[j][i]=macroIndex++;
         }
       }
@@ -3308,17 +3305,18 @@ int LoadFile(const char* filename) {
       for (int i=0; i<song->macrosC; i++) {
         if (seqparas[i]==0) continue;
         fseek(sfile,seqparas[i],SEEK_SET);
-        Macro m=Macro();
+        Macro* m=new Macro();
         unsigned int len=fgeti(sfile);
-        m.jumpRelease=fgeti(sfile);
+        m->jumpRelease=fgeti(sfile);
         int reserved1=fgeti(sfile);
         int reserved2=fgeti(sfile);
         for (unsigned int i=0; i<len; i++) {
           unsigned char cType=fgetc(sfile);
           unsigned int cValue=fgeti(sfile);
-          m.cmds.push_back(MacroCommand(cType&0x7f,cValue,cType&0x80?1:0));
+          m->cmds.push_back(MacroCommand(cType&0x7f,cValue,cType&0x80?1:0));
           if ((cType&0x7f)==cmdEnd) break;
         }
+        song->macros.push_back(m);
       }
     }
 
@@ -3375,7 +3373,7 @@ int LoadFile(const char* filename) {
         song->ins[ii]->vol=li.vol;
         song->ins[ii]->pitch=li.pitch;
         song->ins[ii]->pcmLen=li.pcmLen;
-        song->ins[ii]->filterH=li.filterH;
+        song->ins[ii]->filterH=65535-li.filterH;
         song->ins[ii]->res=li.res;
         song->ins[ii]->FTm=li.FTm;
         song->ins[ii]->pcmPos=li.pcmPos[0]|(li.pcmPos[1]<<8);

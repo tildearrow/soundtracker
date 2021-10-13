@@ -39,6 +39,9 @@ extern "C" {
 
 #define TRACKER_VER 152
 
+#define minval(a,b) (((a)<(b))?(a):(b)) // for Linux compatibility
+#define maxval(a,b) (((a)>(b))?(a):(b)) // for Linux compatibility
+
 typedef std::string string;
 typedef std::wstring wstring;
 #define S(x) string(x)
@@ -616,7 +619,7 @@ struct LegacyInstrument {
 struct Instrument {
   char name[32];
   unsigned char id, pcmMult;
-  unsigned short volMacro, cutMacro, resMacro, pitchMacro;
+  short volMacro, cutMacro, resMacro, pitchMacro;
   unsigned char unused1, noteOffset;
   unsigned char FPt, FPR, filterMode, LFO;
   unsigned char vol, pitch;
@@ -626,8 +629,8 @@ struct Instrument {
   unsigned short pcmLoop;
   unsigned short ver;
   unsigned char flags, RMf;
-  unsigned short finePitchMacro, shapeMacro, dutyMacro, panMacro, filterModeMacro, volSweepMacro, freqSweepMacro, cutSweepMacro;
-  unsigned short pcmPosMacro;
+  short finePitchMacro, shapeMacro, dutyMacro, panMacro, filterModeMacro, volSweepMacro, freqSweepMacro, cutSweepMacro;
+  short pcmPosMacro;
   unsigned short unused2;
   unsigned int unused3[3];
   Instrument():
@@ -721,12 +724,40 @@ struct Song {
 
 class Player;
 
+class MacroStatus {
+  Macro* macro;
+  int pos, waitTime;
+  bool released;
+  public:
+    bool hasChanged;
+    unsigned int value;
+
+    void next();
+    void release();
+    void load(Macro* m);
+    MacroStatus();
+};
+
 struct ChannelStatus {
   bool noteOn;
   float note;
   short instr;
   short vol;
   unsigned char fx, fxVal;
+
+  MacroStatus macroVol;
+  MacroStatus macroCut;
+  MacroStatus macroRes;
+  MacroStatus macroDuty;
+  MacroStatus macroShape;
+  MacroStatus macroPitch;
+  MacroStatus macroFinePitch;
+  MacroStatus macroPan;
+  MacroStatus macroFilterMode;
+  MacroStatus macroVolSweep;
+  MacroStatus macroFreqSweep;
+  MacroStatus macroCutSweep;
+  MacroStatus macroPCM;
 
   ChannelStatus():
     noteOn(false),
@@ -752,6 +783,8 @@ class Player {
     void noteOn(int channel, int note);
     void noteOff(int channel);
     void noteCut(int channel);
+    void noteAftertouch(int channel, int val);
+    void noteProgramChange(int channel, int val);
 
     void nextRow();
 

@@ -18,6 +18,7 @@ set(TRACKER_SRC src/blip_buf.c
                 src/soundchip.cpp
                 src/song.cpp
                 src/player.cpp
+                src/macroStatus.cpp
                 src/hlesoundchip.cpp
                 src/graphics.cpp
                 src/ssinter.cpp
