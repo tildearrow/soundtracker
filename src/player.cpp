@@ -85,7 +85,7 @@ void Player::noteOn(int channel, int note) {
     status.macroPitch.load(NULL);
   }
 
-  c.freq=getNoteFreq(status.note);
+  status.freqChanged=true;
 
   if (ins->flags&32) {
     c.flags.restim=true;
@@ -166,18 +166,56 @@ void Player::nextRow() {
     if (p->data[step][i][2]>=64 && p->data[step][i][2]<=127) {
       noteAftertouch(i,minval(127,(p->data[step][i][2]-64)*2));
     }
+    // cancel previous pitch-changing effect
+    switch (status.fx+0x40) {
+      case 'H': case 'J':
+        status.freqChanged=true;
+        break;
+    }
     // effect
     status.fx=p->data[step][i][3];
     status.fxVal=p->data[step][i][4];
-    switch (status.fx) {
-      case 1: // Axx: speed
+    switch (status.fx+0x40) {
+      case 'A': // speed
         speed=status.fxVal;
         break;
-      case 2: // Bxx: jump
+      case 'B': // jump
         nextJump=status.fxVal;
         break;
-      case 3: // Cxx: jump to next
+      case 'C': // jump to next
         nextJump=pat+1;
+        break;
+      case 'D': case 'K': case 'L': // volume slide
+        if (status.fxVal!=0) {
+          int volAdd=status.fxVal>>4;
+          int volSub=status.fxVal&15;
+          if (volAdd==15 && volSub!=0) {
+          } else if (volSub==15 && volAdd!=0) {
+          } else {
+            status.volSlide=(volAdd-volSub)*2;
+          }
+        }
+        break;
+      case 'E': case 'F': case 'G': // slides/porta
+        if (status.fxVal>0 && status.fxVal<0xe0) {
+          status.slideSpeed=(float)status.fxVal/16.0f;
+        }
+        break;
+      case 'H': // vibrato
+        if ((status.fxVal>>4)!=0) {
+          status.vibSpeed=4*(status.fxVal>>4);
+        }
+        if ((status.fxVal&15)!=0) {
+          status.vibDepth=(status.fxVal&15)*4;
+        }
+        break;
+      case 'U': // fine vibrato
+        if ((status.fxVal>>4)!=0) {
+          status.vibSpeed=4*(status.fxVal>>4);
+        }
+        if ((status.fxVal&15)!=0) {
+          status.vibDepth=(status.fxVal&15);
+        }
         break;
     }
   }
@@ -226,17 +264,67 @@ void Player::update() {
     status.macroShape.next();
     if (status.macroShape.hasChanged) {
       c.flags.shape=status.macroShape.value;
+      if (song->flags&4) status.freqChanged=true;
     }
 
     status.macroPitch.next();
     if (status.macroPitch.hasChanged) {
-      c.freq=getNoteFreq(offsetNote(status.note,status.macroPitch.value));
+      status.freqChanged=true;
+    }
+
+    status.arpValue=0;
+    status.vibValue=0;
+
+#define VOL_SLIDE \
+  status.vol+=status.volSlide; \
+  if (status.vol>127) status.vol=127; \
+  if (status.vol<0) status.vol=0; \
+  status.volChanged=true;
+
+#define VIBRATO \
+  status.vibPos+=status.vibSpeed; \
+  status.vibValue=sin(M_PI*(float)status.vibPos/128.0f)*((float)status.vibDepth/16.0f); \
+  status.freqChanged=true;
+
+    // effects
+    switch (status.fx+0x40) {
+      case 'D': // volume slide
+        VOL_SLIDE
+        break;
+      case 'E': // slide down
+        status.note-=status.slideSpeed;
+        status.freqChanged=true;
+        break;
+      case 'F': // slide up
+        status.note+=status.slideSpeed;
+        status.freqChanged=true;
+        break;
+      case 'H': // vibrato
+        VIBRATO
+        break;
+      case 'J': // arpeggio
+        status.arpValue=(status.fxVal>>(8-((speed-tick)%3)*4))&15;
+        status.freqChanged=true;
+        break;
+      case 'K': // volume slide and vibrato
+        VOL_SLIDE
+        VIBRATO
+        break;
     }
 
     // changes
     if (status.volChanged) {
       c.vol=minval(127,(status.vol*status.envVol)>>8);
       status.volChanged=false;
+    }
+    if (status.freqChanged) {
+      unsigned int freq=getNoteFreq(offsetNote(status.note+status.vibValue+status.arpValue,status.macroPitch.value));
+      if (song->flags&4 && c.flags.shape==4) {
+        c.freq=freq>>2;
+      } else {
+        c.freq=freq;
+      }
+      status.freqChanged=false;
     }
   }
 }

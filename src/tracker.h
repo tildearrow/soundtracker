@@ -745,8 +745,15 @@ struct ChannelStatus {
   short vol;
   short envVol;
   unsigned char fx, fxVal;
+  unsigned char arpValue;
+  signed char volSlide;
 
   bool volChanged, freqChanged;
+
+  float slideSpeed, slideTarget;
+
+  unsigned char vibPos, vibSpeed, vibDepth;
+  float vibValue;
 
   MacroStatus macroVol;
   MacroStatus macroCut;

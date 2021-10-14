@@ -3136,6 +3136,7 @@ int LoadFile(const char* filename) {
     }
     if (song->version<152) {
       printf("-applying legacy instrument and sequence compatibility\n");
+      printf("-applying legacy noise frequency compatibility\n");
     }
 
     instruments=song->insC; // instruments
@@ -3208,6 +3209,11 @@ int LoadFile(const char* filename) {
       for (int j=0; j<32; j++) {
         song->defaultPan[j]=0;
       }
+    }
+
+    // version<152 noise range
+    if (song->version<152) {
+      song->flags|=4;
     }
 
     fseek(sfile,0x180,SEEK_SET);

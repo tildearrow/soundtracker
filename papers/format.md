@@ -27,7 +27,8 @@ xxxx│ pointers to patterns, 4 bytes per pointer                     │
     Note: DFA: detune
           Flags: bit 0: NTSC
                  bit 1: NTSC50
-                 bit 2: 
+                 bit 2: noise compatibility mode
+                        if set then noise frequency is divided by 4.
 
 ## Macros, new format
 read macros like this:
