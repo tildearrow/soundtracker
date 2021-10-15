@@ -2087,8 +2087,8 @@ int ImportMOD(FILE* mod) {
       chans=(h.ident&0xff)-'0'+((((h.ident&0xff00)>>8)-'0')*10);
     }
     if (chans==0) {
-      printf("The Ultimate Soundtracker module detected\n");
-      origin="The Ultimate Soundtracker";
+      printf("Amiga Soundtracker module detected\n");
+      origin="Amiga Soundtracker";
       chans=4;
       karsten=true;
       insMax=15;
@@ -3240,10 +3240,14 @@ int LoadFile(const char* filename) {
                 break;
             }
             if (k==bytable[j][i][255]) {
-              m->cmds.push_back(MacroCommand(cmdWaitRel,0,false));
+              if (bytable[j][i][254]<=bytable[j][i][255]) {
+                m->cmds.push_back(MacroCommand(cmdLoopRel,bytable[j][i][254],false));
+              } else {
+                m->cmds.push_back(MacroCommand(cmdWaitRel,0,false));
+              }
             }
           }
-          if (bytable[j][i][254]!=255) m->cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][254],false));
+          if (bytable[j][i][254]!=255 && (bytable[j][i][254]>bytable[j][i][255] || bytable[j][i][255]==255)) m->cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][254],false));
           song->macros.push_back(m);
           macroMap[j][i]=macroIndex++;
         }

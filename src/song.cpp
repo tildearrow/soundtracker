@@ -5,7 +5,7 @@ static Pattern emptyPat;
 Pattern* Song::getPattern(unsigned char num, bool create) {
   if (pat[num]==NULL) {
     if (!create) return &emptyPat;
-    printf("\x1b[1;32mCreating pattern %d.\x1b[m\n",num);
+    //printf("\x1b[1;32mCreating pattern %d.\x1b[m\n",num);
     pat[num]=new Pattern;
   }
   return pat[num];
@@ -42,14 +42,13 @@ Song::Song():
 }
 
 Song::~Song() {
-  printf("Destructor called\n");
   for (int i=0; i<256; i++) {
     if (ins[i]!=NULL) {
       delete ins[i];
       ins[i]=NULL;
     }
     if (pat[i]!=NULL) {
-      printf("\x1b[1;31mDeleting pattern %d.\x1b[m\n",i);
+      //printf("\x1b[1;31mDeleting pattern %d.\x1b[m\n",i);
       delete pat[i];
       pat[i]=NULL;
     }

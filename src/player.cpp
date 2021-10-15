@@ -54,7 +54,7 @@ void Player::noteOn(int channel, int note) {
   /// FILTER MODE
   c.flags.fmode=ins->filterMode&7;
   //printf("filter mode is now %d\n",c.flags.fmode);
-  c.reson=127;
+  c.reson=48;
 
   /// MACROS
   if (ins->volMacro>=0) {
@@ -225,17 +225,36 @@ void Player::nextRow() {
           int volAdd=status.fxVal>>4;
           int volSub=status.fxVal&15;
           if (volAdd==15 && volSub!=0) {
+            status.vol-=volSub;
+            if (status.vol<0) status.vol=0;
+            status.volChanged=true;
             status.volSlide=0;
           } else if (volSub==15 && volAdd!=0) {
+            status.vol+=volAdd;
+            if (status.vol>127) status.vol=127;
+            status.volChanged=true;
             status.volSlide=0;
           } else {
             status.volSlide=(volAdd-volSub)*2;
           }
         }
         break;
-      case 'E': case 'F': // slides
+      case 'E': // slide down
         if (status.fxVal>0 && status.fxVal<0xe0) {
           status.slideSpeed=(float)status.fxVal/16.0f;
+        } else if (status.fxVal<0xf0) {
+          status.note-=(float)(status.fxVal&15)/64.0f;
+        } else {
+          status.note-=(float)(status.fxVal&15)/16.0f;
+        }
+        break;
+      case 'F': // slide up
+        if (status.fxVal>0 && status.fxVal<0xe0) {
+          status.slideSpeed=(float)status.fxVal/16.0f;
+        } else if (status.fxVal<0xf0) {
+          status.note+=(float)(status.fxVal&15)/64.0f;
+        } else {
+          status.note+=(float)(status.fxVal&15)/16.0f;
         }
         break;
       case 'G': // porta
@@ -363,12 +382,16 @@ void Player::update() {
         VOL_SLIDE
         break;
       case 'E': // slide down
-        status.note-=status.slideSpeed;
-        status.freqChanged=true;
+        if (status.fxVal<0xe0) {
+          status.note-=status.slideSpeed;
+          status.freqChanged=true;
+        }
         break;
       case 'F': // slide up
-        status.note+=status.slideSpeed;
-        status.freqChanged=true;
+        if (status.fxVal<0xe0) {
+          status.note+=status.slideSpeed;
+          status.freqChanged=true;
+        }
         break;
       case 'G': // portamento
         PORTAMENTO
