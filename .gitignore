@@ -1,1 +1,4 @@
+.cache/
+.kdev4/
+.vscode/
 build/
