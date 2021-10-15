@@ -752,6 +752,7 @@ struct ChannelStatus {
   unsigned char fx, fxVal;
   unsigned char arpValue;
   signed char volSlide;
+  signed char channelPan;
 
   bool volChanged, freqChanged;
 
@@ -786,6 +787,7 @@ struct ChannelStatus {
     fxVal(0),
     arpValue(0),
     volSlide(0),
+    channelPan(0),
     volChanged(false),
     freqChanged(false),
     slideSpeed(0),
@@ -816,6 +818,7 @@ class Player {
     void noteCut(int channel);
     void noteAftertouch(int channel, int val);
     void noteProgramChange(int channel, int val);
+    void notePanChange(int channel, signed char val);
 
     void nextRow();
 

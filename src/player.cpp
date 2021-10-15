@@ -100,6 +100,7 @@ void Player::noteOn(int channel, int note) {
     status.macroPan.load(song->macros[ins->panMacro]);
   } else {
     status.macroPan.load(NULL);
+    c.pan=status.channelPan;
   }
 
   status.freqChanged=true;
@@ -149,6 +150,13 @@ void Player::noteProgramChange(int channel, int val) {
   noteAftertouch(channel,minval(127,song->ins[status.instr]->vol*2));
 }
 
+void Player::notePanChange(int channel, signed char val) {
+  ChannelStatus& status=chan[channel];
+  soundchip::channel& c=chip[channel>>3].chan[channel&7];
+
+  status.channelPan=val;
+  c.pan=val;
+}
 
 void Player::nextRow() {
   if (nextJump>=0) {
@@ -255,6 +263,9 @@ void Player::nextRow() {
           status.vibDepth=(status.fxVal&15);
         }
         break;
+      case 'X': // channel pan
+        notePanChange(i,status.fxVal);
+        break;
     }
   }
   
@@ -314,6 +325,11 @@ void Player::update() {
     if (status.macroFinePitch.hasChanged) {
       status.finePitch+=((signed char)status.macroFinePitch.value);
       status.freqChanged=true;
+    }
+
+    status.macroPan.next();
+    if (status.macroPan.hasChanged) {
+      c.pan=status.macroPan.value;
     }
 
     status.arpValue=0;
@@ -448,7 +464,8 @@ void Player::play() {
   }
   for (int i=0; i<song->channels; i++) {
     chan[i]=ChannelStatus();
-    chip[i>>3].chan[i&7].pan=song->defaultPan[i];
+    chan[i].channelPan=song->defaultPan[i];
+    chip[i>>3].chan[i&7].pan=chan[i].channelPan;
   }
 }
 
