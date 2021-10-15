@@ -10,6 +10,7 @@ void MacroStatus::next() {
   if (--waitTime>0) return;
 
   bool getOut=false;
+  int iterations=0;
   while (!getOut) {
     pos++;
     if (pos>=macro->cmds.size()) break;
@@ -48,6 +49,8 @@ void MacroStatus::next() {
         break;
     }
     if (cmd.type&128) getOut=true;
+    // prevent Macro of Death
+    if (++iterations>16) break;
   }
 }
 

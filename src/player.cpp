@@ -4,6 +4,10 @@ int getNote(unsigned char note) {
   return (12*(note>>4)+(note&15));
 }
 
+int isNote(unsigned char note) {
+  return (note!=0 && (note&15)<13);
+}
+
 // formula to calculate 6203.34:
 // - 65536*440/(chipClock/64)
 // chipClock is 297500 (PAL)
@@ -44,7 +48,8 @@ void Player::noteOn(int channel, int note) {
   } else {
     c.flags.pcm=0;
   }
-  status.note=(note-48)+ins->noteOffset;
+  status.note=note;
+  status.finePitch=0;
 
   /// FILTER MODE
   c.flags.fmode=ins->filterMode&7;
@@ -73,16 +78,28 @@ void Player::noteOn(int channel, int note) {
     status.macroDuty.load(song->macros[ins->dutyMacro]);
   } else {
     status.macroDuty.load(NULL);
+    c.duty=63;
   }
   if (ins->shapeMacro>=0) {
     status.macroShape.load(song->macros[ins->shapeMacro]);
   } else {
     status.macroShape.load(NULL);
+    c.flags.shape=0;
   }
   if (ins->pitchMacro>=0) {
     status.macroPitch.load(song->macros[ins->pitchMacro]);
   } else {
     status.macroPitch.load(NULL);
+  }
+  if (ins->finePitchMacro>=0) {
+    status.macroFinePitch.load(song->macros[ins->finePitchMacro]);
+  } else {
+    status.macroFinePitch.load(NULL);
+  }
+  if (ins->panMacro>=0) {
+    status.macroPan.load(song->macros[ins->panMacro]);
+  } else {
+    status.macroPan.load(NULL);
   }
 
   status.freqChanged=true;
@@ -90,11 +107,22 @@ void Player::noteOn(int channel, int note) {
   if (ins->flags&32) {
     c.flags.restim=true;
     c.restimer=getNotePeriod(offsetNote(note,ins->LFO));
+  } else {
+    c.flags.restim=false;
   }
 }
 
 void Player::noteOff(int channel) {
+  ChannelStatus& status=chan[channel];
 
+  status.macroVol.release();
+  status.macroCut.release();
+  status.macroRes.release();
+  status.macroDuty.release();
+  status.macroShape.release();
+  status.macroPitch.release();
+  status.macroFinePitch.release();
+  status.macroPan.release();
 }
 
 void Player::noteCut(int channel) {
@@ -117,8 +145,6 @@ void Player::noteProgramChange(int channel, int val) {
   ChannelStatus& status=chan[channel];
   soundchip::channel& c=chip[channel>>3].chan[channel&7];
 
-  c.flags.shape=0;
-  c.duty=63;
   status.instr=val;
   noteAftertouch(channel,minval(127,song->ins[status.instr]->vol*2));
 }
@@ -158,7 +184,8 @@ void Player::nextRow() {
           noteCut(i);
           break;
         default:
-          noteOn(i,getNote(p->data[step][i][0]));
+          // NOTE ON - check for portamento
+          if (0x40+p->data[step][i][3]!='G') noteOn(i,getNote(p->data[step][i][0]));
           break;
       }
     }
@@ -190,16 +217,22 @@ void Player::nextRow() {
           int volAdd=status.fxVal>>4;
           int volSub=status.fxVal&15;
           if (volAdd==15 && volSub!=0) {
+            status.volSlide=0;
           } else if (volSub==15 && volAdd!=0) {
+            status.volSlide=0;
           } else {
             status.volSlide=(volAdd-volSub)*2;
           }
         }
         break;
-      case 'E': case 'F': case 'G': // slides/porta
+      case 'E': case 'F': // slides
         if (status.fxVal>0 && status.fxVal<0xe0) {
           status.slideSpeed=(float)status.fxVal/16.0f;
         }
+        break;
+      case 'G': // porta
+        if (status.fxVal!=0) status.slideSpeed=(float)status.fxVal/16.0f;
+        if (isNote(p->data[step][i][0])) status.slideTarget=getNote(p->data[step][i][0]);
         break;
       case 'H': // vibrato
         if ((status.fxVal>>4)!=0) {
@@ -207,6 +240,11 @@ void Player::nextRow() {
         }
         if ((status.fxVal&15)!=0) {
           status.vibDepth=(status.fxVal&15)*4;
+        }
+        break;
+      case 'T': // tempo
+        if (status.fxVal>0x1f) {
+          tempo=status.fxVal;
         }
         break;
       case 'U': // fine vibrato
@@ -272,6 +310,12 @@ void Player::update() {
       status.freqChanged=true;
     }
 
+    status.macroFinePitch.next();
+    if (status.macroFinePitch.hasChanged) {
+      status.finePitch+=((signed char)status.macroFinePitch.value);
+      status.freqChanged=true;
+    }
+
     status.arpValue=0;
     status.vibValue=0;
 
@@ -283,8 +327,19 @@ void Player::update() {
 
 #define VIBRATO \
   status.vibPos+=status.vibSpeed; \
-  status.vibValue=sin(M_PI*(float)status.vibPos/128.0f)*((float)status.vibDepth/16.0f); \
+  status.vibValue=sin(M_PI*(float)status.vibPos/128.0f)*((float)status.vibDepth/32.0f); \
   status.freqChanged=true;
+
+#define PORTAMENTO \
+  if (status.note<status.slideTarget) { \
+    status.note+=status.slideSpeed; \
+    if (status.note>=status.slideTarget) status.note=status.slideTarget; \
+    status.freqChanged=true; \
+  } else { \
+    status.note-=status.slideSpeed; \
+    if (status.note<=status.slideTarget) status.note=status.slideTarget; \
+    status.freqChanged=true; \
+  }
 
     // effects
     switch (status.fx+0x40) {
@@ -299,6 +354,9 @@ void Player::update() {
         status.note+=status.slideSpeed;
         status.freqChanged=true;
         break;
+      case 'G': // portamento
+        PORTAMENTO
+        break;
       case 'H': // vibrato
         VIBRATO
         break;
@@ -310,6 +368,10 @@ void Player::update() {
         VOL_SLIDE
         VIBRATO
         break;
+      case 'L': // volume slide and portamento
+        VOL_SLIDE
+        PORTAMENTO
+        break;
     }
 
     // changes
@@ -318,12 +380,15 @@ void Player::update() {
       status.volChanged=false;
     }
     if (status.freqChanged) {
-      unsigned int freq=getNoteFreq(offsetNote(status.note+status.vibValue+status.arpValue,status.macroPitch.value));
+      unsigned int freq=getNoteFreq(offsetNote((status.note-48)+((float)ins->pitch/128.0f)+ins->noteOffset+status.vibValue+status.arpValue+((float)status.finePitch/64.0f),status.macroPitch.value));
       if (song->flags&4 && c.flags.shape==4) {
         c.freq=freq>>2;
       } else {
         c.freq=freq;
       }
+
+      if (ins->flags&32) c.restimer=getNotePeriod(offsetNote(status.note,ins->LFO));
+
       status.freqChanged=false;
     }
   }
@@ -347,6 +412,16 @@ void Player::reset() {
     speed=6;
     tempo=ntsc?150:125;
   }
+
+  for (int i=0; i<32; i++) {
+    chan[i]=ChannelStatus();
+    if (chip!=NULL) {
+      memset(chip[0].chan,0,256);
+      memset(chip[1].chan,0,256);
+      memset(chip[2].chan,0,256);
+      memset(chip[3].chan,0,256);
+    }
+  }
 }
 
 void Player::play() {
@@ -354,10 +429,34 @@ void Player::play() {
   step=-1;
   nextJump=-1;
   tick=0;
+  if (song!=NULL) {
+    speed=song->speed;
+    if (song->tempo!=0) {
+      tempo=song->tempo;
+    } else {
+      tempo=ntsc?150:125;
+    }
+  } else {
+    speed=6;
+    tempo=ntsc?150:125;
+  }
+  if (chip!=NULL) {
+    memset(chip[0].chan,0,256);
+    memset(chip[1].chan,0,256);
+    memset(chip[2].chan,0,256);
+    memset(chip[3].chan,0,256);
+  }
+  for (int i=0; i<song->channels; i++) {
+    chan[i]=ChannelStatus();
+    chip[i>>3].chan[i&7].pan=song->defaultPan[i];
+  }
 }
 
 void Player::stop() {
   playMode=0;
+  for (int i=0; i<song->channels; i++) {
+    chip[i>>3].chan[i&7].vol=0;
+  }
 }
 
 void Player::setSong(Song* s) {

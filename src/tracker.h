@@ -606,7 +606,8 @@ struct LegacyInstrument {
   unsigned char env[8];
   unsigned char noteOffset;
   unsigned char FPt, FPR, DFM, LFO;
-  unsigned char vol, pitch;
+  unsigned char vol;
+  signed char pitch;
   unsigned short pcmLen, filterH;
   unsigned char res;
   unsigned char pcmPos[2]; // alignment
@@ -622,7 +623,8 @@ struct Instrument {
   short volMacro, cutMacro, resMacro, pitchMacro;
   unsigned char unused1, noteOffset;
   unsigned char FPt, FPR, filterMode, LFO;
-  unsigned char vol, pitch;
+  unsigned char vol;
+  signed char pitch;
   unsigned short pcmLen, filterH;
   unsigned char res, FTm;
   unsigned short pcmPos;
@@ -686,6 +688,8 @@ struct MacroCommand {
 struct Macro {
   int jumpRelease;
   std::vector<MacroCommand> cmds;
+  Macro():
+    jumpRelease(-1) {}
 };
 
 struct Pattern {
@@ -744,6 +748,7 @@ struct ChannelStatus {
   short instr;
   short vol;
   short envVol;
+  short finePitch;
   unsigned char fx, fxVal;
   unsigned char arpValue;
   signed char volSlide;
@@ -776,10 +781,19 @@ struct ChannelStatus {
     instr(0),
     vol(0),
     envVol(255),
+    finePitch(0),
     fx(0),
     fxVal(0),
+    arpValue(0),
+    volSlide(0),
     volChanged(false),
-    freqChanged(false) {}
+    freqChanged(false),
+    slideSpeed(0),
+    slideTarget(0),
+    vibPos(0),
+    vibSpeed(0),
+    vibDepth(0),
+    vibValue(0) {}
 };
 
 class Player {

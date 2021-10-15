@@ -55,8 +55,6 @@ int prevSample[2]={0,0};
 short bbOut[2][32768];
 
 const bool verbose=false; // change this to turn on verbose mode
-double FPS=50;
-int tempo;
 
 int doframe;
 unsigned char colorof[6]={0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff};
@@ -134,8 +132,7 @@ int Mins[32]={};
 bool EnvelopesRunning[32][8]={}; // EnvelopesRunning[channel][envelope]
 
 string name; // song name
-unsigned char speed=6; // current speed
-signed char playmode=0; // playmode (-1: reverse, 0: stopped, 1: playing, 2: paused)
+
 int curins=1; // selected instrument
 int curoctave=2;
 int curedchan=0; // cureditingchannel
@@ -169,18 +166,6 @@ int curvol[32]={}; // current volume of a step
 int curchanvol[32]={}; // current volume of a channel
 unsigned char nnote[32]={}; // next note
 float curnote[32]={}; // current note of a channel
-int curvibdepth[32]={}; // current vibrato offset
-int curvibspeed[32]={}; // current vibrato speed
-int curvibpos[32]={};
-int curvibshape[32]={};
-int curtrmdepth[32]={}; // current tremolo offset
-int curtrmspeed[32]={}; // current tremolo speed
-int curtrmpos[32]={};
-int curtrmshape[32]={};
-int curpandepth[32]={}; // current panbrello offset
-int curpanspeed[32]={}; // current panbrello speed
-int curpanpos[32]={};
-int curpanshape[32]={};
 int slidememory[32]={}; // current Dxx value
 int chanslidememory[32]={}; // current Nxx value
 int globslidememory[32]={}; // current Wxx value
@@ -442,22 +427,6 @@ int playfx(const char* fxdata,int fxpos,int achan);
 void triggerfx(int num);
 #define interpolatee(aa,bb,cc) (aa+((bb-aa)*cc))
 
-bool reservedevent[32]={0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0};
-int newperiod[32]={0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0};
-int oldperiod[32]={0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0};
-bool offinstead[32]={0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0};
 bool midion[32]={0,0,0,0,0,0,0,0,
       0,0,0,0,0,0,0,0,
        0,0,0,0,0,0,0,0,
@@ -502,12 +471,14 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   }
 #endif
   if (ntsc) {
-    ASC::interval=(int)(6180000/FPS);
-    if (tempo==150) ASC::interval=103103;
+    // 6.18MHz * 2.5
+    ASC::interval=(int)(15450000/player.tempo);
+    if (player.tempo==150) ASC::interval=103103;
     targetSR=309000;
     noProc=sr/targetSR;
   } else {
-    ASC::interval=(int)(5950000/FPS);
+    // 5.95MHz * 2.5
+    ASC::interval=(int)(14875000/player.tempo);
     targetSR=297500;
     noProc=sr/targetSR;
   }
@@ -534,14 +505,6 @@ static void nothing(void* userdata, Uint8* stream, int len) {
         sfxpos=playfx(sfxdata[cursfx],sfxpos,chantoplayfx);
         if (sfxpos==-1) {
           sfxplaying=false;
-        }
-      }
-      for (int updateindex1=0;updateindex1<32;updateindex1++) {
-        if (muted[updateindex1]) {
-          cvol[updateindex1]=0;
-          if (updateindex1<(8*(1+((song->channels-1)>>3)))) {
-            chip[updateindex1>>3].chan[updateindex1&7].vol=0;
-          }
         }
       }
       ASC::currentclock+=ASC::interval;
@@ -1042,6 +1005,7 @@ void Playback() {
 
 void CleanupPatterns() {
   canUseSong.lock();
+  player.reset();
   if (song!=NULL) {
     delete song;
     song=NULL;
@@ -1076,8 +1040,8 @@ void drawpatterns(bool force) {
   if (playermode) {return;}
   if (follow) {patRow=player.step; if (patRow<0) patRow=0;}
   //patRow=0;
-  // will be replaced
-  if ((!UPDATEPATTERNS || playmode==0 || playmode==1) && !force && oldpat==player.pat) {oldpat=player.pat;return;}
+  // will be replaced (WHEN)
+  if ((!UPDATEPATTERNS || player.playMode==0 || player.playMode==1) && !force && oldpat==player.pat) {oldpat=player.pat;return;}
   oldpat=player.pat;
   UPDATEPATTERNS=true;
   g._WRAP_destroy_bitmap(patternbitmap);
@@ -1288,7 +1252,7 @@ void EditSkip() {
     p->data[player.step][curedpage+curedchan][1]=curins;
   }
   // skipping
-  if (playmode==0) {
+  if (player.playMode==0) {
     player.tick=1;
     player.step++;
     if (player.step>(p->length-1)) {
@@ -1662,7 +1626,7 @@ void drawabout() {
     g.tPos(0,10);
     g.printf("it seems you don't have the logo file!");
   } else {
-    g._WRAP_draw_rotated_bitmap(logo,180,86.5,scrW/2,scrH/2,(sin((((float)player.step*(float)speed)+((float)speed-(float)player.tick))/(8*(float)speed)*2*M_PI)/8)*(playmode!=0),0);
+    g._WRAP_draw_rotated_bitmap(logo,180,86.5,scrW/2,scrH/2,(sin((((float)player.step*(float)player.speed)+((float)player.speed-(float)player.tick))/(8*(float)player.speed)*2*M_PI)/8)*(player.playMode!=0),0);
   }
 }
 
@@ -1794,33 +1758,7 @@ void drawpcmeditor() {
     }
   }
 }
-void StepPlay() {
-  // TODO next row
-  playmode=2;
-}
 void Play() {
-  //// PLAY SONG ////
-  // set speed to song speed and other variables
-  if (!speedlock) {speed=song->speed;}
-  if (!tempolock) {
-    if (song->tempo) {
-      tempo=song->tempo;
-    } else {
-      if (ntsc) {
-        tempo=150;
-      } else {
-        tempo=125;
-      }
-    }
-  }
-  Pattern* p=song->getPattern(song->order[player.pat],true);
-  for (int ii=0;ii<32;ii++) {
-    if (p->data[0][ii][3]==20)
-    {if (p->data[0][ii][4]!=0 && !tempolock)
-    {tempo=maxval(31,p->data[0][ii][4]);FPS=(double)tempo/2.5;
-    }}
-  }
-  FPS=tempo/2.5;
   // reset cursor position
   tickstart=true;
   // reset channels
@@ -1834,7 +1772,6 @@ void Play() {
   cfmode[su]=0;
   Mvol[su]=0;
   Mins[su]=0;
-  curvibshape[su]=0;
   EnvelopesRunning[su][0]=false;
   EnvelopesRunning[su][1]=false;
   EnvelopesRunning[su][2]=false;
@@ -2047,7 +1984,6 @@ int ImportIT(FILE* it) {
   }
   else {printf("error while importing file! file doesn't exist\n"); return 1;}
   if (!playermode && !fileswitch) {player.pat=0;}
-  if (playmode==1) {Play();}
   if (name=="") {
     g.setTitle(PROGRAM_NAME);
   } else {
@@ -2166,6 +2102,7 @@ int ImportMOD(FILE* mod) {
       }
       song->ins[ii+1]->vol=h.ins[ii].vol;
       song->ins[ii+1]->pcmPos=CurrentSampleSeek;
+      song->ins[ii+1]->pitch=h.ins[ii].pitch<<4;
       int tempsize;
       tempsize=h.ins[ii].len*2;
       int repeatpos;
@@ -2177,7 +2114,7 @@ int ImportMOD(FILE* mod) {
       int repeatlen;
       repeatlen=h.ins[ii].loopLen*2;
       printf("sample %d size: %.5x repeat: %.4x replen: %.4x\n",ii,tempsize,repeatpos,repeatlen);
-      printf("finetune %d vol %d\n",h.ins[ii].pitch,h.ins[ii].vol);      
+      printf("finetune %d vol %d\n",h.ins[ii].pitch,h.ins[ii].vol);
 
       if (karsten) {
         song->ins[ii+1]->pcmPos=(CurrentSampleSeek+repeatpos);
@@ -2317,7 +2254,6 @@ int ImportMOD(FILE* mod) {
   else {/*cout << "error while importing file! file doesn't exist\n";*/ return 1;}
   song->detune=0x1b; // Amiga compat
   if (!playermode && !fileswitch) {player.pat=0;}
-  if (playmode==1) {Play();}
   if (name=="") {
     g.setTitle(PROGRAM_NAME);
   } else {
@@ -2722,7 +2658,6 @@ int ImportXM(FILE* xm) {
   fclose(xm);
   
   if (!playermode && !fileswitch) {player.pat=0;}
-  if (playmode==1) {Play();}
   if (name=="") {
     g.setTitle(PROGRAM_NAME);
   } else {
@@ -3103,8 +3038,7 @@ int LoadFile(const char* filename) {
     }
     
     // stop the song
-    oplaymode=playmode;
-    playmode=0;
+    oplaymode=player.playMode;
     CleanupPatterns();
 
     fseek(sfile,0,SEEK_SET);
@@ -3147,7 +3081,7 @@ int LoadFile(const char* filename) {
       seqs=song->macrosC;
     }
     if (song->version<150) {
-      song->tempo=125; // tempo
+      song->tempo=0; // tempo
     }
     name="";
     for (int i=0; i<32; i++) {
@@ -3305,13 +3239,11 @@ int LoadFile(const char* filename) {
                 m->cmds.push_back(MacroCommand(cmdSet,bytable[j][i][k],true));
                 break;
             }
-            if (k==bytable[j][i][254]) {
-              m->cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][k],false));
-            }
             if (k==bytable[j][i][255]) {
               m->cmds.push_back(MacroCommand(cmdWaitRel,0,false));
             }
           }
+          if (bytable[j][i][254]!=255) m->cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][254],false));
           song->macros.push_back(m);
           macroMap[j][i]=macroIndex++;
         }
@@ -3606,7 +3538,7 @@ void ClickEvents() {
           if (player.tick==0) {
             Play();
           } else {
-            playmode=1;
+            // TODO continue
           }
         }
         // pattern play button
@@ -3615,12 +3547,12 @@ void ClickEvents() {
         }
         // stop button
         if (PIR((scrW/2)+31,13,(scrW/2)+71,47,mstate.x,mstate.y)) {
-          playmode=0;
+          player.stop();
         }
         // skip left button
         if (PIR((scrW/2)-112,13,(scrW/2)-82,47,mstate.x,mstate.y)) {
           if (player.pat>0) player.pat--;
-          if (playmode==1) Play();
+          if (player.playMode==1) Play();
         }
         // skip right button
         if (PIR((scrW/2)+82,13,(scrW/2)+112,47,mstate.x,mstate.y)) {
@@ -3629,7 +3561,7 @@ void ClickEvents() {
           } else {
             player.pat=0;
           }
-          if (playmode==1) Play();
+          if (player.playMode==1) Play();
         }
       }
     }
@@ -3677,11 +3609,11 @@ void ClickEvents() {
         if (player.tick==0) {
           Play();
         } else {
-          playmode=1;
+          // TODO this
         }
       }
       if (PIR((scrW/2)-61,37,(scrW/2)-21,48,mstate.x,mstate.y)) {reversemode=true;}
-      if (PIR((scrW/2)+21,13,(scrW/2)+61,37,mstate.x,mstate.y)) {playmode=0;}
+      if (PIR((scrW/2)+21,13,(scrW/2)+61,37,mstate.x,mstate.y)) {player.stop();}
     }
     if (leftpress) {
       if (!PIR(inputRefRect.x,inputRefRect.y,inputRefRect.x+inputRefRect.w,inputRefRect.y+inputRefRect.h,mstate.x,mstate.y)) {
@@ -3705,18 +3637,18 @@ void ClickEvents() {
       }
       if (PIR(272,24,279,36,mstate.x,mstate.y)) {curoctave--; if (curoctave<0) {curoctave=0;}}
       if (PIR(280,24,288,36,mstate.x,mstate.y)) {curoctave++; if (curoctave>8) {curoctave=8;}}
-      if (PIR(160,12,167,23,mstate.x,mstate.y)) {speed--; if (speed<1) {speed=1;}}
-      if (PIR(168,12,176,23,mstate.x,mstate.y)) {speed++; if (speed>31) {speed=31;}; if (speed<1) {speed=1;}}
-      if (PIR(160,24,167,35,mstate.x,mstate.y)) {tempo--; if (tempo<31) {tempo=31;}; FPS=tempo/2.5;}
-      if (PIR(168,24,176,35,mstate.x,mstate.y)) {tempo++; if (tempo>255) {tempo=255;}; FPS=tempo/2.5;}
-      if (PIR(160,36,167,48,mstate.x,mstate.y)) {if (player.pat>0) player.pat--; if (playmode==1) Play();}
+      if (PIR(160,12,167,23,mstate.x,mstate.y)) {player.speed--; if (player.speed<1) {player.speed=1;}}
+      if (PIR(168,12,176,23,mstate.x,mstate.y)) {player.speed++; if (player.speed>31) {player.speed=31;}; if (player.speed<1) {player.speed=1;}}
+      if (PIR(160,24,167,35,mstate.x,mstate.y)) {player.tempo--; if (player.tempo<31) {player.tempo=31;};}
+      if (PIR(168,24,176,35,mstate.x,mstate.y)) {player.tempo++; if (player.tempo>255) {player.tempo=255;};}
+      if (PIR(160,36,167,48,mstate.x,mstate.y)) {if (player.pat>0) player.pat--; if (player.playMode==1) Play();}
       if (PIR(168,36,176,48,mstate.x,mstate.y)) {
         if (player.pat<song->orders) {
           player.pat++;
         } else {
           player.pat=0;
         }
-        if (playmode==1) Play();
+        if (player.playMode==1) Play();
       }
       if (PIR(272,12,279,24,mstate.x,mstate.y)) {song->order[player.pat]--; drawpatterns(true);}
       if (PIR(280,12,288,24,mstate.x,mstate.y)) {song->order[player.pat]++; drawpatterns(true);}
@@ -3730,7 +3662,7 @@ void ClickEvents() {
         p->length++;
         if (p->length>256) p->length=256;
       }
-      if (PIR((scrW/2)-20,37,(scrW/2)+20,48,mstate.x,mstate.y)) {StepPlay();}
+      //if (PIR((scrW/2)-20,37,(scrW/2)+20,48,mstate.x,mstate.y)) {StepPlay();}
       if (PIR((scrW/2)-20,13,(scrW/2)+20,37,mstate.x,mstate.y)) {Play();}
       if (PIR(scrW-34*8,24,scrW-28*8,36,mstate.x,mstate.y)) {follow=!follow;}
       
@@ -4142,8 +4074,8 @@ void ClickEvents() {
       setInputRect();
       SDL_StartTextInput();
     }
-    if (PIR(760,60,767,72,mstate.x,mstate.y)) {song->speed--;if (song->speed<1) {song->speed=1;};speed=song->speed;}
-    if (PIR(768,60,776,72,mstate.x,mstate.y)) {song->speed++;if (song->speed<1) {song->speed=1;};speed=song->speed;}
+    if (PIR(760,60,767,72,mstate.x,mstate.y)) {song->speed--;if (song->speed<1) {song->speed=1;};player.speed=song->speed;}
+    if (PIR(768,60,776,72,mstate.x,mstate.y)) {song->speed++;if (song->speed<1) {song->speed=1;};player.speed=song->speed;}
     if (PIR(456,60,463,72,mstate.x,mstate.y)) {song->detune--;}
     if (PIR(464,60,472,72,mstate.x,mstate.y)) {song->detune++;}
     if (PIR(568,60,575,72,mstate.x,mstate.y)) {song->orders--;}
@@ -4452,41 +4384,6 @@ void triggerfx(int num) {
   sfxplaying=true;
 }
 
-void SFXControls() {
-  if (kbpressed[SDL_SCANCODE_1]) {triggerfx(0);}
-  if (kbpressed[SDL_SCANCODE_2]) {triggerfx(1);}
-  if (kbpressed[SDL_SCANCODE_3]) {triggerfx(2);}
-  if (kbpressed[SDL_SCANCODE_4]) {triggerfx(3);}
-  if (kbpressed[SDL_SCANCODE_5]) {triggerfx(4);}
-  if (kbpressed[SDL_SCANCODE_6]) {triggerfx(5);}
-  if (kbpressed[SDL_SCANCODE_7]) {triggerfx(6);}
-  if (kbpressed[SDL_SCANCODE_8]) {triggerfx(7);}
-  if (kbpressed[SDL_SCANCODE_Q]) {triggerfx(8);}
-  if (kbpressed[SDL_SCANCODE_W]) {triggerfx(9);}
-  if (kbpressed[SDL_SCANCODE_E]) {triggerfx(10);}
-  if (kbpressed[SDL_SCANCODE_R]) {triggerfx(11);}
-  if (kbpressed[SDL_SCANCODE_T]) {triggerfx(12);}
-  if (kbpressed[SDL_SCANCODE_Y]) {triggerfx(13);}
-  if (kbpressed[SDL_SCANCODE_U]) {triggerfx(14);}
-  if (kbpressed[SDL_SCANCODE_I]) {triggerfx(15);}
-  if (kbpressed[SDL_SCANCODE_A]) {triggerfx(16);}
-  if (kbpressed[SDL_SCANCODE_S]) {triggerfx(17);}
-  if (kbpressed[SDL_SCANCODE_D]) {triggerfx(18);}
-  if (kbpressed[SDL_SCANCODE_F]) {triggerfx(19);}
-  if (kbpressed[SDL_SCANCODE_G]) {triggerfx(20);}
-  if (kbpressed[SDL_SCANCODE_H]) {triggerfx(21);}
-  if (kbpressed[SDL_SCANCODE_J]) {triggerfx(22);}
-  if (kbpressed[SDL_SCANCODE_K]) {triggerfx(23);}
-  if (kbpressed[SDL_SCANCODE_Z]) {triggerfx(24);}
-  if (kbpressed[SDL_SCANCODE_X]) {triggerfx(25);}
-  if (kbpressed[SDL_SCANCODE_C]) {triggerfx(26);}
-  if (kbpressed[SDL_SCANCODE_V]) {triggerfx(27);}
-  if (kbpressed[SDL_SCANCODE_B]) {triggerfx(28);}
-  if (kbpressed[SDL_SCANCODE_N]) {triggerfx(29);}
-  // pausers
-  if (kbpressed[SDL_SCANCODE_M]) {if (playmode==0) {playmode=1;} else {playmode=0;};triggerfx(30);}
-  if (kbpressed[SDL_SCANCODE_COMMA]) {if (playmode==0) {playmode=1;} else {playmode=0;};triggerfx(31);}
-}
 void KeyboardEvents() {
   const unsigned char* ks=SDL_GetKeyboardState(NULL);
   // check for presses
@@ -4514,9 +4411,6 @@ void KeyboardEvents() {
   };drawpatterns(true);drawmixerlayer();}
   
   if (kbpressed[SDL_SCANCODE_TAB]) {MuteAllChannels();}
-  if (screen==9 || screen==7) {
-    SFXControls();
-  }
   if (screen==1) {
     if (kbpressed[SDL_SCANCODE_MINUS]) {valuewidth--; if (valuewidth<1) {valuewidth=1;}}
     if (kbpressed[SDL_SCANCODE_EQUALS]) {valuewidth++;}
@@ -4592,7 +4486,7 @@ void keyEvent_pat(SDL_Event& ev) {
       break;
     case SDL_SCANCODE_UP:
       // go back
-      if (playmode==0) {
+      if (player.playMode==0) {
         player.tick=1;
         player.step--;
         if (player.step<0) {
@@ -4609,7 +4503,7 @@ void keyEvent_pat(SDL_Event& ev) {
       break;
     case SDL_SCANCODE_DOWN:
       // skipping
-      if (playmode==0) {
+      if (player.playMode==0) {
         player.tick=1;
         player.step++;
         if (player.step>(p->length-1)) {
@@ -5166,7 +5060,7 @@ void keyEvent(SDL_Event& ev) {
       if (player.tick==0) {
         Play();
       } else {
-        playmode=1;
+        // TODO this
       }
       break;
     case SDL_SCANCODE_F6: // play
@@ -5176,21 +5070,19 @@ void keyEvent(SDL_Event& ev) {
       Play();
       break;
     case SDL_SCANCODE_F8: // stop
-      playmode=0;
+      player.stop();
       break;
     case SDL_SCANCODE_APPLICATION:
     case SDL_SCANCODE_GRAVE:
       ntsc=!ntsc;
       if (!tempolock) {
         if (ntsc) {
-          if (tempo==125) {
-            tempo=150;
-            FPS=60;
+          if (player.tempo==125) {
+            player.tempo=150;
           }
         } else {
-          if (tempo==150) {
-            tempo=125;
-            FPS=50;
+          if (player.tempo==150) {
+            player.tempo=125;
           }
         }
       }
@@ -5444,8 +5336,8 @@ void drawdisp() {
     }
   
     g.tColor(14);
-    g.tPos(18,1); g.printf("%.2X",speed);
-    g.tPos(17,2); g.printf("%d",tempo);
+    g.tPos(18,1); g.printf("%.2X",player.speed);
+    g.tPos(17,2); g.printf("%d",player.tempo);
     g.tPos(18,3); g.printf("%.2X",player.pat);
     g.tPos(32,1); g.printf("%.2X",song->order[player.pat]);
     g.tPos(32,2); g.printf("%.2X",curoctave);
@@ -5466,7 +5358,7 @@ void drawdisp() {
     g.tNLPos(((float)scrW/8.0)-24);
     g.tPos(0.6666667);
     g.tColor(15);
-    g.printf(" %.2x/%.2x\n",player.tick,speed);
+    g.printf(" %.2x/%.2x\n",player.tick,player.speed);
     g.printf(" %.2x/%.2x\n",maxval(0,player.step),p->length);
     g.printf(" %.2x:%.2x",song->order[player.pat],player.pat,song->orders);
     // draw orders
@@ -5694,9 +5586,9 @@ void updateDisp() {
         g.tAlign(0.5);
         g.tPos((float)scrW/16.0,0);
         if (ntsc) {
-          g.printf("%.1fHz CLOCK: 6.18MHz i: %x t: %.5x NTSC",FPS,ASC::interval,ASC::currentclock);
+          g.printf("%.1fHz CLOCK: 6.18MHz i: %x t: %.5x NTSC",player.tempo/2.5,ASC::interval,ASC::currentclock);
         } else {
-          g.printf("%.1fHz CLOCK: 5.95MHz i: %x t: %.5x PAL",FPS,ASC::interval,ASC::currentclock);
+          g.printf("%.1fHz CLOCK: 5.95MHz i: %x t: %.5x PAL",player.tempo/2.5,ASC::interval,ASC::currentclock);
         }
         g.tAlign(0);
         g.tNLPos(0);
@@ -5763,11 +5655,9 @@ int main(int argc, char **argv) {
     }
   }
   if (ntsc) {
-    FPS=60;
-    tempo=150;
+    player.tempo=150;
   } else {
-    FPS=50;
-    tempo=125;
+    player.tempo=125;
   }
   filessorted.resize(1024);
   filenames.resize(1024);
