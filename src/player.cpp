@@ -283,7 +283,7 @@ void Player::nextRow() {
         }
         break;
       case 'X': // channel pan
-        notePanChange(i,status.fxVal);
+        notePanChange(i,status.fxVal^0x80);
         break;
     }
   }
@@ -348,7 +348,7 @@ void Player::update() {
 
     status.macroPan.next();
     if (status.macroPan.hasChanged) {
-      c.pan=status.macroPan.value;
+      c.pan=status.macroPan.value^0x80;
     }
 
     status.arpValue=0;
