@@ -2985,6 +2985,78 @@ int getFormat(FILE* sfile) {
   return FormatMOD;
 }
 
+void dumpMacro(Macro* m) {
+  printf("---MACRO DUMP---\n");
+  printf("- jumpRelease: %d\n",m->jumpRelease);
+  printf("- commands:\n");
+  int index=0;
+  for (MacroCommand& i: m->cmds) {
+    if (i.type&128) {
+      switch (i.type&127) {
+        case cmdEnd:
+          printf("  * %.2x: End\n",index);
+          break;
+        case cmdSet:
+          printf("  * %.2x: Set to   %d\n",index,i.value);
+          break;
+        case cmdWait:
+          printf("  * %.2x: Wait for %d ticks\n",index,i.value);
+          break;
+        case cmdWaitRel:
+          printf("  * %.2x: WaitRel\n",index);
+          break;
+        case cmdLoop:
+          printf("  * %.2x: Loop on  %.2x\n",index,i.value);
+          break;
+        case cmdLoopRel:
+          printf("  * %.2x: LoopRel  %.2x\n",index,i.value);
+          break;
+        case cmdAdd:
+          printf("  * %.2x: Add by   %d\n",index,i.value);
+          break;
+        case cmdSub:
+          printf("  * %.2x: Subtract %d\n",index,i.value);
+          break;
+        default:
+          printf("  * %.2x: Unk %.2x %d\n",index,i.type,i.value);
+          break;
+      }
+    } else {
+      switch (i.type&127) {
+        case cmdEnd:
+          printf("  - %.2x: End\n",index);
+          break;
+        case cmdSet:
+          printf("  - %.2x: Set to   %d\n",index,i.value);
+          break;
+        case cmdWait:
+          printf("  - %.2x: Wait for %d ticks\n",index,i.value);
+          break;
+        case cmdWaitRel:
+          printf("  - %.2x: WaitRel\n",index);
+          break;
+        case cmdLoop:
+          printf("  - %.2x: Loop on  %.2x\n",index,i.value);
+          break;
+        case cmdLoopRel:
+          printf("  - %.2x: LoopRel  %.2x\n",index,i.value);
+          break;
+        case cmdAdd:
+          printf("  - %.2x: Add by   %d\n",index,i.value);
+          break;
+        case cmdSub:
+          printf("  - %.2x: Subtract %d\n",index,i.value);
+          break;
+        default:
+          printf("  - %.2x: Unk %.2x %d\n",index,i.type,i.value);
+          break;
+      }
+    }
+   
+    index++;
+  }
+}
+
 int LoadFile(const char* filename) {
   // load file
   FILE *sfile;
@@ -3168,8 +3240,8 @@ int LoadFile(const char* filename) {
     }
 
     // MACROS/SEQUENCES //
-    unsigned short macroMap[8][256];
-    memset(macroMap,-1,8*256*2);
+    short macroMap[8][256];
+    memset(macroMap,0,8*256*2);
     // version<152 legacy sequences
     if (song->version<152) {
       unsigned char bytable[8][256][256];
@@ -3225,7 +3297,10 @@ int LoadFile(const char* filename) {
         }
       }
       // convert sequences into macros
-      int macroIndex=0;
+      int macroIndex=1;
+      Macro* emptyMacro=new Macro();
+      emptyMacro->cmds.push_back(MacroCommand(cmdSet,0,true));
+      song->macros.push_back(emptyMacro);
       for (int i=0; i<256; i++) {
         if (seqparas[i]==0) continue;
         for (int j=0; j<8; j++) {
@@ -3245,6 +3320,7 @@ int LoadFile(const char* filename) {
               } else {
                 m->cmds.push_back(MacroCommand(cmdWaitRel,0,false));
               }
+              m->cmds.push_back(MacroCommand(cmdWait,1,false));
             }
           }
           if (bytable[j][i][254]!=255 && (bytable[j][i][254]>bytable[j][i][255] || bytable[j][i][255]==255)) m->cmds.push_back(MacroCommand(cmdLoop,bytable[j][i][254],false));
@@ -5120,19 +5196,23 @@ void drawdisp() {
     // top bar
     int rectX;
     for (int i=0; i<chanstodisplay; i++) {
-      if (cshape[i+curedpage]==0) {
-        barcol=mapHSV(250-(cduty[i+curedpage]),0.67,1);
+      soundchip::channel c=chip[(i+curedpage)>>3].chan[(i+curedpage)&7];
+
+      if (c.flags.pcm) {
+        barcol=g._WRAP_map_rgb(255,0,0);
+      } else if (c.flags.shape==0) {
+        barcol=mapHSV(250-(c.duty),0.67,1);
       } else {
         barcol=g._WRAP_map_rgb(
-          (cshape[i+curedpage]==4 || cshape[i+curedpage]==1 || cshape[i+curedpage]==5)?(255):(0),
-          (cshape[i+curedpage]!=5)?(255):(0),
-          (cshape[i+curedpage]!=1 && cshape[i+curedpage]!=2)?(255):(0)
+          (c.flags.shape==4 || c.flags.shape==1 || c.flags.shape==5)?(255):(0),
+          (c.flags.shape!=5)?(255):(0),
+          (c.flags.shape!=1 && c.flags.shape!=2)?(255):(0)
         );
       }
-      barcol.a=0.1+float(cvol[i+curedpage])/200.0f;
+      barcol.a=0.1+float(c.vol)/200.0f;
       rectX=patStartX/dpiScale+(3+5.5+(12*i))*8*(float(curzoom)/float(dpiScale));
-      g._WRAP_draw_filled_rectangle(rectX+6,67,rectX+6+38*(float(curzoom)/float(dpiScale))*(float((cvol[i+curedpage]*(127-maxval(0,-cpan[i+curedpage])))>>7)/127.0f),73,barcol);
-      g._WRAP_draw_filled_rectangle(rectX-6,67,rectX-6-38*(float(curzoom)/float(dpiScale))*(float((cvol[i+curedpage]*(127-maxval(0,cpan[i+curedpage])))>>7)/127.0f),73,barcol);
+      g._WRAP_draw_filled_rectangle(rectX+6,67,rectX+6+38*(float(curzoom)/float(dpiScale))*(float((c.vol*(127-maxval(0,-c.pan)))>>7)/127.0f),73,barcol);
+      g._WRAP_draw_filled_rectangle(rectX-6,67,rectX-6-38*(float(curzoom)/float(dpiScale))*(float((c.vol*(127-maxval(0,c.pan)))>>7)/127.0f),73,barcol);
       
       g.tPos(patStartX/(8*dpiScale)+(3+5.5+(12*i))*(float(curzoom)/float(dpiScale)),5);
       if (!muted[i+curedpage]) {

@@ -746,17 +746,19 @@ struct ChannelStatus {
   bool active, noteOn;
   float note;
   short instr;
-  short vol;
+  short vol, channelVol;
   short envVol;
   short finePitch;
   unsigned char fx, fxVal;
   unsigned char arpValue;
-  signed char volSlide;
+  unsigned char volSlide;
   signed char channelPan;
+  unsigned char cutTimer, rowDelay;
 
   bool volChanged, freqChanged;
 
-  float slideSpeed, slideTarget;
+  float slideSpeed;
+  float portaSpeed, portaTarget;
 
   unsigned char vibPos, vibSpeed, vibDepth;
   float vibValue;
@@ -788,10 +790,13 @@ struct ChannelStatus {
     arpValue(0),
     volSlide(0),
     channelPan(0),
+    cutTimer(0),
+    rowDelay(0),
     volChanged(false),
     freqChanged(false),
     slideSpeed(0),
-    slideTarget(0),
+    portaSpeed(0),
+    portaTarget(0),
     vibPos(0),
     vibSpeed(0),
     vibDepth(0),
@@ -820,6 +825,7 @@ class Player {
     void noteProgramChange(int channel, int val);
     void notePanChange(int channel, signed char val);
 
+    void processChanRow(Pattern* pat, int channel);
     void nextRow();
 
     void update();
