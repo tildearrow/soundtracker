@@ -750,7 +750,7 @@ struct ChannelStatus {
   short envVol;
   short finePitch;
   unsigned char fx, fxVal;
-  unsigned char arpValue;
+  unsigned char arp, arpValue;
   unsigned char volSlide;
   signed char channelPan;
   unsigned char cutTimer, rowDelay;

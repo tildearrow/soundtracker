@@ -106,6 +106,31 @@ void Player::noteOn(int channel, int note) {
     status.macroPan.load(NULL);
     c.pan=status.channelPan;
   }
+  if (ins->filterModeMacro>=0) {
+    status.macroFilterMode.load(song->macros[ins->filterModeMacro]);
+  } else {
+    status.macroFilterMode.load(NULL);
+  }
+  if (ins->volSweepMacro>=0) {
+    status.macroVolSweep.load(song->macros[ins->volSweepMacro]);
+  } else {
+    status.macroVolSweep.load(NULL);
+  }
+  if (ins->freqSweepMacro>=0) {
+    status.macroFreqSweep.load(song->macros[ins->freqSweepMacro]);
+  } else {
+    status.macroFreqSweep.load(NULL);
+  }
+  if (ins->cutSweepMacro>=0) {
+    status.macroCutSweep.load(song->macros[ins->cutSweepMacro]);
+  } else {
+    status.macroCutSweep.load(NULL);
+  }
+  if (ins->pcmPosMacro>=0) {
+    status.macroPCM.load(song->macros[ins->pcmPosMacro]);
+  } else {
+    status.macroPCM.load(NULL);
+  }
 
   status.freqChanged=true;
 
@@ -128,6 +153,11 @@ void Player::noteOff(int channel) {
   status.macroPitch.release();
   status.macroFinePitch.release();
   status.macroPan.release();
+  status.macroFilterMode.release();
+  status.macroVolSweep.release();
+  status.macroFreqSweep.release();
+  status.macroCutSweep.release();
+  status.macroPCM.release();
 }
 
 void Player::noteCut(int channel) {
@@ -265,6 +295,11 @@ void Player::processChanRow(Pattern* p, int i) {
       }
       if ((status.fxVal&15)!=0) {
         status.vibDepth=(status.fxVal&15)*4;
+      }
+      break;
+    case 'J': // arpeggio
+      if (status.fxVal!=0) {
+        status.arp=status.fxVal;
       }
       break;
     case 'M': // channel volume
@@ -406,6 +441,34 @@ void Player::update() {
       c.pan=status.macroPan.value^0x80;
     }
 
+    status.macroFilterMode.next();
+    if (status.macroFilterMode.hasChanged) {
+      c.flags.fmode=status.macroFilterMode.value;
+    }
+
+    status.macroVolSweep.next();
+    if (status.macroVolSweep.hasChanged) {
+      *(unsigned int*)(&c.swvol)=status.macroVolSweep.value;
+      c.flags.swvol=(status.macroVolSweep.value!=0);
+    }
+
+    status.macroFreqSweep.next();
+    if (status.macroFreqSweep.hasChanged) {
+      *(unsigned int*)(&c.swfreq)=status.macroFreqSweep.value;
+      c.flags.swfreq=(status.macroFreqSweep.value!=0);
+    }
+
+    status.macroCutSweep.next();
+    if (status.macroCutSweep.hasChanged) {
+      *(unsigned int*)(&c.swcut)=status.macroCutSweep.value;
+      c.flags.swcut=(status.macroCutSweep.value!=0);
+    }
+
+    status.macroPCM.next();
+    if (status.macroPCM.hasChanged) {
+      c.pcmpos=ins->pcmPos+status.macroPCM.value;
+    }
+
     status.arpValue=0;
 
 #define VOL_SLIDE { \
@@ -464,7 +527,7 @@ void Player::update() {
         VIBRATO
         break;
       case 'J': // arpeggio
-        status.arpValue=(status.fxVal>>(8-((speed-tick)%3)*4))&15;
+        status.arpValue=(status.arp>>(8-((speed-tick)%3)*4))&15;
         status.freqChanged=true;
         break;
       case 'K': // volume slide and vibrato

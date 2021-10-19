@@ -1053,7 +1053,7 @@ void drawinsedit() {
   g.printf("%.2x",song->ins[CurrentIns]->LFO);
   
   g.tPos((float)(scrW-208)/8.0,18);
-  g.printf("%.4x",0xffff-song->ins[CurrentIns]->filterH);
+  g.printf("%.4x",song->ins[CurrentIns]->filterH);
   
   g.tPos((float)(scrW-208)/8.0,27);
   g.printf("%.1x",song->ins[CurrentIns]->flags>>6);
