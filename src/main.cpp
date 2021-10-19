@@ -54,49 +54,9 @@ int prevSample[2]={0,0};
 
 short bbOut[2][32768];
 
-const bool verbose=false; // change this to turn on verbose mode
-
 int doframe;
 unsigned char colorof[6]={0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff};
 // init sound stuff
-unsigned int cfreq[32]={1,1,1,1,1,1,1,1,
-         1,1,1,1,1,1,1,1,
-               1,1,1,1,1,1,1,1,
-               1,1,1,1,1,1,1,1};
-short cvol[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-short chanvol[32]={128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128};
-unsigned char cshape[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-unsigned char cshapeprev[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-unsigned char cduty[32]={31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,
-               31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31};
-int crstep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int crrmstep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int coff[32]={262144,262144,262144,262144,262144,262144,262144,
-              262144,262144,262144,262144,262144,262144,262144,
-              262144,262144,262144,262144,262144,262144,262144,
-              262144,262144,262144,262144,262144,262144,262144,
-        262144,262144,262144,262144};
-unsigned char creso[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-unsigned char cfmode[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-unsigned char cmode[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-signed char cpan[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-bool cfsweep[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-double cpcmpos[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-unsigned short crmfreq[32]={100,1,1,1,1,1,1,1,
-         1,1,1,1,1,1,1,1,
-               1,1,1,1,1,1,1,1,
-               1,1,1,1,1,1,1,1};
-unsigned char crmshape[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-signed char crm[32]={0,0,0,0,0,0,0,0,
-         0,0,0,0,0,0,0,0,
-               0,0,0,0,0,0,0,0,
-               0,0,0,0,0,0,0,0};
-unsigned char crmduty[32]={31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,
-               31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31};
-int cpcmstart[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int cbound[32]={131071,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-bool cloop[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int cglobvol=128;
 bool AlreadySkipped=false;
 enum filters {
   fNone, fLowPass, fHighPass, fNotch, fBandPass, fLowBand, fHighBand, fAllPass
@@ -107,29 +67,18 @@ int oldpat=-1;
 unsigned char CurrentIns=1;
 unsigned char CurrentEnv=0;
 // init tracker stuff
-int pattern=0;
 string tempInsName;
 Instrument blankIns;
-int scroll[32][7]={}; // scroll[channel][envelope]
 int instruments=0;
 int patterns=0;
 int seqs=255;
-bool muted[32]={};
 bool leftpress=false;
 bool rightpress=false;
 bool leftrelease=false;
 bool rightrelease=false;
 bool hexmode=false;
 bool quit=false;
-// channel memory stuff
-unsigned char Msmp[32]={};
-int Mvol[32]={};
-int Mport[32]={};
-int Mvib[32]={};
-int Mtrem[32]={};
-int Marp[32]={};
-int Mins[32]={};
-bool EnvelopesRunning[32][8]={}; // EnvelopesRunning[channel][envelope]
+bool clockInfo=false;
 
 string name; // song name
 
@@ -150,82 +99,15 @@ int maxCTD=8;
 double patseek=0;
 int screen=0; // 0=patterns, 1=instruments 2=diskop 3=song 4=mixer 5=config 6=help 7=about
 float diskopscrollpos=0;
-bool kb[256]={false};
-bool kblast[256]={false};
-bool kbpressed[256]={false};
-bool IRP[32][8]={}; // in release point
-bool released[32]={}; // note has been released
-bool edittype=true; // 0=ModPlug 1=FT2
-int ins[32]={}; // current playing instrument on each channel
-int insnote[32]={}; // current playing note on a channel
-int insvol[32]={}; // current volume on a channel
-bool insfading[32]={}; // checks if the instrument is fading
-int insrelease[32]={}; // checks if the instrument is on its release state
-int inspos[32][8]={}; // current instrument position per envelope, inspos[chan][env]
-int curvol[32]={}; // current volume of a step
-int curchanvol[32]={}; // current volume of a channel
-unsigned char nnote[32]={}; // next note
-float curnote[32]={}; // current note of a channel
-int slidememory[32]={}; // current Dxx value
-int chanslidememory[32]={}; // current Nxx value
-int globslidememory[32]={}; // current Wxx value
-int tcmdmemory[32]={}; // current Zxx value
-int curhandle[32]={}; // current Zxx handle number
-int defshape[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // default shape per channel (Zc8-Zcf)
-int cutcount[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // SCx ticks to cut
-int retrigger[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // Qxx memory
-int retrig[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // Qxx processor
-int plpos[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // SBx processor - position
-int plcount[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // SBx processor - count
-signed char chanpan[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // channel panning
-int linex1=0;
-int liney1=0;
-int finepitch[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0}; // fine pitch envelope value
-int finedelay=0;
-bool doretrigger[32]={0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0,
-                  0,0,0,0,0,0,0,0};
 bool tickstart=false;
 bool linearslides=true;
 bool playermode=false;
 bool fileswitch=false;
 bool reversemode=false;
-int nvolu[32]={}; // next volume value
-unsigned char nfxid[32]={}; // next effect
-unsigned char nfxvl[32]={}; // next effect value
-int portastatic[32]={}; // current note
 int sfxpos=-1; // sound effect position
 const char* sfxdata[32]={
   // pause
-  "$x!O6V7fEM1v03e00100RRRRRR"
-  "V7fCRRRRRR"
-  "V7fERRRRRR"
-  "V7fCRRRRRRRRRRRRRRRRRRRRR!",
+  "$x!O6V7fEM1v03e00100RRRRRRV7fCRRRRRRV7fERRRRRRV7fCRRRRRRRRRRRRRRRRRRRRR!",
   // error
   "$x!O6V7fAM1v02000100RRRRV7fO5ARRRRRRRRRRR!",
   // shot
@@ -237,25 +119,6 @@ const char* sfxdata[32]={
   NULL
 }; // sound effect data
 int cursfx=0; // current effect
-
-const int sine[256]={
-        0,  2,  3,  5,  6,  8,  9, 11, 12, 14, 16, 17, 19, 20, 22, 23,
-                24, 26, 27, 29, 30, 32, 33, 34, 36, 37, 38, 39, 41, 42, 43, 44,
-                45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 56, 57, 58, 59,
-                59, 60, 60, 61, 61, 62, 62, 62, 63, 63, 63, 64, 64, 64, 64, 64,
-                64, 64, 64, 64, 64, 64, 63, 63, 63, 62, 62, 62, 61, 61, 60, 60,
-                59, 59, 58, 57, 56, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46,
-                45, 44, 43, 42, 41, 39, 38, 37, 36, 34, 33, 32, 30, 29, 27, 26,
-                24, 23, 22, 20, 19, 17, 16, 14, 12, 11,  9,  8,  6,  5,  3,  2,
-                 0, -2, -3, -5, -6, -8, -9,-11,-12,-14,-16,-17,-19,-20,-22,-23,
-               -24,-26,-27,-29,-30,-32,-33,-34,-36,-37,-38,-39,-41,-42,-43,-44,
-               -45,-46,-47,-48,-49,-50,-51,-52,-53,-54,-55,-56,-56,-57,-58,-59,
-               -59,-60,-60,-61,-61,-62,-62,-62,-63,-63,-63,-64,-64,-64,-64,-64,
-               -64,-64,-64,-64,-64,-64,-63,-63,-63,-62,-62,-62,-61,-61,-60,-60,
-               -59,-59,-58,-57,-56,-56,-55,-54,-53,-52,-51,-50,-49,-48,-47,-46,
-               -45,-44,-43,-42,-41,-39,-38,-37,-36,-34,-33,-32,-30,-29,-27,-26,
-               -24,-23,-22,-20,-19,-17,-16,-14,-12,-11, -9, -8, -6, -5, -3, -2
-}; // taken directly from Jeffrey Lim's fine sine table
 const char HEXVALS[17]="0123456789ABCDEF"; // 17 for the null
 const int modeOff[6]={
   24,48,64,88,96,112
@@ -266,10 +129,6 @@ SSInter sfxInst;
 bool sfxplaying=false;
 
 namespace ASC {
-  int interval=119000;
-  int currentclock=0;
-}
-namespace fakeASC {
   int interval=119000;
   int currentclock=0;
 }
@@ -296,7 +155,6 @@ bool rightclickprev=false;
 int prevZ=0;
 int hover[16]={}; // hover time per button
 int16_t ver=TRACKER_VER; // version number
-unsigned char chs0[5000];
 string comments;
 int inputcurpos=0;
 int chantoplayfx=0;
@@ -319,25 +177,11 @@ bool tempolock=false;
 unsigned long int framecounter=0;
 unsigned long int audioframecounter=0;
 // init the audio
-float *buf;
-int pitch = 0x20;
-int val = 0;
-int i;
 int sr;
 double targetSR;
 double noProc;
 double procPos;
 
-float nsL[33];
-float nsR[33];
-float ns[33];
-
-double raster1, raster2, maxrasterdelta;
-
-#define mufflef 0.08
-#define mufflefb 0
-float muffleb0[2]={0,0};
-float muffleb1[2]={0,0};
 int selectedfileindex=-1;
 struct FileInList {
   string name;
@@ -345,7 +189,7 @@ struct FileInList {
 };
 std::vector<FileInList> filenames;
 std::vector<FileInList> filessorted;
-int scrW,scrH;
+int scrW, scrH;
 Texture patternbitmap;
 Texture pianoroll;
 Texture pianoroll_temp;
@@ -363,14 +207,12 @@ namespace settings {
   bool distortion=false;
   bool threading=false;
   bool cubicspline=false;
-  int buffersize=5950;
   // importer settings
   bool names=true;
   bool split=false;
   bool samples=true;
   // filter settings
   bool nofilters=false;
-  bool muffle=true;
 }
 
 // NEW VARIABLES BEGIN //
@@ -422,15 +264,9 @@ std::mutex canUseSong;
 // NEW VARIABLES END //
 
 void Playback();
-void MuteAllChannels();
 int playfx(const char* fxdata,int fxpos,int achan);
 void triggerfx(int num);
 #define interpolatee(aa,bb,cc) (aa+((bb-aa)*cc))
-
-bool midion[32]={0,0,0,0,0,0,0,0,
-      0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0,
-       0,0,0,0,0,0,0,0};
 
 #define resaf 0.33631372025095791864295318996109
 
@@ -471,22 +307,14 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   }
 #endif
   if (ntsc) {
-    // 6.18MHz * 2.5
-    ASC::interval=(int)(15450000/player.tempo);
-    if (player.tempo==150) ASC::interval=103103;
     targetSR=309000;
     noProc=sr/targetSR;
   } else {
-    // 5.95MHz * 2.5
-    ASC::interval=(int)(14875000/player.tempo);
     targetSR=297500;
     noProc=sr/targetSR;
   }
   blip_set_rates(bb[0],targetSR,jacksr);
   blip_set_rates(bb[1],targetSR,jacksr);
-  if (kb[SDL_SCANCODE_ESCAPE] || (PIR((scrW/2)+21,37,(scrW/2)+61,48,mstate.x,mstate.y) && leftclick && iface!=UIMobile)) {
-    ASC::interval=16384;
-  }
   
   // high quality rewrite
   int runtotal=blip_clocks_needed(bb[0],nframes);
@@ -495,9 +323,6 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   if (canPlay) for (int i=0; i<runtotal; i++) {
     ASC::currentclock-=20; // 20 CPU cycles per sound output cycle
     if (ASC::currentclock<=0) {
-      for (int ii=0;ii<32;ii++) {
-        cshapeprev[ii]=cshape[ii];
-      }
 
       player.update();
 
@@ -506,6 +331,17 @@ static void nothing(void* userdata, Uint8* stream, int len) {
         if (sfxpos==-1) {
           sfxplaying=false;
         }
+      }
+      if (ntsc) {
+        // 6.18MHz * 2.5
+        ASC::interval=(int)(15450000/player.tempo);
+        if (player.tempo==150) ASC::interval=103103;
+      } else {
+        // 5.95MHz * 2.5
+        ASC::interval=(int)(14875000/player.tempo);
+      }
+      if (PIR(((float)scrW/2)+21,37,((float)scrW/2)+61,48,mstate.x,mstate.y) && leftclick && iface!=UIMobile) {
+        ASC::interval=16384;
       }
       ASC::currentclock+=ASC::interval;
     }
@@ -984,19 +820,8 @@ void Zxx(unsigned char value) {
   }
 }
 int FreeChannel() {
-  // returns which channel is free
-  // routine is similar to IT's next free channel routine
-  // 1. find first inactive channel
-  // failed? 2. find first channel with zero volume
-  for (int ii=0;ii<8;ii++) {
-    if (cvol[ii]==0) {return ii;}
-  }
-  // failed? 3. find channel with lowest volume
-  int candidate=0;
-  for (int ii=1;ii<8;ii++) {
-    if (cvol[candidate]>cvol[ii]) {candidate=ii;}
-  }
-  return candidate;
+  // TODO
+  return 0;
 }
 
 void Playback() {
@@ -1237,12 +1062,6 @@ void drawinsedit() {
     g.tPos(61,5);
     g.printf("HEX");
   }
-  
-  if (rightclick && PIR(0,90,515,420,mstate.x,mstate.y) && !hexmode) {
-    g._WRAP_draw_circle((linex1/4)*4,liney1,4,g._WRAP_map_rgb(255,255,255),1);
-    g._WRAP_draw_circle((mstate.x/4)*4,mstate.y,4,g._WRAP_map_rgb(255,255,255),1);
-    g._WRAP_draw_line((linex1/4)*4,liney1,(mstate.x/4)*4,mstate.y,g._WRAP_map_rgb(255,255,255),1);
-  }
 }
 
 void EditSkip() {
@@ -1320,14 +1139,6 @@ void drawmixerlayer() {
     g.printf("Pan  ^v\n\n");
     g.printf("Freq\n");
     g.printf("Cut\n");
-    g.printf("Ins  |Vol  \n");
-    g.printf("EP0  |EP1  \n");
-    g.printf("EP2  |EP3  \n");
-    g.printf("EP4  |EP5  \n");
-    g.printf("EP6  |EP7  \n");
-    g.printf("Not  |Por  \n");
-    g.printf("Vib  |Trm  \n");
-    g.printf("Trr  |Pbr  ");
   }
   g.tNLPos(0);
   g._WRAP_draw_line(0,21.5+60,scrW,21.5+60,g._WRAP_map_rgb(255,255,255),1);
@@ -1353,59 +1164,42 @@ void drawmixer() {
   int mixerdrawoffset=(scrW/2)-chanstodisplay*48-12;
   g._WRAP_draw_bitmap(mixer,0,0,0);
   for (int chantodraw=0;chantodraw<chanstodisplay;chantodraw++) {
-    if (midion[chantodraw+curedpage]) {
-      g.tColor(9);
-    } else {
-      g.tColor(15);
-    }
+    soundchip::channel& c=chip[(chantodraw+curedpage)>>3].chan[(chantodraw+curedpage)&7];
+    g.tColor(15);
     g.tNLPos(2+chantodraw*12+((float)mixerdrawoffset/8.0));
     g.tPos(5);
     g.printf(" Channel ");
-    if (!muted[chantodraw+curedpage]) {
+    if (!player.channelMask[chantodraw+curedpage]) {
       g.tColor(14);
     } else {
       g.tColor(8);
     }
     g.printf("%d\n\n",chantodraw+curedpage);
 
-    g._WRAP_draw_filled_rectangle(16+(chantodraw*96)+mixerdrawoffset-1,scrH-4-1,58+(chantodraw*96)+mixerdrawoffset+1,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((127-(maxval(0,(float)cpan[chantodraw+curedpage])))/127))*((scrH-244)/128))+1,g._WRAP_map_rgb(0,200,0));
-    g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset-1,scrH-4-1,104+(chantodraw*96)+mixerdrawoffset+1,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((128+(minval(0,(float)cpan[chantodraw+curedpage])))/128))*((scrH-244)/128))+1,g._WRAP_map_rgb(0,200,0));
-    g._WRAP_draw_filled_rectangle(16+(chantodraw*96)+mixerdrawoffset,scrH-4,58+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((127-(maxval(0,(float)cpan[chantodraw+curedpage])))/127))*((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
-    g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset,scrH-4,104+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)cvol[chantodraw+curedpage]*((128+(minval(0,(float)cpan[chantodraw+curedpage])))/128))*((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
+    g._WRAP_draw_filled_rectangle(16+(chantodraw*96)+mixerdrawoffset-1,scrH-4-1,58+(chantodraw*96)+mixerdrawoffset+1,(scrH-4)-(((float)c.vol*((127-(maxval(0,(float)c.pan)))/127))*(int)((scrH-244)/128))+1,g._WRAP_map_rgb(0,200,0));
+    g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset-1,scrH-4-1,104+(chantodraw*96)+mixerdrawoffset+1,(scrH-4)-(((float)c.vol*((128+(minval(0,(float)c.pan)))/128))*(int)((scrH-244)/128))+1,g._WRAP_map_rgb(0,200,0));
+    g._WRAP_draw_filled_rectangle(16+(chantodraw*96)+mixerdrawoffset,scrH-4,58+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)c.vol*((127-(maxval(0,(float)c.pan)))/127))*(int)((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
+    g._WRAP_draw_filled_rectangle(62+(chantodraw*96)+mixerdrawoffset,scrH-4,104+(chantodraw*96)+mixerdrawoffset,(scrH-4)-(((float)c.vol*((128+(minval(0,(float)c.pan)))/128))*(int)((scrH-244)/128)),g._WRAP_map_rgb(0,255,0));
     
     g.tColor(14);
     g.printf("   %.2x",song->defaultVol[chantodraw+curedpage]);
     g.tColor(12);
-    g.printf("   %.2x%c\n",cduty[chantodraw+curedpage]%256,shapeSym(cshape[chantodraw+curedpage]));
+    g.printf("   %.2x%c\n",c.duty,shapeSym(c.flags.shape));
     g.tColor(14);
     g.printf("   %.2x   ",(unsigned char)song->defaultPan[chantodraw+curedpage]);
-    switch (cfmode[chantodraw+curedpage]) {
+    switch (c.flags.fmode) {
       case 0: g.printf("   \n\n"); break;
       case 1: g.printf("  l\n\n"); break;
       case 2: g.printf(" h \n\n"); break;
       case 3: g.printf(" hl\n\n"); break;
       case 4: g.printf("b  \n\n"); break;
       case 5: g.printf("b l\n\n"); break;
-      case 6: g.printf("bh \n\n"); break;
+      case 6: g.printf("bh \n\n"); break; 
       case 7: g.printf("bhl\n\n"); break;
     }
-    g.printf("      %.4x\n",cfreq[chantodraw+curedpage]);
+    g.printf("      %.4x\n",c.freq);
     g.tColor(12);
-    g.printf("    %.1f\n",(float)coff[chantodraw+curedpage]/10);
-
-    g.tColor(14);
-    g.printf("   %.2x",Mins[chantodraw+curedpage]);
-    g.printf("    %.2x\n",Mvol[chantodraw+curedpage]);
-
-    for (int j=0; j<8; j++) {
-      g.tColor(14);
-      g.printf(j&1?"    %.2x\n":"   %.2x",inspos[chantodraw+curedpage][j]);
-    }
-
-    g.tColor(14);
-    g.printf("   %.2x",(int)(curnote[chantodraw+curedpage])%256);
-    g.printf("    %.2x",portastatic[chantodraw+curedpage]%256);
-
+    g.printf("    %.4x\n",c.cutoff);
   }
   g.tNLPos(0);
 }
@@ -1451,7 +1245,7 @@ void drawdiskop() {
     if (selectedfileindex>(diskopscrollpos)) {
       g._WRAP_draw_filled_rectangle(0,111+16+((selectedfileindex-1-diskopscrollpos)*36),scrW,123+24+16+((selectedfileindex-1-diskopscrollpos)*36),g._WRAP_map_rgb(128,128,128));
     }
-    for (int i=diskopscrollpos; i<minval(diskopscrollpos+((int(scrH/12)-9)/3),filenames.size()); i++) {
+    for (int i=diskopscrollpos; i<minval(diskopscrollpos+(int)((int(scrH/12)-9)/3),filenames.size()); i++) {
       g.tPos(1,11.25+(i-diskopscrollpos)*3);
       g.tColor(filenames[i].isdir?14:15);
       g.printf(filenames[i].name.c_str());
@@ -1597,13 +1391,13 @@ void drawconfig() {
   // new config page!
   g.tColor(15);
   g.tAlign(0.5);
-  g.tPos((scrW/2)/8-10,5.5);
+  g.tPos(((float)scrW/2)/8-10,5.5);
   g.printf("General");
 
-  g.tPos((scrW/2)/8,5.5);
+  g.tPos(((float)scrW/2)/8,5.5);
   g.printf("Audio");
 
-  g.tPos((scrW/2)/8+10,5.5);
+  g.tPos(((float)scrW/2)/8+10,5.5);
   g.printf("Video");
   g.tAlign(0);
   
@@ -1621,13 +1415,6 @@ void drawabout() {
   g.tColor(14);
   g.printf("r%d",ver);
   g.tAlign(0);
-  if (logo.actual==NULL) {
-    g.tColor(15);
-    g.tPos(0,10);
-    g.printf("it seems you don't have the logo file!");
-  } else {
-    g._WRAP_draw_rotated_bitmap(logo,180,86.5,scrW/2,scrH/2,(sin((((float)player.step*(float)player.speed)+((float)player.speed-(float)player.tick))/(8*(float)player.speed)*2*M_PI)/8)*(player.playMode!=0),0);
-  }
 }
 
 float getLKeyOff(int tone) {
@@ -1649,7 +1436,7 @@ float getRKeyOff(int tone) {
 void drawpiano() {
   double prefreq;
   int postfreq;
-  g._WRAP_draw_scaled_bitmap(piano,0,0,700,60,(scrW/2)-(((scrW)/700)*700)/2,scrH-(60*((scrW)/700)),((scrW)/700)*700,((scrW)/700)*60,0);
+  g._WRAP_draw_scaled_bitmap(piano,0,0,700,60,((float)scrW/2)-(float)((int)(scrW/700)*700)/2,scrH-(60*(int)(scrW/700)),(int)(scrW/700)*700,(int)(scrW/700)*60,0);
   g.setTarget(pianoroll_temp);
   g._WRAP_draw_bitmap(pianoroll,0,-1,0);
   g.setTarget(pianoroll);
@@ -1658,8 +1445,9 @@ void drawpiano() {
   g.resetTarget();
   //printf("--------------\n");
   for (int ii=0;ii<32;ii++) {
-    if (muted[ii] || cvol[ii]==0) continue;
-    prefreq=((log(((4.53948974609375*(double)cfreq[ii])/440.0)/64)/log(2.0))*12.0)+57.5;
+    soundchip::channel& c=chip[ii>>3].chan[ii&7];
+    if (player.channelMask[ii] || c.vol==0) continue;
+    prefreq=((log(((4.53948974609375*(double)c.freq)/440.0)/64)/log(2.0))*12.0)+57.5;
     if (prefreq<0 || prefreq>120) continue;
     if (
       (int)prefreq%12==0 || (int)prefreq%12==2 || (int)prefreq%12==4 ||
@@ -1669,59 +1457,60 @@ void drawpiano() {
       postfreq=round(((int)prefreq%12)/2.0);
       // upper key
       g._WRAP_draw_filled_rectangle(
-        ((((int)prefreq/12)*70+((postfreq*10)+getLKeyOff(postfreq)))*((scrW)/700))+(scrW/2)-(((scrW)/700)*700)/2,
-        ((scrW)/700)+scrH-(((scrW)/700)*60),
-        ((((int)prefreq/12)*70+((postfreq*10)+getRKeyOff(postfreq)))*((scrW)/700))+(scrW/2)-(((scrW)/700)*700)/2,
-        35*((scrW)/700)+scrH-(((scrW)/700)*60),
+        int((((int)prefreq/12)*70+((postfreq*10)+(int)getLKeyOff(postfreq)))*(int)(scrW/700))+((float)scrW/2)-(float)((int)(scrW/700)*700)/2,
+        (int)(scrW/700)+scrH-((int)(scrW/700)*60),
+        int((((int)prefreq/12)*70+((postfreq*10)+(int)getRKeyOff(postfreq)))*(int)(scrW/700))+((float)scrW/2)-(float)((int)(scrW/700)*700)/2,
+        35*(int)(scrW/700)+scrH-((int)(scrW/700)*60),
         g._WRAP_map_rgba(
-        (cshape[ii]==4 || cshape[ii]==1 || cshape[ii]==5)?(255):(0),
-        (cshape[ii]!=5)?(255):(0),
-        (cshape[ii]!=1 && cshape[ii]!=2)?(255):(0),
-        cvol[ii]*2));
+        (c.flags.shape==4 || c.flags.shape==1 || c.flags.shape==5)?(255):(0),
+        (c.flags.shape!=5)?(255):(0),
+        (c.flags.shape!=1 && c.flags.shape!=2)?(255):(0),
+        c.vol*2));
       // lower key
       g._WRAP_draw_filled_rectangle(
-        ((((int)prefreq/12)*70+(((postfreq*10)+1)))*((scrW)/700))+(scrW/2)-(((scrW)/700)*700)/2,
-        35*((scrW)/700)+scrH-(((scrW)/700)*60),
-        ((((int)prefreq/12)*70+(((postfreq*10)+10)))*((scrW)/700))+(scrW/2)-(((scrW)/700)*700)/2,
-        59*((scrW)/700)+scrH-(((scrW)/700)*60),
+        int((((int)prefreq/12)*70+(((postfreq*10)+1)))*(int)(scrW/700))+((float)scrW/2)-(float)((int)(scrW/700)*700)/2,
+        35*(int)(scrW/700)+scrH-((int)(scrW/700)*60),
+        int((((int)prefreq/12)*70+(((postfreq*10)+10)))*(int)(scrW/700))+((float)scrW/2)-(float)((int)(scrW/700)*700)/2,
+        59*(int)(scrW/700)+scrH-((int)(scrW/700)*60),
         g._WRAP_map_rgba(
-        (cshape[ii]==4 || cshape[ii]==1 || cshape[ii]==5)?(255):(0),
-        (cshape[ii]!=5)?(255):(0),
-        (cshape[ii]!=1 && cshape[ii]!=2)?(255):(0),
-        cvol[ii]*2));
+        (c.flags.shape==4 || c.flags.shape==1 || c.flags.shape==5)?(255):(0),
+        (c.flags.shape!=5)?(255):(0),
+        (c.flags.shape!=1 && c.flags.shape!=2)?(255):(0),
+        c.vol*2));
     } else {
       postfreq=((int)prefreq%12)/2.0;
       g._WRAP_draw_filled_rectangle(
-        ((((int)prefreq/12)*70+(((postfreq*10)+8)))*((scrW)/700))+(scrW/2)-(((scrW)/700)*700)/2,
-        ((scrW)/700)+scrH-(((scrW)/700)*60),
-        ((((int)prefreq/12)*70+(((postfreq*10)+13)))*((scrW)/700))+(scrW/2)-(((scrW)/700)*700)/2,
-        (34*((scrW)/700))+scrH-(((scrW)/700)*60),
+        int((((int)prefreq/12)*70+(((postfreq*10)+8)))*(int)(scrW/700))+((float)scrW/2)-(float)((int)(scrW/700)*700)/2,
+        (int)(scrW/700)+scrH-((int)(scrW/700)*60),
+        int((((int)prefreq/12)*70+(((postfreq*10)+13)))*(int)(scrW/700))+((float)scrW/2)-(float)((int)(scrW/700)*700)/2,
+        (34*(int)(scrW/700))+scrH-((int)(scrW/700)*60),
         g._WRAP_map_rgba(
-        (cshape[ii]==4 || cshape[ii]==1 || cshape[ii]==5)?(cvol[ii]*2):(0),
-        (cshape[ii]!=5)?(cvol[ii]*2):(0),
-        (cshape[ii]!=1 && cshape[ii]!=2)?(cvol[ii]*2):(0),
+        (c.flags.shape==4 || c.flags.shape==1 || c.flags.shape==5)?(c.vol*2):(0),
+        (c.flags.shape!=5)?(c.vol*2):(0),
+        (c.flags.shape!=1 && c.flags.shape!=2)?(c.vol*2):(0),
         255));
     }
     g.setTarget(pianoroll);
                 g._WRAP_set_blender(SDL_BLENDMODE_ADD);
-                if (cshape[ii]==0) {
+                if (c.flags.shape==0) {
                  g._WRAP_draw_filled_rectangle(((prefreq-0.5)*6)+1-0.5,127,((prefreq-0.5)*6)+5,128,
-      mapHSV(240-(cduty[ii]),1,(float)cvol[ii]/127)); 
+      mapHSV(240-(c.duty),1,(float)c.vol/127)); 
                 } else {
     g._WRAP_draw_filled_rectangle(((prefreq-0.5)*5.83333333)+1-0.5,127,((prefreq-0.5)*5.833333333)+5,128,
       g._WRAP_map_rgb(
-      (cshape[ii]==4 || cshape[ii]==1 || cshape[ii]==5)?(cvol[ii]*2):(0),
-      (cshape[ii]!=5)?(cvol[ii]*2):(0),
-      (cshape[ii]!=1 && cshape[ii]!=2)?(cvol[ii]*2):(0)
+      (c.flags.shape==4 || c.flags.shape==1 || c.flags.shape==5)?(c.vol*2):(0),
+      (c.flags.shape!=5)?(c.vol*2):(0),
+      (c.flags.shape!=1 && c.flags.shape!=2)?(c.vol*2):(0)
       ));
                 }
                 g._WRAP_set_blender(SDL_BLENDMODE_BLEND);
     g.resetTarget();
   }
-  g._WRAP_draw_scaled_bitmap(pianoroll,0,0,700,128,(scrW/2)-((((scrW)/700)*700)/2),scrH-(((scrH-(60+((((scrW)/700)*60))))/128)*128)-(((scrW)/700)*60),((scrW)/700)*700,((scrH-(60+((((scrW)/700)*60))))/128)*128,0);
+  g._WRAP_draw_scaled_bitmap(pianoroll,0,0,700,128,((float)scrW/2)-int(((int)(scrW/700)*700)/2),scrH-int(((scrH-(60+(((int)(scrW/700)*60))))/128)*128)-((int)(scrW/700)*60),(int)(scrW/700)*700,int((scrH-(60+(((int)(scrW/700)*60))))/128)*128,0);
   for (int ii=0;ii<32;ii++) {
-    if (muted[ii] || cvol[ii]==0) continue;
-    prefreq=((log(((4.53948974609375*(double)cfreq[ii])/440.0)/64)/log(2.0))*12.0)+57.5;
+    soundchip::channel& c=chip[ii>>3].chan[ii&7];
+    if (player.channelMask[ii] || c.vol==0) continue;
+    prefreq=((log(((4.53948974609375*(double)c.freq)/440.0)/64)/log(2.0))*12.0)+57.5;
     if (prefreq<0 || prefreq>120) continue;
     g.tColor(15);
     g.tPos(0,5+ii);
@@ -1733,76 +1522,9 @@ void drawsfxpanel() {
   // TODO after the SDL port
 }
 
-void drawpcmeditor() {
-  pcmeditseek=mstate.x;
-  g.tColor(15);
-  g.tPos(0,5);
-  if (sign(pcmeditscale)>-1) {
-    g.printf("scale: %d:1\n",(int)pow(2.0f,pcmeditscale));
-  } else {
-    g.printf("scale: 1:%d\n",(int)pow(2.0f,-pcmeditscale));
-  }
-  g.printf("position: %.5x",(int)((float)pcmeditseek*pow(2.0f,-pcmeditscale)));
-  g._WRAP_draw_line((int)((float)pcmeditseek*pow(2.0f,-pcmeditscale))*pow(2.0f,pcmeditscale),(scrH/2)-128,
-    (int)((float)pcmeditseek*pow(2.0f,-pcmeditscale))*pow(2.0f,pcmeditscale),(scrH/2)+128,g._WRAP_map_rgb(255,255,0),1);
-  for (float ii=0;ii<(scrW*pow(2.0f,-pcmeditscale));ii+=pow(2.0f,-pcmeditscale)) {
-    g._WRAP_draw_pixel(ii*pow(2.0f,pcmeditscale),(scrH/2)+chip[0].pcm[(int)ii+pcmeditoffset],(pcmeditenable)?g._WRAP_map_rgb(255,255,0):g._WRAP_map_rgb(255,255,255));
-  }
-  for (int ii=0;ii<32;ii++) {
-    if (cmode[ii]==1 && cvol[ii]>0) {
-      g._WRAP_draw_line(((float)cpcmpos[ii]*pow(2.0f,pcmeditscale)),(scrH/2)-140,
-    ((float)cpcmpos[ii]*pow(2.0f,pcmeditscale)),(scrH/2)-129,g._WRAP_map_rgb(0,255,255),1);
-      g.tColor(11);
-      g.tPos((float)(cpcmpos[ii]*pow(2.0f,pcmeditscale))/8.0,(float)((scrH/2)-153)/12);
-      g.printf("%d",ii);
-    }
-  }
-}
 void Play() {
   // reset cursor position
   tickstart=true;
-  // reset channels
-  for (int su=0;su<32;su++) {
-  cvol[su]=0;
-  cfreq[su]=1;
-  cduty[su]=63;
-  cshape[su]=0;
-  coff[su]=262144;
-  creso[su]=0;
-  cfmode[su]=0;
-  Mvol[su]=0;
-  Mins[su]=0;
-  EnvelopesRunning[su][0]=false;
-  EnvelopesRunning[su][1]=false;
-  EnvelopesRunning[su][2]=false;
-  EnvelopesRunning[su][3]=false;
-  EnvelopesRunning[su][4]=false;
-  EnvelopesRunning[su][5]=false;
-  EnvelopesRunning[su][6]=false;
-  EnvelopesRunning[su][7]=false;
-  inspos[su][0]=0;
-  inspos[su][1]=0;
-  inspos[su][2]=0;
-  inspos[su][3]=0;
-  inspos[su][4]=0;
-  inspos[su][5]=0;
-  inspos[su][6]=0;
-  inspos[su][7]=0;
-  released[su]=false;
-  plcount[su]=0;
-  plpos[su]=0;
-  chanvol[su]=song->defaultVol[su];
-  doretrigger[su]=false;
-  chanpan[su]=song->defaultPan[su];
-  //if ((su+1)&2) {chanpan[su]=96;} else {chanpan[su]=-96;} // amiga auto-pan logic
-  //if (su&1) {chanpan[su]=96;} else {chanpan[su]=-96;} // normal auto-pan logic
-  finedelay=0;
-  cutcount[su]=-1;
-  }
-  // reset global volume
-  cglobvol=128;
-  
-  // the code above has to be destroyed.
   player.play();
 }
 unsigned char ITVolumeConverter(unsigned char itvol) {
@@ -2055,8 +1777,8 @@ int ImportMOD(FILE* mod) {
       case 0x31384443: // CD81
       case 0x41544b4f: // OKTA
       case 0x4154434f: // OCTA
-        printf("8-channel Oktalyzer/OctaMED module detected\n");
-        origin="Oktalyzer/OctaMED";
+        printf("8-channel Oktalyzer/Octalyzer/OctaMED module detected\n");
+        origin="Oktalyzer/Octalyzer/OctaMED";
         chans=8;
         break;
       case 0x214b264d: // M&K!
@@ -2774,7 +2496,6 @@ int SaveFile() {
   int pcmpointer=0;
   bool IS_INS_BLANK[256];
   bool IS_PAT_BLANK[256];
-  bool IS_SEQ_BLANK[256];
   char rfn[4096];
   int oldseek=0;
   
@@ -3338,6 +3059,8 @@ int LoadFile(const char* filename) {
         m->jumpRelease=fgeti(sfile);
         int reserved1=fgeti(sfile);
         int reserved2=fgeti(sfile);
+        reserved1=reserved2; // shut the compiler up
+        reserved2=reserved1;
         for (unsigned int i=0; i<len; i++) {
           unsigned char cType=fgetc(sfile);
           unsigned int cValue=fgeti(sfile);
@@ -3614,7 +3337,7 @@ void ClickEvents() {
         }
       } else {
         // play button
-        if (PIR((scrW/2)-71,13,(scrW/2)-31,47,mstate.x,mstate.y)) {
+        if (PIR(((float)scrW/2)-71,13,((float)scrW/2)-31,47,mstate.x,mstate.y)) {
           if (player.tick==0) {
             Play();
           } else {
@@ -3622,20 +3345,20 @@ void ClickEvents() {
           }
         }
         // pattern play button
-        if (PIR((scrW/2)-20,13,(scrW/2)+20,47,mstate.x,mstate.y)) {
+        if (PIR(((float)scrW/2)-20,13,((float)scrW/2)+20,47,mstate.x,mstate.y)) {
           Play();
         }
         // stop button
-        if (PIR((scrW/2)+31,13,(scrW/2)+71,47,mstate.x,mstate.y)) {
+        if (PIR(((float)scrW/2)+31,13,((float)scrW/2)+71,47,mstate.x,mstate.y)) {
           player.stop();
         }
         // skip left button
-        if (PIR((scrW/2)-112,13,(scrW/2)-82,47,mstate.x,mstate.y)) {
+        if (PIR(((float)scrW/2)-112,13,((float)scrW/2)-82,47,mstate.x,mstate.y)) {
           if (player.pat>0) player.pat--;
           if (player.playMode==1) Play();
         }
         // skip right button
-        if (PIR((scrW/2)+82,13,(scrW/2)+112,47,mstate.x,mstate.y)) {
+        if (PIR(((float)scrW/2)+82,13,((float)scrW/2)+112,47,mstate.x,mstate.y)) {
           if (player.pat<song->orders) {
             player.pat++;
           } else {
@@ -3685,15 +3408,15 @@ void ClickEvents() {
       if (PIR(64,12,88,24,mstate.x,mstate.y)) {screen=9;}
       if (PIR(64,24,88,36,mstate.x,mstate.y)) {screen=10;}
       if (PIR(64,36,88,48,mstate.x,mstate.y)) {screen=12;}
-      if (PIR((scrW/2)-61,13,(scrW/2)-21,37,mstate.x,mstate.y)) {
+      if (PIR(((float)scrW/2)-61,13,((float)scrW/2)-21,37,mstate.x,mstate.y)) {
         if (player.tick==0) {
           Play();
         } else {
           // TODO this
         }
       }
-      if (PIR((scrW/2)-61,37,(scrW/2)-21,48,mstate.x,mstate.y)) {reversemode=true;}
-      if (PIR((scrW/2)+21,13,(scrW/2)+61,37,mstate.x,mstate.y)) {player.stop();}
+      if (PIR(((float)scrW/2)-61,37,((float)scrW/2)-21,48,mstate.x,mstate.y)) {reversemode=true;}
+      if (PIR(((float)scrW/2)+21,13,((float)scrW/2)+61,37,mstate.x,mstate.y)) {player.stop();}
     }
     if (leftpress) {
       if (!PIR(inputRefRect.x,inputRefRect.y,inputRefRect.x+inputRefRect.w,inputRefRect.y+inputRefRect.h,mstate.x,mstate.y)) {
@@ -3742,8 +3465,8 @@ void ClickEvents() {
         p->length++;
         if (p->length>256) p->length=256;
       }
-      //if (PIR((scrW/2)-20,37,(scrW/2)+20,48,mstate.x,mstate.y)) {StepPlay();}
-      if (PIR((scrW/2)-20,13,(scrW/2)+20,37,mstate.x,mstate.y)) {Play();}
+      //if (PIR(((float)scrW/2)-20,37,((float)scrW/2)+20,48,mstate.x,mstate.y)) {StepPlay();}
+      if (PIR(((float)scrW/2)-20,13,((float)scrW/2)+20,37,mstate.x,mstate.y)) {Play();}
       if (PIR(scrW-34*8,24,scrW-28*8,36,mstate.x,mstate.y)) {follow=!follow;}
       
       if (PIR(scrW-28*8,12,scrW-27*8,24,mstate.x,mstate.y)) {
@@ -3765,7 +3488,7 @@ void ClickEvents() {
     float patStartX, patStartY;
     Pattern* p=song->getPattern(song->order[player.pat],true);
     patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
-    patStartY=(60+((scrH*dpiScale)-60)/2);
+    patStartY=(int)(60+((scrH*dpiScale)-60)/2);
     if (mstate.y>60) {
       if (leftpress) {
         selStart=(int)((mstate.y*dpiScale-patStartY-(3*curzoom)+patRow*12*curzoom)/(12*curzoom));
@@ -4078,7 +3801,7 @@ void ClickEvents() {
         }
         if (diskopSwiper.getStatus()==swHolding) {
           // selection check here
-          for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+((int)(scrH/12)-12)/3,filenames.size()); ii++) {
+          for (int ii=diskopscrollpos; ii<minval(diskopscrollpos+(int)(((int)(scrH/12)-12)/3),filenames.size()); ii++) {
             if (PIR(0,125+(ii*36)-(diskopscrollpos*36),scrW-8,136+24+(ii*36)-(diskopscrollpos*36),mstate.x,mstate.y)) {
               selectedfileindex=ii+1;
             }
@@ -4182,8 +3905,7 @@ void ClickEvents() {
     }
     if (leftpress) {
       for (int ii=0;ii<chanstodisplay;ii++) {
-        if (!kb[SDL_SCANCODE_LSHIFT]) {if (PIR(16+(ii*96)+mixerdrawoffset,60,96+(ii*96)+mixerdrawoffset,72,mstate.x,mstate.y)) {muted[ii+curedpage]=!muted[ii+curedpage];}}
-        else {if (PIR(16+(ii*96)+mixerdrawoffset,60,96+(ii*96)+mixerdrawoffset,72,mstate.x,mstate.y)) {midion[ii+curedpage]=!midion[ii+curedpage];}}
+        if (PIR(16+(ii*96)+mixerdrawoffset,60,96+(ii*96)+mixerdrawoffset,72,mstate.x,mstate.y)) player.toggleChannel(ii+curedpage);
       }
     }
     if (rightpress) {
@@ -4192,17 +3914,17 @@ void ClickEvents() {
           bool solomode=true;
           for (int jj=0;jj<32;jj++) {
             if (jj==ii+curedpage) {continue;}
-            if (!muted[jj]) {solomode=false;break;}
+            if (!player.channelMask[jj]) {solomode=false;break;}
           }
           if (solomode) {
             for (int jj=0;jj<32;jj++) {
-              muted[jj]=false;
+              player.maskChannel(jj,false);
             }
           } else {
             for (int jj=0;jj<32;jj++) {
-              muted[jj]=true;
+              player.maskChannel(jj,true);
             }
-            muted[ii+curedpage]=false;
+            player.maskChannel(ii+curedpage,false);
           }
         }
       }
@@ -4214,7 +3936,6 @@ void ClickEvents() {
       if (PIR(280,96,368,107,mstate.x,mstate.y)) {settings::distortion=!settings::distortion;}
       if (PIR(280,132,368,143,mstate.x,mstate.y)) {settings::cubicspline=!settings::cubicspline;}
       if (PIR(280,240,368,251,mstate.x,mstate.y)) {settings::nofilters=!settings::nofilters;}
-      if (PIR(280,252,368,264,mstate.x,mstate.y)) {settings::muffle=!settings::muffle;}
     }
   }
   // events only in sound effect editor
@@ -4228,228 +3949,6 @@ void ClickEvents() {
   }
   prevZ=mstate.z;
 }
-void FastTracker() {
-  Pattern* p=song->getPattern(song->order[player.pat],true);
-  // FT2-like pattern editor
-  // scroll code
-  if (kbpressed[SDL_SCANCODE_DELETE]) {
-  }
-  if (curedmode==0) {
-  // silences and stuff
-  if (kbpressed[SDL_SCANCODE_EQUALS]) {p->data[player.step][curedpage+curedchan][0]=0x0d;EditSkip();}
-  if (kbpressed[SDL_SCANCODE_1]) {p->data[player.step][curedpage+curedchan][0]=0x0f;EditSkip();}
-  if (kbpressed[SDL_SCANCODE_BACKSLASH]) {p->data[player.step][curedpage+curedchan][0]=0x0e;EditSkip();}
-  // notes, main octave
-  if (kbpressed[SDL_SCANCODE_Z]) {p->data[player.step][curedpage+curedchan][0]=0x01+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_X]) {p->data[player.step][curedpage+curedchan][0]=0x03+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][0]=0x05+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_V]) {p->data[player.step][curedpage+curedchan][0]=0x06+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][0]=0x08+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_N]) {p->data[player.step][curedpage+curedchan][0]=0x0a+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_M]) {p->data[player.step][curedpage+curedchan][0]=0x0c+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_S]) {p->data[player.step][curedpage+curedchan][0]=0x02+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][0]=0x04+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_G]) {p->data[player.step][curedpage+curedchan][0]=0x07+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_H]) {p->data[player.step][curedpage+curedchan][0]=0x09+minval(curoctave<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_J]) {p->data[player.step][curedpage+curedchan][0]=0x0b+minval(curoctave<<4,0x90);EditSkip();}
-  // notes, 2nd octave
-  if (kbpressed[SDL_SCANCODE_Q]) {p->data[player.step][curedpage+curedchan][0]=0x01+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_W]) {p->data[player.step][curedpage+curedchan][0]=0x03+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][0]=0x05+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_R]) {p->data[player.step][curedpage+curedchan][0]=0x06+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_T]) {p->data[player.step][curedpage+curedchan][0]=0x08+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_Y]) {p->data[player.step][curedpage+curedchan][0]=0x0a+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_U]) {p->data[player.step][curedpage+curedchan][0]=0x0c+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_2]) {p->data[player.step][curedpage+curedchan][0]=0x02+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_3]) {p->data[player.step][curedpage+curedchan][0]=0x04+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_5]) {p->data[player.step][curedpage+curedchan][0]=0x07+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_6]) {p->data[player.step][curedpage+curedchan][0]=0x09+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_7]) {p->data[player.step][curedpage+curedchan][0]=0x0b+minval((curoctave+1)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_I]) {p->data[player.step][curedpage+curedchan][0]=0x01+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_9]) {p->data[player.step][curedpage+curedchan][0]=0x02+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_O]) {p->data[player.step][curedpage+curedchan][0]=0x03+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_0]) {p->data[player.step][curedpage+curedchan][0]=0x04+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[SDL_SCANCODE_P]) {p->data[player.step][curedpage+curedchan][0]=0x05+minval((curoctave+2)<<4,0x90);EditSkip();}
-  /*
-  if (kbpressed[66]) {p->data[player.step][curedpage+curedchan][0]=0x06+minval((curoctave+2)<<4,0x90);EditSkip();}
-  if (kbpressed[65]) {p->data[player.step][curedpage+curedchan][0]=0x07+minval((curoctave+2)<<4,0x90);EditSkip();}
-  */
-  }
-  if (curedmode==1) {
-  if (kbpressed[SDL_SCANCODE_0]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {p->data[player.step][curedpage+curedchan][1]=(p->data[player.step][curedpage+curedchan][1]<<4)+15;drawpatterns(true);}
-  }
-  if (curedmode==2) {
-  if (kbpressed[SDL_SCANCODE_0]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {p->data[player.step][curedpage+curedchan][2]=(p->data[player.step][curedpage+curedchan][2]<<4)+15;drawpatterns(true);}
-  }
-  if (curedmode==3) {
-  if (kbpressed[SDL_SCANCODE_A]) {p->data[player.step][curedpage+curedchan][3]=1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][3]=2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][3]=3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][3]=4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][3]=5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {p->data[player.step][curedpage+curedchan][3]=6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_G]) {p->data[player.step][curedpage+curedchan][3]=7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_H]) {p->data[player.step][curedpage+curedchan][3]=8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_I]) {p->data[player.step][curedpage+curedchan][3]=9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_J]) {p->data[player.step][curedpage+curedchan][3]=10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_K]) {p->data[player.step][curedpage+curedchan][3]=11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_L]) {p->data[player.step][curedpage+curedchan][3]=12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_M]) {p->data[player.step][curedpage+curedchan][3]=13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_N]) {p->data[player.step][curedpage+curedchan][3]=14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_O]) {p->data[player.step][curedpage+curedchan][3]=15;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_P]) {p->data[player.step][curedpage+curedchan][3]=16;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Q]) {p->data[player.step][curedpage+curedchan][3]=17;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_R]) {p->data[player.step][curedpage+curedchan][3]=18;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_S]) {p->data[player.step][curedpage+curedchan][3]=19;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_T]) {p->data[player.step][curedpage+curedchan][3]=20;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_U]) {p->data[player.step][curedpage+curedchan][3]=21;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_V]) {p->data[player.step][curedpage+curedchan][3]=22;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_W]) {p->data[player.step][curedpage+curedchan][3]=23;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_X]) {p->data[player.step][curedpage+curedchan][3]=24;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Y]) {p->data[player.step][curedpage+curedchan][3]=25;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_Z]) {p->data[player.step][curedpage+curedchan][3]=26;drawpatterns(true);}
-  }
-  if (curedmode==4) {
-  if (kbpressed[SDL_SCANCODE_0]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4);drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_1]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+1;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_2]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+2;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_3]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+3;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_4]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+4;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_5]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+5;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_6]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+6;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_7]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+7;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_8]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+8;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_9]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+9;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_A]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+10;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_B]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+11;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_C]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+12;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_D]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+13;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_E]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+14;drawpatterns(true);}
-  if (kbpressed[SDL_SCANCODE_F]) {p->data[player.step][curedpage+curedchan][4]=(p->data[player.step][curedpage+curedchan][4]<<4)+15;drawpatterns(true);}
-  }
-}
-void InstrumentTest(int testnote, int testchan) {
-  // code scrapped.
-  // this will be fixed soon.
-}
-void ModPlug() {
-  // ModPlug Tracker-OpenMPT-like pattern editor
-
-
-}
-void RunTestNote(int keycode) {
-  // notes, main octave
-  switch (keycode) {
-  case SDL_SCANCODE_Z: InstrumentTest(0x01+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_X: InstrumentTest(0x03+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_C: InstrumentTest(0x05+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_V: InstrumentTest(0x06+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_B: InstrumentTest(0x08+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_N: InstrumentTest(0x0a+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_M: InstrumentTest(0x0c+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_S: InstrumentTest(0x02+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_D: InstrumentTest(0x04+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_G: InstrumentTest(0x07+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_H: InstrumentTest(0x09+minval(curoctave<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_J: InstrumentTest(0x0b+minval(curoctave<<4,0x90),FreeChannel()); break;
-  // TODO why did I not use the enum?!
-  //case 72: InstrumentTest(0x01+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  //case 12: InstrumentTest(0x02+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  //case 73: InstrumentTest(0x03+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  //case 60: InstrumentTest(0x04+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  // notes, 2nd octave
-  case SDL_SCANCODE_Q: InstrumentTest(0x01+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_W: InstrumentTest(0x03+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_E: InstrumentTest(0x05+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_R: InstrumentTest(0x06+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_T: InstrumentTest(0x08+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_Y: InstrumentTest(0x0a+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_U: InstrumentTest(0x0c+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_2: InstrumentTest(0x02+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_3: InstrumentTest(0x04+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_5: InstrumentTest(0x07+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_6: InstrumentTest(0x09+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_7: InstrumentTest(0x0b+minval((curoctave+1)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_I: InstrumentTest(0x01+minval((curoctave+2)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_9: InstrumentTest(0x02+minval((curoctave+2)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_O: InstrumentTest(0x03+minval((curoctave+2)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_0: InstrumentTest(0x04+minval((curoctave+2)<<4,0x90),FreeChannel()); break;
-  case SDL_SCANCODE_P: InstrumentTest(0x05+minval((curoctave+2)<<4,0x90),FreeChannel()); break;
-  case 66: InstrumentTest(0x06+minval((curoctave+2)<<4,0x90),FreeChannel()); break;
-  case 65: InstrumentTest(0x07+minval((curoctave+2)<<4,0x90),FreeChannel()); break;
-  }
-}
-void MuteControls() {
-  if (kbpressed[SDL_SCANCODE_1]) {muted[0]=!muted[0];}
-  if (kbpressed[SDL_SCANCODE_2]) {muted[1]=!muted[1];}
-  if (kbpressed[SDL_SCANCODE_3]) {muted[2]=!muted[2];}
-  if (kbpressed[SDL_SCANCODE_4]) {muted[3]=!muted[3];}
-  if (kbpressed[SDL_SCANCODE_5]) {muted[4]=!muted[4];}
-  if (kbpressed[SDL_SCANCODE_6]) {muted[5]=!muted[5];}
-  if (kbpressed[SDL_SCANCODE_7]) {muted[6]=!muted[6];}
-  if (kbpressed[SDL_SCANCODE_8]) {muted[7]=!muted[7];}
-  if (kbpressed[SDL_SCANCODE_Q]) {muted[8]=!muted[8];}
-  if (kbpressed[SDL_SCANCODE_W]) {muted[9]=!muted[9];}
-  if (kbpressed[SDL_SCANCODE_E]) {muted[10]=!muted[10];}
-  if (kbpressed[SDL_SCANCODE_R]) {muted[11]=!muted[11];}
-  if (kbpressed[SDL_SCANCODE_T]) {muted[12]=!muted[12];}
-  if (kbpressed[SDL_SCANCODE_Y]) {muted[13]=!muted[13];}
-  if (kbpressed[SDL_SCANCODE_U]) {muted[14]=!muted[14];}
-  if (kbpressed[SDL_SCANCODE_I]) {muted[15]=!muted[15];}
-  if (kbpressed[SDL_SCANCODE_A]) {muted[16]=!muted[16];}
-  if (kbpressed[SDL_SCANCODE_S]) {muted[17]=!muted[17];}
-  if (kbpressed[SDL_SCANCODE_D]) {muted[18]=!muted[18];}
-  if (kbpressed[SDL_SCANCODE_F]) {muted[19]=!muted[19];}
-  if (kbpressed[SDL_SCANCODE_G]) {muted[20]=!muted[20];}
-  if (kbpressed[SDL_SCANCODE_H]) {muted[21]=!muted[21];}
-  if (kbpressed[SDL_SCANCODE_J]) {muted[22]=!muted[22];}
-  if (kbpressed[SDL_SCANCODE_K]) {muted[23]=!muted[23];}
-  if (kbpressed[SDL_SCANCODE_Z]) {muted[24]=!muted[24];}
-  if (kbpressed[SDL_SCANCODE_X]) {muted[25]=!muted[25];}
-  if (kbpressed[SDL_SCANCODE_C]) {muted[26]=!muted[26];}
-  if (kbpressed[SDL_SCANCODE_V]) {muted[27]=!muted[27];}
-  if (kbpressed[SDL_SCANCODE_B]) {muted[28]=!muted[28];}
-  if (kbpressed[SDL_SCANCODE_N]) {muted[29]=!muted[29];}
-  if (kbpressed[SDL_SCANCODE_M]) {muted[30]=!muted[30];}
-  if (kbpressed[SDL_SCANCODE_COMMA]) {muted[31]=!muted[31];}
-}
-void MuteAllChannels() {
-  for (int su=0;su<8*(1+((song->channels-1)>>3));su++) {
-    if (sfxplaying && su==chantoplayfx) continue;
-    cvol[su]=0;
-    chip[su>>3].chan[su&7].vol=0;
-  }
-}
 
 void triggerfx(int num) {
   if (sfxdata[num]==NULL) return;
@@ -4462,46 +3961,6 @@ void triggerfx(int num) {
   chantoplayfx=FreeChannel();
   sfxInst.setChan(chantoplayfx);
   sfxplaying=true;
-}
-
-void KeyboardEvents() {
-  const unsigned char* ks=SDL_GetKeyboardState(NULL);
-  // check for presses
-  for (int cntkb=0;cntkb<255;cntkb++) {
-  kblast[cntkb]=kb[cntkb];
-  kbpressed[cntkb]=false;
-  kb[cntkb]=ks[cntkb];
-  if (kb[cntkb]!=kblast[cntkb] && kb[cntkb]==true) {
-    kbpressed[cntkb]=true;
-    //if (verbose) {cout << cntkb;}
-  }}
-  // main code here
-  if (edittype && screen==0) {FastTracker();} else {ModPlug();}
-  if (screen==4) {MuteControls();}
-  if (kbpressed[SDL_SCANCODE_PAGEDOWN]) {curedpage++; if (curedpage>(song->channels-chanstodisplay)) {curedpage=(song->channels-chanstodisplay);
-    #ifdef SOUNDS
-    triggerfx(1);
-    #endif
-  };drawpatterns(true);drawmixerlayer();}
-  if (kbpressed[SDL_SCANCODE_PAGEUP]) {curedpage--; if (curedpage<0) {
-    #ifdef SOUNDS
-    triggerfx(1);
-    #endif
-    curedpage=0;
-  };drawpatterns(true);drawmixerlayer();}
-  
-  if (kbpressed[SDL_SCANCODE_TAB]) {MuteAllChannels();}
-  if (screen==1) {
-    if (kbpressed[SDL_SCANCODE_MINUS]) {valuewidth--; if (valuewidth<1) {valuewidth=1;}}
-    if (kbpressed[SDL_SCANCODE_EQUALS]) {valuewidth++;}
-  }
-  if (screen==11) {
-    if (kb[SDL_SCANCODE_LEFT]) {pcmeditoffset-=4*maxval(1,(int)pow(2.0f,-pcmeditscale));}
-    if (kb[SDL_SCANCODE_RIGHT]) {pcmeditoffset+=4*maxval(1,(int)pow(2.0f,-pcmeditscale));}
-    if (kbpressed[SDL_SCANCODE_MINUS]) {pcmeditscale--;}
-    if (kbpressed[SDL_SCANCODE_EQUALS]) {pcmeditscale++;}
-    if (kbpressed[SDL_SCANCODE_SPACE]) {pcmeditenable=!pcmeditenable;}
-  }
 }
 
 void keyEvent_pat(SDL_Event& ev) {
@@ -5136,6 +4595,9 @@ void keyEvent_pat(SDL_Event& ev) {
 void keyEvent(SDL_Event& ev) {
   // global keys
   if (!ev.key.repeat) switch (ev.key.keysym.scancode) {
+    case SDL_SCANCODE_TAB: // panic
+      player.panic();
+      break;
     case SDL_SCANCODE_F5: // play/pause
       if (player.tick==0) {
         Play();
@@ -5151,6 +4613,9 @@ void keyEvent(SDL_Event& ev) {
       break;
     case SDL_SCANCODE_F8: // stop
       player.stop();
+      break;
+    case SDL_SCANCODE_F9: // clock info
+      clockInfo=!clockInfo;
       break;
     case SDL_SCANCODE_APPLICATION:
     case SDL_SCANCODE_GRAVE:
@@ -5189,14 +4654,14 @@ void drawdisp() {
   ClickEvents();
   if (screen==0) {
     patStartX=(scrW*((float)dpiScale)-(24+chanstodisplay*96)*curzoom)/2;
-    patStartY=(60+((scrH*dpiScale)-60)/2);
+    patStartY=(int)(60+((scrH*dpiScale)-60)/2);
     patOffY=(patRow*12)*curzoom;
     Color barcol;
     
     // top bar
     int rectX;
     for (int i=0; i<chanstodisplay; i++) {
-      soundchip::channel c=chip[(i+curedpage)>>3].chan[(i+curedpage)&7];
+      soundchip::channel& c=chip[(i+curedpage)>>3].chan[(i+curedpage)&7];
 
       if (c.flags.pcm) {
         barcol=g._WRAP_map_rgb(255,0,0);
@@ -5215,7 +4680,7 @@ void drawdisp() {
       g._WRAP_draw_filled_rectangle(rectX-6,67,rectX-6-38*(float(curzoom)/float(dpiScale))*(float((c.vol*(127-maxval(0,c.pan)))>>7)/127.0f),73,barcol);
       
       g.tPos(patStartX/(8*dpiScale)+(3+5.5+(12*i))*(float(curzoom)/float(dpiScale)),5);
-      if (!muted[i+curedpage]) {
+      if (!player.channelMask[i+curedpage]) {
         g.tColor(14);
       } else {
         g.tColor(8);
@@ -5295,10 +4760,10 @@ void drawdisp() {
   if (pointsToDraw) {
     g._WRAP_clear_to_color(g._WRAP_map_rgb(0,0,0));
     for (int ii=0;ii<pointsToDraw;ii++) {
-      g._WRAP_draw_pixel(((ii*128/pointsToDraw))+0.5,36+(int)(oscbuf[oscbufRPos]*18)-9+0.5,g._WRAP_map_rgb_f(0,(1-(((oscbuf[oscbufRPos]+1)*18)-(int)((oscbuf[oscbufRPos]+1)*18)))*1.5,0));
-      g._WRAP_draw_pixel(((ii*128/pointsToDraw))+0.5,36+(int)(oscbuf2[oscbufRPos]*18)-9+0.5,g._WRAP_map_rgb_f((1-(((oscbuf2[oscbufRPos]+1)*18)-(int)((oscbuf2[oscbufRPos]+1)*18)))*1.5,0,0));
-      g._WRAP_draw_pixel(((ii*128/pointsToDraw))+0.5,36+(int)(oscbuf[oscbufRPos]*18)-8+0.5,g._WRAP_map_rgb_f(0,((((oscbuf[oscbufRPos]+1)*18)-(int)((oscbuf[oscbufRPos]+1)*18)))*1.5,0));
-      g._WRAP_draw_pixel(((ii*128/pointsToDraw))+0.5,36+(int)(oscbuf2[oscbufRPos]*18)-8+0.5,g._WRAP_map_rgb_f(((((oscbuf2[oscbufRPos]+1)*18)-(int)((oscbuf2[oscbufRPos]+1)*18)))*1.5,0,0));
+      g._WRAP_draw_pixel(int((ii*128/pointsToDraw))+0.5,36+(int)(oscbuf[oscbufRPos]*18)-9+0.5,g._WRAP_map_rgb_f(0,(1-(((oscbuf[oscbufRPos]+1)*18)-(int)((oscbuf[oscbufRPos]+1)*18)))*1.5,0));
+      g._WRAP_draw_pixel(int((ii*128/pointsToDraw))+0.5,36+(int)(oscbuf2[oscbufRPos]*18)-9+0.5,g._WRAP_map_rgb_f((1-(((oscbuf2[oscbufRPos]+1)*18)-(int)((oscbuf2[oscbufRPos]+1)*18)))*1.5,0,0));
+      g._WRAP_draw_pixel(int((ii*128/pointsToDraw))+0.5,36+(int)(oscbuf[oscbufRPos]*18)-8+0.5,g._WRAP_map_rgb_f(0,((((oscbuf[oscbufRPos]+1)*18)-(int)((oscbuf[oscbufRPos]+1)*18)))*1.5,0));
+      g._WRAP_draw_pixel(int((ii*128/pointsToDraw))+0.5,36+(int)(oscbuf2[oscbufRPos]*18)-8+0.5,g._WRAP_map_rgb_f(((((oscbuf2[oscbufRPos]+1)*18)-(int)((oscbuf2[oscbufRPos]+1)*18)))*1.5,0,0));
       oscbufRPos++;
     }
   }
@@ -5328,28 +4793,28 @@ void drawdisp() {
       g._WRAP_draw_line(16,30,32,30,g._WRAP_map_rgb(255,255,255),1);
       g._WRAP_draw_line(16,36,32,36,g._WRAP_map_rgb(255,255,255),1);
       // play/pattern/stop buttons
-      g._WRAP_draw_rectangle((scrW/2)-112,13,(scrW/2)-82,47,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_rectangle((scrW/2)-71,13,(scrW/2)-31,47,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,47,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_rectangle((scrW/2)+31,13,(scrW/2)+71,47,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_rectangle((scrW/2)+82,13,(scrW/2)+112,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle(((float)scrW/2)-112,13,((float)scrW/2)-82,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle(((float)scrW/2)-71,13,((float)scrW/2)-31,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle(((float)scrW/2)-20,13,((float)scrW/2)+20,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle(((float)scrW/2)+31,13,((float)scrW/2)+71,47,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle(((float)scrW/2)+82,13,((float)scrW/2)+112,47,g._WRAP_map_rgb(255,255,255),2);
       // play button
-      g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-58,36,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_line((scrW/2)-58,22,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_line((scrW/2)-58,36,(scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-58,22,((float)scrW/2)-58,36,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-58,22,((float)scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-58,36,((float)scrW/2)-44,29,g._WRAP_map_rgb(255,255,255),2);
       // pattern button
-      g._WRAP_draw_line((scrW/2)-8,21,(scrW/2)-8,37,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_line((scrW/2)-5,22,(scrW/2)-5,36,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_line((scrW/2)-5,22,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_line((scrW/2)-5,36,(scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-8,21,((float)scrW/2)-8,37,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-5,22,((float)scrW/2)-5,36,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-5,22,((float)scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-5,36,((float)scrW/2)+9,29,g._WRAP_map_rgb(255,255,255),2);
       // stop button
-      g._WRAP_draw_rectangle((scrW/2)+44,22,(scrW/2)+58,36,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_rectangle(((float)scrW/2)+44,22,((float)scrW/2)+58,36,g._WRAP_map_rgb(255,255,255),2);
       // skip left
-      g._WRAP_draw_line((scrW/2)-92,22,(scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_line((scrW/2)-92,36,(scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-92,22,((float)scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)-92,36,((float)scrW/2)-102,29,g._WRAP_map_rgb(255,255,255),2);
       // skip right
-      g._WRAP_draw_line((scrW/2)+92,22,(scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
-      g._WRAP_draw_line((scrW/2)+92,36,(scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)+92,22,((float)scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
+      g._WRAP_draw_line(((float)scrW/2)+92,36,((float)scrW/2)+102,29,g._WRAP_map_rgb(255,255,255),2);
     }
 
     // alternate view
@@ -5474,24 +4939,24 @@ void drawdisp() {
     g._WRAP_draw_line(scrW-200,0,scrW-200,59,g._WRAP_map_rgb(255,255,255),1);
     g._WRAP_draw_line(0,59,scrW,59,g._WRAP_map_rgb(255,255,255),1);
     // play/pattern/stop buttons
-    g._WRAP_draw_rectangle((scrW/2)-61,13,(scrW/2)-21,37,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)-20,13,(scrW/2)+20,37,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)+21,13,(scrW/2)+61,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle(((float)scrW/2)-61,13,((float)scrW/2)-21,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle(((float)scrW/2)-20,13,((float)scrW/2)+20,37,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle(((float)scrW/2)+21,13,((float)scrW/2)+61,37,g._WRAP_map_rgb(255,255,255),2);
     // reverse/step/follow buttons
-    g._WRAP_draw_rectangle((scrW/2)-61,37,(scrW/2)-21,48,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)-20,37,(scrW/2)+20,48,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_rectangle((scrW/2)+21,37,(scrW/2)+61,48,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle(((float)scrW/2)-61,37,((float)scrW/2)-21,48,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle(((float)scrW/2)-20,37,((float)scrW/2)+20,48,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle(((float)scrW/2)+21,37,((float)scrW/2)+61,48,g._WRAP_map_rgb(255,255,255),2);
     // play button
-    g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-48,32,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-48,18,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-48,32,(scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line(((float)scrW/2)-48,18,((float)scrW/2)-48,32,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line(((float)scrW/2)-48,18,((float)scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line(((float)scrW/2)-48,32,((float)scrW/2)-34,25,g._WRAP_map_rgb(255,255,255),2);
     // pattern button
-    g._WRAP_draw_line((scrW/2)-8,17,(scrW/2)-8,33,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)-5,32,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,18,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
-    g._WRAP_draw_line((scrW/2)-5,32,(scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line(((float)scrW/2)-8,17,((float)scrW/2)-8,33,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line(((float)scrW/2)-5,18,((float)scrW/2)-5,32,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line(((float)scrW/2)-5,18,((float)scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_line(((float)scrW/2)-5,32,((float)scrW/2)+9,25,g._WRAP_map_rgb(255,255,255),2);
     // stop button
-    g._WRAP_draw_rectangle((scrW/2)+34,18,(scrW/2)+48,32,g._WRAP_map_rgb(255,255,255),2);
+    g._WRAP_draw_rectangle(((float)scrW/2)+34,18,((float)scrW/2)+48,32,g._WRAP_map_rgb(255,255,255),2);
     // oscilloscope
     g._WRAP_draw_bitmap(osc,scrW-128,0,0);
     g._WRAP_draw_line(scrW-128,0,scrW-128,59,g._WRAP_map_rgb(255,255,255),1);
@@ -5507,12 +4972,11 @@ void drawdisp() {
     case 7: drawabout(); break;
     case 9: drawsfxpanel(); break;
     case 10: drawmemory(); break;
-    case 11: drawpcmeditor(); break;
     case 12: drawpiano(); break;
   }
 
   if (candInput!="") {
-    g.tPos(scrW/8-candInput.size(),0);
+    g.tPos(int(scrW/8-candInput.size()),0);
     g.tColor(10);
     g.printf("%s",candInput.c_str());
   }  
@@ -5661,11 +5125,10 @@ void updateDisp() {
       scrH=g.getWSize().y;
     }
 
-    maxrasterdelta=(maxval(0,raster2-raster1)>maxrasterdelta)?(maxval(0,raster2-raster1)):(maxrasterdelta);
     if (!playermode) {
       g.clearScreen();
       drawdisp();
-      if (kb[SDL_SCANCODE_LSHIFT]) {
+      if (clockInfo) {
         g.tColor(9);
         g.tAlign(0.5);
         g.tPos((float)scrW/16.0,0);

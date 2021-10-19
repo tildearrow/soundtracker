@@ -13,7 +13,7 @@ void MacroStatus::next() {
   int iterations=0;
   while (!getOut) {
     pos++;
-    if (pos>=macro->cmds.size()) break;
+    if (pos>=(int)macro->cmds.size()) break;
     MacroCommand cmd=macro->cmds[pos];
     switch (cmd.type&127) {
       case cmdEnd:

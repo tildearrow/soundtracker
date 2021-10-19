@@ -52,6 +52,8 @@ void Player::noteOn(int channel, int note) {
   status.finePitch=0;
   status.vibPos=0;
   status.vibValue=0;
+  status.tremPos=0;
+  status.tremValue=0;
 
   /// FILTER MODE
   c.flags.fmode=ins->filterMode&7;
@@ -146,11 +148,13 @@ void Player::noteAftertouch(int channel, int val) {
 
 void Player::noteProgramChange(int channel, int val) {
   ChannelStatus& status=chan[channel];
-  soundchip::channel& c=chip[channel>>3].chan[channel&7];
+  //soundchip::channel& c=chip[channel>>3].chan[channel&7];
 
   status.instr=val;
   status.vibPos=0;
   status.vibValue=0;
+  status.tremPos=0;
+  status.tremValue=0;
   noteAftertouch(channel,minval(127,song->ins[status.instr]->vol*2));
 }
 
@@ -169,7 +173,7 @@ void Player::processChanRow(Pattern* p, int i) {
     noteProgramChange(i,p->data[step][i][1]);
   }
   // note
-  if (p->data[step][i][0]!=0) {
+  if ((p->data[step][i][0]&15)!=0) {
     switch (p->data[step][i][0]&15) {
       case 13: // OFF
         noteOff(i);
@@ -267,6 +271,14 @@ void Player::processChanRow(Pattern* p, int i) {
       status.channelVol=status.fxVal*2;
       if (status.channelVol>0x80) status.channelVol=0x80;
       status.volChanged=true;
+      break;
+    case 'R': // tremolo
+      if ((status.fxVal>>4)!=0) {
+        status.tremSpeed=4*(status.fxVal>>4);
+      }
+      if ((status.fxVal&15)!=0) {
+        status.tremDepth=(status.fxVal&15)*4;
+      }
       break;
     case 'S': { // special effects
       unsigned char subEffect=status.fxVal>>4;
@@ -412,6 +424,11 @@ void Player::update() {
   status.vibValue=-sin(M_PI*(float)status.vibPos/128.0f)*((float)status.vibDepth/32.0f); \
   status.freqChanged=true;
 
+#define TREMOLO \
+  status.tremPos+=status.tremSpeed; \
+  status.tremValue=-sin(M_PI*(float)status.tremPos/128.0f)*(status.tremDepth); \
+  status.volChanged=true;
+
 #define PORTAMENTO \
   if (status.note<status.portaTarget) { \
     status.note+=status.portaSpeed; \
@@ -458,18 +475,27 @@ void Player::update() {
         VOL_SLIDE
         PORTAMENTO
         break;
+      case 'R': // tremolo
+        TREMOLO
+        break;
     }
 
     // changes
     if (status.volChanged) {
-      c.vol=(minval(127,(status.vol*status.envVol)>>8)*status.channelVol)>>7;
+      if (channelMask[i]) {
+        c.vol=0;
+      } else {
+        c.vol=minval(127,(status.vol*status.envVol*status.channelVol*(int)(128.5+status.tremValue))>>22);
+      }
       status.volChanged=false;
     }
     if (status.freqChanged) {
       unsigned int freq=getNoteFreq(offsetNote((status.note-48)+((float)ins->pitch/128.0f)+ins->noteOffset+status.vibValue+status.arpValue+((float)status.finePitch/64.0f),status.macroPitch.value));
       if (song->flags&4 && c.flags.shape==4) {
+        if (freq>0x3ffff) freq=0x3ffff;
         c.freq=freq>>2;
       } else {
+        if (freq>0xffff) freq=0xffff;
         c.freq=freq;
       }
 
@@ -506,19 +532,33 @@ void Player::reset() {
     tempo=ntsc?150:125;
   }
 
+  if (chip!=NULL) {
+    memset(chip[0].chan,0,256);
+    memset(chip[1].chan,0,256);
+    memset(chip[2].chan,0,256);
+    memset(chip[3].chan,0,256);
+  }
   for (int i=0; i<32; i++) {
     chan[i]=ChannelStatus();
-    if (chip!=NULL) {
-      memset(chip[0].chan,0,256);
-      memset(chip[1].chan,0,256);
-      memset(chip[2].chan,0,256);
-      memset(chip[3].chan,0,256);
-    }
+  }
+}
+
+void Player::panic() {
+  if (chip!=NULL) {
+    memset(chip[0].chan,0,256);
+    memset(chip[1].chan,0,256);
+    memset(chip[2].chan,0,256);
+    memset(chip[3].chan,0,256);
+  }
+  for (int i=0; i<32; i++) {
+    chan[i]=ChannelStatus();
+    chan[i].channelPan=song->defaultPan[i];
+    chan[i].channelVol=song->defaultVol[i];
+    chip[i>>3].chan[i&7].pan=chan[i].channelPan;
   }
 }
 
 void Player::play() {
-  playMode=1;
   step=-1;
   nextJump=-1;
   tick=0;
@@ -545,6 +585,7 @@ void Player::play() {
     chan[i].channelVol=song->defaultVol[i];
     chip[i>>3].chan[i&7].pan=chan[i].channelPan;
   }
+  playMode=1;
 }
 
 void Player::stop() {
@@ -552,6 +593,18 @@ void Player::stop() {
   for (int i=0; i<song->channels; i++) {
     chip[i>>3].chan[i&7].vol=0;
   }
+}
+
+void Player::maskChannel(int channel, bool mask) {
+  channelMask[channel]=mask;
+  if (channelMask[channel]) {
+    chip[channel>>3].chan[channel&7].vol=0;
+  }
+  chan[channel].volChanged=true;
+}
+
+void Player::toggleChannel(int channel) {
+  maskChannel(channel,!channelMask[channel]);
 }
 
 void Player::setSong(Song* s) {

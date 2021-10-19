@@ -755,13 +755,19 @@ struct ChannelStatus {
   signed char channelPan;
   unsigned char cutTimer, rowDelay;
 
-  bool volChanged, freqChanged;
+  bool volChanged, freqChanged, panChanged;
 
   float slideSpeed;
   float portaSpeed, portaTarget;
 
   unsigned char vibPos, vibSpeed, vibDepth;
   float vibValue;
+
+  unsigned char tremPos, tremSpeed, tremDepth;
+  float tremValue;
+
+  unsigned char panbPos, panbSpeed, panbDepth;
+  float panbValue;
 
   MacroStatus macroVol;
   MacroStatus macroCut;
@@ -794,13 +800,22 @@ struct ChannelStatus {
     rowDelay(0),
     volChanged(false),
     freqChanged(false),
+    panChanged(false),
     slideSpeed(0),
     portaSpeed(0),
     portaTarget(0),
     vibPos(0),
     vibSpeed(0),
     vibDepth(0),
-    vibValue(0) {}
+    vibValue(0),
+    tremPos(0),
+    tremSpeed(0),
+    tremDepth(0),
+    tremValue(0),
+    panbPos(0),
+    panbSpeed(0),
+    panbDepth(0),
+    panbValue(0) {}
 };
 
 class Player {
@@ -812,6 +827,7 @@ class Player {
     int speed, tempo, nextJump;
     bool ntsc;
     ChannelStatus chan[32];
+    bool channelMask[32];
 
     unsigned int getNoteFreq(float note);
     unsigned int getNotePeriod(float note);
@@ -828,8 +844,12 @@ class Player {
     void processChanRow(Pattern* pat, int channel);
     void nextRow();
 
+    void maskChannel(int channel, bool mask);
+    void toggleChannel(int channel);
+
     void update();
     void reset();
+    void panic();
     void play();
     void stop();
 
