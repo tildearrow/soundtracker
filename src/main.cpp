@@ -49,7 +49,7 @@ uint32_t jacksr;
 #include "blip_buf.h"
 soundchip chip[4]; // up to 4 soundchips
 
-blip_buffer_t* bb[2];
+blip_buffer_t* bb[2]={NULL,NULL};
 int prevSample[2]={0,0};
 
 short bbOut[2][32768];
@@ -2310,22 +2310,24 @@ int ImportXM(FILE* xm) {
     fseek(xm,-243,SEEK_CUR);
     // convert envelopes
     printf("volenv: %d panenv: %d\n",ich.envVolCount,ich.envPanCount);
-    /*(if (ich.volType&1) {
+    if (ich.volType&1) {
       int point=0;
-      for (int j=0; (point<ich.envVolCount && j<253); j++) {
+      Macro* m=new Macro;
+      for (int j=0; (point<ich.envVolCount); j++) {
         if (point<1) {
-          bytable[0][i+1][j]=minval(255,ich.envVol[point].val*4);
+          m->cmds.push_back(MacroCommand(cmdSet,minval(255,ich.envVol[point].val*4),true));
         } else {
-          bytable[0][i+1][j]=minval(255,interpolate(float(ich.envVol[point-1].val),float(ich.envVol[point].val),(float(j-ich.envVol[point-1].pos)/float(ich.envVol[point].pos-ich.envVol[point-1].pos)))*4);
+          m->cmds.push_back(MacroCommand(cmdSet,minval(255,interpolate(float(ich.envVol[point-1].val),float(ich.envVol[point].val),(float(j-ich.envVol[point-1].pos)/float(ich.envVol[point].pos-ich.envVol[point-1].pos)))*4),true));
         }
-        if (j>=ich.envVol[point].pos) point++;
+        if (j>=ich.envVol[point].pos) {
+          if (point==ich.volSus && ich.volType&2) m->cmds.push_back(MacroCommand(cmdWaitRel,0,false));
+          point++;
+        }
       }
-      bytable[0][i+1][253]=minval(252,ich.envVol[ich.envVolCount-1].pos);
+      song->ins[i]->volMacro=song->macros.size();
+      song->macros.push_back(m);
       printf("volsus %d\n",ich.volSus);
-      if (ich.volType&2) {
-        bytable[0][i+1][255]=minval(252,ich.envVol[ich.volSus].pos);
-      }
-    }*/
+    }
     // load samples (only the first one is loaded)
     fseek(xm,ih.size,SEEK_CUR);
     for (int j=0; j<ih.samples[0]; j++) {
@@ -2350,16 +2352,20 @@ int ImportXM(FILE* xm) {
         for (int k=0; k<sh.size; k++) {
           if (sh.flags&16) {
             delta+=fgetsh(xm);
-            chip[0].pcm[sampleSeek]=delta>>8;
-            chip[1].pcm[sampleSeek]=delta>>8;
-            chip[2].pcm[sampleSeek]=delta>>8;
-            chip[3].pcm[sampleSeek]=delta>>8;
+            if (sampleSeek<SOUNDCHIP_PCM_SIZE) {
+              chip[0].pcm[sampleSeek]=delta>>8;
+              chip[1].pcm[sampleSeek]=delta>>8;
+              chip[2].pcm[sampleSeek]=delta>>8;
+              chip[3].pcm[sampleSeek]=delta>>8;
+            }
           } else {
             delta+=(signed char)(fgetc(xm));
-            chip[0].pcm[sampleSeek]=delta;
-            chip[1].pcm[sampleSeek]=delta;
-            chip[2].pcm[sampleSeek]=delta;
-            chip[3].pcm[sampleSeek]=delta;
+            if (sampleSeek<SOUNDCHIP_PCM_SIZE) {
+              chip[0].pcm[sampleSeek]=delta;
+              chip[1].pcm[sampleSeek]=delta;
+              chip[2].pcm[sampleSeek]=delta;
+              chip[3].pcm[sampleSeek]=delta;
+            }
           }
           sampleSeek++;
           if (sampleSeek>=SOUNDCHIP_PCM_SIZE) {
@@ -2491,7 +2497,7 @@ int SaveFile() {
   int CPL=0; // current pattern packlength
   int insparas[256];
   int patparas[256];
-  int seqparas[256];
+  int macroparas[8192];
   int commentpointer=0;
   int pcmpointer=0;
   bool IS_INS_BLANK[256];
@@ -2506,50 +2512,40 @@ int SaveFile() {
   sfile=ps_fopen(rfn,"wb");
   if (sfile!=NULL) { // write the file
     fseek(sfile,0,SEEK_SET); // seek to 0
-    printf("writing headers...\n");
-    fwrite("TRACK8BT",1,8,sfile); // magic number
-    fwrite(&ver,2,1,sfile); // version
-    fputc(instruments,sfile); // instruments
-    fputc(patterns,sfile); // patterns
-    fputc(song->orders,sfile); // orders
-    fputc(song->speed,sfile); // speed
-    fputc(seqs,sfile); // sequences
-    fputc(song->tempo,sfile); // tempo
-    fputs(name.c_str(),sfile); // name
-    fseek(sfile,48,SEEK_SET); // seek to 0x30
-    fputc(0,sfile); // default filter mode
-    fputc(song->channels,sfile); // channels
-    fwrite("\0\0",2,1,sfile); // flags
-    fputc(128,sfile); // global volume
-    fputc(0,sfile); // global panning
-    fwrite("\0\0\0\0",4,1,sfile); // mute flags
-    fwrite("\0\0\0\0",4,1,sfile); // PCM data pointer
-    fwrite("\0\0",2,1,sfile); // reserved
-    fseek(sfile,0x3e,SEEK_SET); // seek to 0x3e
-    fputc(song->detune,sfile); // detune factor
-    fseek(sfile,0x40,SEEK_SET); // seek to 0x40
-    fwrite(song->defaultVol,1,32,sfile); // channel volume
-    fwrite(song->defaultPan,1,32,sfile); // channel panning
-    fseek(sfile,0x80,SEEK_SET); // seek to 0x80
-    for (int ii=0; ii<256; ii++) {
-      fputc(song->order[ii],sfile); // order list
-    }
+
+    printf("writing header...\n");
+    song->macrosC=song->macros.size();
+    fwrite(song,1,384,sfile); // write header
+
     printf("writing instruments...\n");
-    fseek(sfile,0xd80,SEEK_SET); // seek to 0xD80, and start writing the instruments
-    sk=0xd80;
+    sk=384+256+256+song->macrosC*4;
+    fseek(sfile,sk,SEEK_SET); // start writing the instruments
     for (int ii=0; ii<256; ii++) {
       IS_INS_BLANK[ii]=true;
       // check if the instrument is blank
-      if (memcmp(&song->ins[ii],&blankIns,64)!=0) {IS_INS_BLANK[ii]=false;}
+      if (memcmp(&song->ins[ii],&blankIns,96)!=0) {IS_INS_BLANK[ii]=false;}
       if (IS_INS_BLANK[ii]) {
         insparas[ii]=0;continue;
       }
       insparas[ii]=ftell(sfile);
-      fwrite(&song->ins[ii],1,64,sfile);
+      fwrite(&song->ins[ii],1,96,sfile);
     }
+
     printf("writing macros...\n");
-    // TODO PLEASE: MACROS
-    printf("packing/writing patterns...\n");
+    for (int i=0; i<song->macrosC; i++) {
+      Macro* m=song->macros[i];
+      unsigned int len=m->cmds.size();
+      macroparas[i]=ftell(sfile);
+      fwrite(&len,4,1,sfile); // write length
+      fwrite(&m->jumpRelease,4,1,sfile); // write jumpRelease
+      fwrite("\0\0\0\0\0\0\0\0",1,8,sfile); // reserved
+      for (MacroCommand& j: m->cmds) {
+        fputc(j.type,sfile);
+        fwrite(&j.value,4,1,sfile);
+      }
+    }
+
+    printf("writing patterns...\n");
     // pattern packer
     for (int ii=0; ii<256; ii++) {
       Pattern* p=song->getPattern(ii,false);
@@ -2619,19 +2615,16 @@ int SaveFile() {
     // write pointers
     printf("writing offsets...\n");
     fseek(sfile,0x180,SEEK_SET);
-    for (int ii=0;ii<256;ii++) {
-      fwrite(&insparas[ii],4,1,sfile);
-    }
-    for (int ii=0;ii<256;ii++) {
-      fwrite(&seqparas[ii],4,1,sfile);
-    }
-    for (int ii=0;ii<256;ii++) {
-      fwrite(&patparas[ii],4,1,sfile);
-    }
+    fwrite(insparas,4,256,sfile);
+    fwrite(macroparas,4,song->macrosC,sfile);
+    fwrite(patparas,4,256,sfile);
+
     fseek(sfile,0x3a,SEEK_SET);
     fwrite(&commentpointer,4,1,sfile);
+    
     fseek(sfile,0x36,SEEK_SET);
     fwrite(&pcmpointer,4,1,sfile);
+    
     fclose(sfile);
     printf("done\n");
     print_entry(curdir);
@@ -2940,7 +2933,7 @@ int LoadFile(const char* filename) {
 
     // version<152 noise range
     if (song->version<152) {
-      song->flags|=4;
+      song->flags=4;
     }
 
     fseek(sfile,0x180,SEEK_SET);
@@ -3052,7 +3045,11 @@ int LoadFile(const char* filename) {
     } else {
       // version>=152 macros
       for (int i=0; i<song->macrosC; i++) {
-        if (seqparas[i]==0) continue;
+        if (seqparas[i]==0) {
+          Macro* m=new Macro();
+          song->macros.push_back(m);
+          continue;
+        }
         fseek(sfile,seqparas[i],SEEK_SET);
         Macro* m=new Macro();
         unsigned int len=fgeti(sfile);
@@ -3061,11 +3058,10 @@ int LoadFile(const char* filename) {
         int reserved2=fgeti(sfile);
         reserved1=reserved2; // shut the compiler up
         reserved2=reserved1;
-        for (unsigned int i=0; i<len; i++) {
+        for (unsigned int j=0; j<len; j++) {
           unsigned char cType=fgetc(sfile);
           unsigned int cValue=fgeti(sfile);
           m->cmds.push_back(MacroCommand(cType&0x7f,cValue,cType&0x80?1:0));
-          if ((cType&0x7f)==cmdEnd) break;
         }
         song->macros.push_back(m);
       }
