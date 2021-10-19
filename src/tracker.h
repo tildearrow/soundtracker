@@ -227,7 +227,6 @@ class Graphics {
   Point scrSize;
   Color textCol;
   char putBuf[4096];
-  bool inited;
   float nlPos;
   float align;
   float dpiScale;
@@ -462,7 +461,7 @@ class Graphics {
     bool preinit();
     bool init(int width, int height);
     bool quit();
-    Graphics(): inited(false), nlPos(0), align(0) {}
+    Graphics(): nlPos(0), align(0) {}
 };
 
 extern Graphics g;
@@ -591,7 +590,7 @@ class PopupBox {
 };
 
 class NumberPad {
-  float x, y;
+  //float x, y;
   Button bNum[16];
   Button bDel;
   Button bOK;
