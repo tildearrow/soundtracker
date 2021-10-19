@@ -1835,8 +1835,8 @@ int ImportMOD(FILE* mod) {
       }
       int repeatlen;
       repeatlen=h.ins[ii].loopLen*2;
-      printf("sample %d size: %.5x repeat: %.4x replen: %.4x\n",ii,tempsize,repeatpos,repeatlen);
-      printf("finetune %d vol %d\n",h.ins[ii].pitch,h.ins[ii].vol);
+      //printf("sample %d size: %.5x repeat: %.4x replen: %.4x\n",ii,tempsize,repeatpos,repeatlen);
+      //printf("finetune %d vol %d\n",h.ins[ii].pitch,h.ins[ii].vol);
 
       if (karsten) {
         song->ins[ii+1]->pcmPos=(CurrentSampleSeek+repeatpos);
@@ -1892,14 +1892,14 @@ int ImportMOD(FILE* mod) {
     memcpy(chip[1].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
     memcpy(chip[2].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
     memcpy(chip[3].pcm,chip[0].pcm,SOUNDCHIP_PCM_SIZE);
-    printf("---PATTERNS---\n");
+    //printf("---PATTERNS---\n");
     if (karsten) {
       fseek(mod,sizeof(ClassicMODHeader),SEEK_SET);
     } else {
       fseek(mod,sizeof(MODHeader),SEEK_SET);
     }
     for (int importid=0;importid<patterns+1;importid++) {
-      printf("-PATTERN %d-\n",importid);
+      //printf("-PATTERN %d-\n",importid);
       Pattern* p=song->getPattern(importid,true);
       for (int indxr=0;indxr<64;indxr++) {
         int NPERIOD;
