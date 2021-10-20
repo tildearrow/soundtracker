@@ -240,7 +240,8 @@ void Player::processChanRow(Pattern* p, int i) {
       nextJump=status.fxVal;
       break;
     case 'C': // jump to next
-      nextJump=pat+1;
+      if (nextJump==-1) nextJump=pat+1;
+      nextJumpStep=status.fxVal;
       break;
     case 'D': case 'K': case 'L': { // volume slide
       if (status.fxVal!=0) {
@@ -319,6 +320,20 @@ void Player::processChanRow(Pattern* p, int i) {
       unsigned char subEffect=status.fxVal>>4;
       unsigned char subVal=status.fxVal&15;
       switch (subEffect) {
+        case 0xB: // pattern loop
+          if (subVal==0) {
+            patLoopPos=step;
+          } else {
+            if (patLoopCount==0) {
+              patLoopCount=subVal;
+              nextJump=pat;
+              nextJumpStep=patLoopPos;
+            } else if (--patLoopCount>0) {
+              nextJump=pat;
+              nextJumpStep=patLoopPos;
+            }
+          }
+          break;
         case 0xC: // delayed cut
           status.cutTimer=subVal+1;
           if (status.cutTimer<2) status.cutTimer=2;
@@ -347,8 +362,9 @@ void Player::processChanRow(Pattern* p, int i) {
 
 void Player::nextRow() {
   if (nextJump>=0) {
-    pat=nextJump; step=-1;
+    pat=nextJump; step=nextJumpStep-1;
     nextJump=-1;
+    nextJumpStep=0;
     if (pat>song->orders) pat=0;
   }
 
@@ -582,6 +598,10 @@ void Player::reset() {
   tick=0;
   playMode=0;
   nextJump=-1;
+  nextJumpStep=0;
+
+  patLoopPos=0;
+  patLoopCount=0;
 
   if (song!=NULL) {
     speed=song->speed;

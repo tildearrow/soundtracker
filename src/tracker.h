@@ -823,7 +823,8 @@ class Player {
 
   public:
     int pat, step, tick, playMode;
-    int speed, tempo, nextJump;
+    int speed, tempo, nextJump, nextJumpStep;
+    int patLoopPos, patLoopCount;
     bool ntsc;
     ChannelStatus chan[32];
     bool channelMask[32];
