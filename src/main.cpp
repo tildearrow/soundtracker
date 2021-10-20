@@ -2518,21 +2518,22 @@ int SaveFile() {
     fseek(sfile,0,SEEK_SET); // seek to 0
 
     printf("writing header...\n");
+    song->version=TRACKER_VER;
     song->macrosC=song->macros.size();
     fwrite(song,1,384,sfile); // write header
 
     printf("writing instruments...\n");
-    sk=384+256+256+song->macrosC*4;
+    sk=384+256*4+256*4+song->macrosC*4;
     fseek(sfile,sk,SEEK_SET); // start writing the instruments
     for (int ii=0; ii<256; ii++) {
       IS_INS_BLANK[ii]=true;
       // check if the instrument is blank
-      if (memcmp(&song->ins[ii],&blankIns,96)!=0) {IS_INS_BLANK[ii]=false;}
+      if (memcmp(song->ins[ii],&blankIns,96)!=0) {IS_INS_BLANK[ii]=false;}
       if (IS_INS_BLANK[ii]) {
         insparas[ii]=0;continue;
       }
       insparas[ii]=ftell(sfile);
-      fwrite(&song->ins[ii],1,96,sfile);
+      fwrite(song->ins[ii],1,96,sfile);
     }
 
     printf("writing macros...\n");
@@ -3054,6 +3055,7 @@ int LoadFile(const char* filename) {
           song->macros.push_back(m);
           continue;
         }
+        printf("%d: seek to %x\n",i,seqparas[i]);
         fseek(sfile,seqparas[i],SEEK_SET);
         Macro* m=new Macro();
         unsigned int len=fgeti(sfile);
@@ -5316,6 +5318,10 @@ int main(int argc, char **argv) {
   if (playermode || fileswitch) {
     if (LoadFile(argv[filearg])) return 1;
       if (playermode) {
+        if (strcmp("newtest",argv[filearg])!=0) {
+          curfname="newtest";
+          SaveFile();
+        }
         Play();
         printf("playing: %s\n",name.c_str());
       }
