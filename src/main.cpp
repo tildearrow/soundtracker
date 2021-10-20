@@ -1590,7 +1590,10 @@ int ImportIT(FILE* it) {
     origin="Impulse Tracker";
     // orders, instruments, samples and patterns
     printf("%d orders, %d instruments, %d samples, %d patterns\n",(int)memblock[0x20],(int)memblock[0x22],(int)memblock[0x24],(int)memblock[0x26]);
-    song->orders=(unsigned char)memblock[0x20]; instruments=(unsigned char)memblock[0x22]; patterns=(unsigned char)memblock[0x26]; samples=(unsigned char)memblock[0x24];
+    song->orders=(unsigned char)memblock[0x20];
+    instruments=(unsigned char)memblock[0x22];
+    patterns=(unsigned char)memblock[0x26];
+    samples=(unsigned char)memblock[0x24];
     //cout << (int)memblock[0x29] << "." << (int)memblock[0x28];
     printf("\n");
     //cout << "volumes: global " << (int)(unsigned char)memblock[0x30] << ", mixing " << (int)(unsigned char)memblock[0x31] << "\n";
@@ -1712,6 +1715,7 @@ int ImportIT(FILE* it) {
     g.setTitle(name+S(" - ")+S(PROGRAM_NAME));
   }
   song->orders--;
+  if (song->order[song->orders]==0xff) song->orders--;
   return 0;
 }
 
