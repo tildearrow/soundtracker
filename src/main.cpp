@@ -33,8 +33,7 @@ bool ntsc=false;
 #include "tracker.h"
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
-#include "imgui_impl_opengl3.h"
-#include <GL/glew.h>
+#include "imgui_impl_sdlrenderer.h"
 #include "ssinter.h"
 #ifdef JACK
 #include <jack/jack.h>
@@ -216,7 +215,7 @@ namespace settings {
 
 // NEW VARIABLES BEGIN //
 SDL_Window* sdlWin;
-SDL_GLContext sdlRend;
+SDL_Renderer* sdlRend;
 
 const char* pageNames[]={
   "pattern",
@@ -2723,7 +2722,7 @@ bool updateDisp() {
         break;
     }
   }
-  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplSDLRenderer_NewFrame();
   ImGui_ImplSDL2_NewFrame(sdlWin);
   ImGui::NewFrame();
 
@@ -2744,50 +2743,24 @@ bool updateDisp() {
 
   // end of frame
   ImGui::Render();
-  glViewport(0,0,scrW,scrH);
-  glClearColor(0,0,0,0);
-  glClear(GL_COLOR_BUFFER_BIT);
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-  SDL_GL_SwapWindow(sdlWin);
-  glFinish();
+  SDL_RenderClear(sdlRend);
+  ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+  SDL_RenderPresent(sdlRend);
 
   return true;
 }
 
 bool initGUI() {
-  // blatantly copy-pasted from refinal
-#ifdef __APPLE__
-  const char* glVer="#version 150";
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,2);
-#else
-  const char* glVer="#version 130";
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,0);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,0);
-#endif
-
-  sdlWin=SDL_CreateWindow("soundtracker",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,scrW*dpiScale,scrH*dpiScale,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI|SDL_WINDOW_OPENGL);
+  sdlWin=SDL_CreateWindow("soundtracker",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,scrW*dpiScale,scrH*dpiScale,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
   if (sdlWin==NULL) {
     printf("error while opening window!\n");
     return false;
   }
 
-  sdlRend=SDL_GL_CreateContext(sdlWin);
+  sdlRend=SDL_CreateRenderer(sdlWin,-1,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
 
   if (sdlRend==NULL) {
     printf("error while opening renderer! %s\n",SDL_GetError());
-    return false;
-  }
-
-  SDL_GL_MakeCurrent(sdlWin,sdlRend);
-  SDL_GL_SetSwapInterval(1);
-
-  if (glewInit()!=GLEW_OK) {
-    printf("GLEW init error!\n");
     return false;
   }
 
@@ -2795,8 +2768,8 @@ bool initGUI() {
   ImGui::CreateContext();
 
   ImGui::StyleColorsDark();
-  ImGui_ImplSDL2_InitForOpenGL(sdlWin,sdlRend);
-  ImGui_ImplOpenGL3_Init(glVer);
+  ImGui_ImplSDL2_InitForSDLRenderer(sdlWin);
+  ImGui_ImplSDLRenderer_Init(sdlRend);
 
   ImGui::GetStyle().ScaleAllSizes(dpiScale);
 

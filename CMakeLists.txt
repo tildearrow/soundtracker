@@ -1,11 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
 project(soundtracker)
+add_subdirectory(SDL)
 if (WIN32)
-  add_subdirectory(SDL)
   set(HAVE_SDL2 SDL2-static)
-else (WIN32)
-  find_library(HAVE_SDL2 SDL2)
 endif (WIN32)
+include_directories(SDL/include)
 if (APPLE)
   find_library(HAVE_APPKIT AppKit PATHS ${CMAKE_OSX_SYSROOT}/System/Library PATH_SUFFIXES Frameworks NO_DEFAULT_PATH)
 else (APPLE)
@@ -18,7 +17,7 @@ imgui/imgui_demo.cpp
 imgui/imgui_draw.cpp
 imgui/imgui_tables.cpp
 imgui/imgui_widgets.cpp
-imgui/backends/imgui_impl_opengl3.cpp
+imgui/backends/imgui_impl_sdlrenderer.cpp
 imgui/backends/imgui_impl_sdl.cpp
 src/blip_buf.c
 src/unifontfull.cpp
@@ -38,9 +37,9 @@ if (WIN32)
 else()
   add_executable(soundtracker ${TRACKER_SRC})
 endif()
-target_link_libraries(ssinter ${HAVE_SDL2})
-target_include_directories(soundtracker PRIVATE imgui imgui/backends /usr/include/SDL2)
-target_link_libraries(soundtracker dl ${HAVE_SDL2} GL GLEW)
+target_link_libraries(ssinter SDL2)
+target_include_directories(soundtracker PRIVATE imgui imgui/backends)
+target_link_libraries(soundtracker dl SDL2)
 if (WIN32)
   target_link_libraries(ssinter SDL2main)
   target_link_libraries(soundtracker SDL2main)

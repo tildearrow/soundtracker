@@ -30,6 +30,7 @@ extern "C" {
 }
 #endif
 #include <stdint.h>
+#include <string.h>
 #include <string>
 #include <vector>
 #include <mutex>
