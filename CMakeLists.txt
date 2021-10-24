@@ -13,17 +13,23 @@ else (APPLE)
 endif (APPLE)
 add_executable(ssinter src/soundchip.cpp src/ssinter.cpp src/ssmain.cpp)
 add_executable(ssbench src/soundchip.cpp src/ssinter.cpp src/ssbench.cpp)
-set(TRACKER_SRC src/blip_buf.c
-                src/unifontfull.cpp
-                src/soundchip.cpp
-                src/song.cpp
-                src/player.cpp
-                src/macroStatus.cpp
-                src/hlesoundchip.cpp
-                src/graphics.cpp
-                src/ssinter.cpp
-                src/fextra.cpp
-                src/main.cpp)
+set(TRACKER_SRC imgui/imgui.cpp
+imgui/imgui_demo.cpp
+imgui/imgui_draw.cpp
+imgui/imgui_tables.cpp
+imgui/imgui_widgets.cpp
+imgui/backends/imgui_impl_opengl3.cpp
+imgui/backends/imgui_impl_sdl.cpp
+src/blip_buf.c
+src/unifontfull.cpp
+src/soundchip.cpp
+src/song.cpp
+src/player.cpp
+src/macroStatus.cpp
+src/hlesoundchip.cpp
+src/ssinter.cpp
+src/fextra.cpp
+src/main.cpp)
 if (APPLE)
 list(APPEND TRACKER_SRC src/nsstub.m)
 endif (APPLE)
@@ -33,7 +39,8 @@ else()
   add_executable(soundtracker ${TRACKER_SRC})
 endif()
 target_link_libraries(ssinter ${HAVE_SDL2})
-target_link_libraries(soundtracker ${HAVE_SDL2})
+target_include_directories(soundtracker PRIVATE imgui imgui/backends /usr/include/SDL2)
+target_link_libraries(soundtracker dl ${HAVE_SDL2} GL GLEW)
 if (WIN32)
   target_link_libraries(ssinter SDL2main)
   target_link_libraries(soundtracker SDL2main)

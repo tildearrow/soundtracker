@@ -2,3 +2,6 @@
 	path = SDL
 	url = https://github.com/spurious/SDL-mirror
 	branch = release-2.0.12
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui.git
