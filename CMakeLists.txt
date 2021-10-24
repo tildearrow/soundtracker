@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.0)
 project(soundtracker)
-add_subdirectory(SDL)
-if (WIN32)
-  set(HAVE_SDL2 SDL2-static)
-endif (WIN32)
-include_directories(SDL/include)
+
+if (ANDROID)
+  set(BUILD_GUI OFF)
+else (ANDROID)
+  set(BUILD_GUI ON)
+endif (ANDROID)
+
+if (BUILD_GUI)
+  add_subdirectory(SDL)
+  include_directories(SDL/include)
+endif (BUILD_GUI)
 if (APPLE)
   find_library(HAVE_APPKIT AppKit PATHS ${CMAKE_OSX_SYSROOT}/System/Library PATH_SUFFIXES Frameworks NO_DEFAULT_PATH)
 else (APPLE)
@@ -12,15 +18,15 @@ else (APPLE)
 endif (APPLE)
 add_executable(ssinter src/soundchip.cpp src/ssinter.cpp src/ssmain.cpp)
 add_executable(ssbench src/soundchip.cpp src/ssinter.cpp src/ssbench.cpp)
-set(TRACKER_SRC imgui/imgui.cpp
+set(GUI_SRC imgui/imgui.cpp
 imgui/imgui_demo.cpp
 imgui/imgui_draw.cpp
 imgui/imgui_tables.cpp
 imgui/imgui_widgets.cpp
 imgui/backends/imgui_impl_sdlrenderer.cpp
 imgui/backends/imgui_impl_sdl.cpp
-src/blip_buf.c
-src/unifontfull.cpp
+)
+set(TRACKER_SRC src/blip_buf.c
 src/soundchip.cpp
 src/song.cpp
 src/player.cpp
@@ -29,8 +35,11 @@ src/hlesoundchip.cpp
 src/ssinter.cpp
 src/fextra.cpp
 src/main.cpp)
+if (BUILD_GUI)
+  list(APPEND TRACKER_SRC ${GUI_SRC})
+endif (BUILD_GUI)
 if (APPLE)
-list(APPEND TRACKER_SRC src/nsstub.m)
+  list(APPEND TRACKER_SRC src/nsstub.m)
 endif (APPLE)
 if (WIN32)
   add_executable(soundtracker WIN32 ${TRACKER_SRC})
@@ -38,8 +47,11 @@ else()
   add_executable(soundtracker ${TRACKER_SRC})
 endif()
 target_link_libraries(ssinter SDL2)
-target_include_directories(soundtracker PRIVATE imgui imgui/backends)
-target_link_libraries(soundtracker dl SDL2)
+if (BUILD_GUI)
+  target_include_directories(soundtracker PRIVATE imgui imgui/backends)
+  target_compile_definitions(soundtracker PUBLIC HAVE_GUI)
+endif (BUILD_GUI)
+target_link_libraries(soundtracker SDL2)
 if (WIN32)
   target_link_libraries(ssinter SDL2main)
   target_link_libraries(soundtracker SDL2main)

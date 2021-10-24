@@ -9,7 +9,6 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
-#include "SDL_video.h"
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
@@ -31,9 +30,13 @@ bool ntsc=false;
 
 //// INCLUDES AND STUFF ////
 #include "tracker.h"
+
+#ifdef HAVE_GUI
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#endif
+
 #include "ssinter.h"
 #ifdef JACK
 #include <jack/jack.h>
@@ -2663,6 +2666,7 @@ int playfx(const char* fxdata,int fxpos,int achan) {
 
 /// SEPARATOR
 
+#ifdef HAVE_GUI
 double getScale() {
   char* env;
   // try with environment variable
@@ -2780,6 +2784,7 @@ bool initGUI() {
 
   return true;
 }
+#endif
 
 int main(int argc, char **argv) {
   int filearg=0;
@@ -2881,6 +2886,7 @@ int main(int argc, char **argv) {
 #endif
 
   if (!playermode) {
+#ifdef HAVE_GUI
     printf("creating display\n");
     dpiScale=getScale();
     if (!initGUI()) {
@@ -2892,6 +2898,10 @@ int main(int argc, char **argv) {
     if (curzoom<1) curzoom=1;
 #else
     curzoom=dpiScale;
+#endif
+#else
+    printf("GUI not available!\n");
+    return 1;
 #endif
   }
 
@@ -2920,10 +2930,14 @@ int main(int argc, char **argv) {
   printf("done\n");
   // MAIN LOOP
   if (playermode) {
-    usleep(100000);
+    while (true) usleep(100000);
   } else {
+#ifdef HAVE_GUI
     while (updateDisp());
     quit=true;
+#else
+    while (true) usleep(100000);
+#endif
   }
   printf("destroying audio system\n");
 #ifdef JACK
