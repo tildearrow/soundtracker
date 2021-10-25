@@ -2716,6 +2716,90 @@ double getScale() {
   return 1;
 }
 
+#define rangedInput(label,var,tempvar,min,max) \
+  int tempvar=var; \
+  if (ImGui::InputInt(label,&tempvar,1,16)) { \
+    if (tempvar<min) tempvar=min; \
+    if (tempvar>max) tempvar=max; \
+    var=tempvar; \
+  }
+
+#define macroSelector(label,var) \
+  ImGui::PushID(#var); \
+  ImGui::Text(label); \
+  ImGui::NextColumn(); \
+  if (var>-1) { \
+    ImGui::Text("%d",var); \
+  } else { \
+    ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.0f),"OFF"); \
+  } \
+  ImGui::NextColumn(); \
+  ImGui::PushButtonRepeat(true); \
+  if (ImGui::ArrowButton("##down",ImGuiDir_Down)) { \
+    if (var>-1) var--; \
+  } \
+  ImGui::SameLine(); \
+  if (ImGui::ArrowButton("##up",ImGuiDir_Up)) { \
+    if (var<short(song->macros.size()-1)) var++; \
+  } \
+  ImGui::SameLine(); \
+  ImGui::Button("New"); \
+  ImGui::SameLine(); \
+  ImGui::Button("Go"); \
+  ImGui::PopButtonRepeat(); \
+  ImGui::NextColumn(); \
+  ImGui::PopID();
+
+void drawInsEditor(int i) {
+  ImGui::Begin("Instrument Editor");
+  Instrument* ins=song->ins[i];
+
+  ImGui::InputText("Name",ins->name,32);
+  rangedInput("Volume",ins->vol,tempVol,0,64);
+  rangedInput("Pitch",ins->pitch,tempPitch,-128,127);
+
+  ImGui::Text("Filter Mode");
+  ImGui::SameLine();
+  ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&1)?0.6f:0.2f,0.2f,1.0f));
+  if (ImGui::Button("low")) {
+    ins->filterMode^=1;
+  }
+  ImGui::PopStyleColor();
+  ImGui::SameLine();
+  ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&2)?0.6f:0.2f,0.2f,1.0f));
+  if (ImGui::Button("high")) {
+    ins->filterMode^=2;
+  }
+  ImGui::PopStyleColor();
+  ImGui::SameLine();
+  ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&4)?0.6f:0.2f,0.2f,1.0f));
+  if (ImGui::Button("band")) {
+    ins->filterMode^=4;
+  }
+  ImGui::PopStyleColor();
+
+  ImGui::BeginChild("Macros",ImVec2(0,0),true,ImGuiWindowFlags_MenuBar);
+  ImGui::BeginMenuBar();
+  ImGui::Text("Macros");
+  ImGui::EndMenuBar();
+  ImGui::Columns(3);
+  macroSelector("Volume",ins->volMacro);
+  macroSelector("Cutoff",ins->cutMacro);
+  macroSelector("Resonance",ins->resMacro);
+  macroSelector("Duty",ins->dutyMacro);
+  macroSelector("Shape",ins->shapeMacro);
+  macroSelector("Pitch",ins->pitchMacro);
+  macroSelector("FinePitch",ins->finePitchMacro);
+  macroSelector("Panning",ins->panMacro);
+  macroSelector("VolSweep",ins->volSweepMacro);
+  macroSelector("FreqSweep",ins->freqSweepMacro);
+  macroSelector("CutSweep",ins->cutSweepMacro);
+  macroSelector("PCM Position",ins->pcmPosMacro);
+  ImGui::EndChild();
+
+  ImGui::End();
+}
+
 bool updateDisp() {
   SDL_Event ev;
   while (SDL_PollEvent(&ev)) {
@@ -2742,8 +2826,14 @@ bool updateDisp() {
     Play();
   }
   ImGui::Text("Current pos: %d",player.step);
+  if (ImGui::InputInt("Instrument",&curins)) {
+    if (curins<1) curins=1;
+    if (curins>255) curins=1;
+  }
 
   ImGui::End();
+
+  drawInsEditor(curins);
 
   // end of frame
   ImGui::Render();
