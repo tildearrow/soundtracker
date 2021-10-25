@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(soundtracker)
 
+set(CMAKE_CXX_STANDARD 11)
+
 if (ANDROID)
   set(BUILD_GUI OFF)
 else (ANDROID)
@@ -50,6 +52,7 @@ target_link_libraries(ssinter SDL2)
 if (BUILD_GUI)
   target_include_directories(soundtracker PRIVATE imgui imgui/backends)
   target_compile_definitions(soundtracker PUBLIC HAVE_GUI)
+  target_compile_definitions(ssinter PUBLIC HAVE_GUI)
 endif (BUILD_GUI)
 target_link_libraries(soundtracker SDL2)
 if (WIN32)

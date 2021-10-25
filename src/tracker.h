@@ -5,7 +5,7 @@
 #include <math.h>
 #include <errno.h>
 
-#if defined(ANDROID) || defined(_WIN32)
+#ifdef HAVE_GUI
 #include <SDL.h>
 #else
 #include <SDL2/SDL.h>

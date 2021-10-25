@@ -18,7 +18,7 @@ jack_client_t* ac;
 jack_port_t* ao[2];
 jack_status_t as;
 #else
-#ifdef _WIN32
+#ifdef HAVE_GUI
 #include <SDL.h>
 #else
 #include <SDL2/SDL.h>
