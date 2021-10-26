@@ -2815,15 +2815,18 @@ bool updateDisp() {
   ImGui::NewFrame();
 
   ImGui::BeginMainMenuBar();
-  if (ImGui::MenuItem("Play")) {
-    Play();
+  if (ImGui::MenuItem("Help")) {
   }
   ImGui::EndMainMenuBar();
 
   ImGui::Begin("Controls");
 
-  if (ImGui::Button("button")) {
+  if (ImGui::Button("Play")) {
     Play();
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Stop")) {
+    player.stop();
   }
   ImGui::Text("Current pos: %d",player.step);
   if (ImGui::InputInt("Instrument",&curins)) {
