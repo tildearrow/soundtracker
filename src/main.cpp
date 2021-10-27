@@ -9,8 +9,6 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
-#include "imgui_internal.h"
-#include <SDL2/SDL_video.h>
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
@@ -506,19 +504,6 @@ FILE* ps_fopen(const char* fn, const char* mo) {
 
 unsigned short bswapu16(unsigned short x) {
   return ((x&0xff)<<8)|((x&0xff00)>>8);
-}
-
-unsigned char GetFXColor(unsigned char fxval) {
-  switch (fxval) {
-  case 1: case 20: return 164; break; // speed control
-  case 2: case 3: case 22: case 23: return 9; break; // song control
-  case 4: case 13: case 14: case 18: case 27: return 10; break; // volume control
-  case 5: case 6: case 7: case 8: case 11: case 12: case 21: return 11; break; // pitch control
-  case 9: case 10: case 15: case 17: return 63; break; // note control
-  case 19: case 26: return 13; break; // special commands
-  case 16: case 24: case 25: return 14; break; // panning commands
-  default: return 8; break; // unknown commands
-  }
 }
 
 float interpolate(float p1, float p2, float amt) {
@@ -2722,6 +2707,63 @@ double getScale() {
   return 1;
 }
 
+enum colType {
+  colRowNumber,
+  colInstrument,
+  colVolume,
+  colVolEffect,
+  colPanEffect,
+  colPitchEffect,
+  colSongEffect,
+  colSpeedEffect,
+  colChanEffect,
+  colInvalidEffect,
+  colMiscEffect,
+
+  colMax
+};
+
+ImVec4 colors[colMax]={
+  ImVec4(0.5f,0.5f,0.5f,1.0f),
+  ImVec4(0.2f,0.8f,1.0f,1.0f),
+  ImVec4(0.2f,0.7f,1.0f,1.0f),
+  ImVec4(0.0f,1.0f,0.0f,1.0f),
+  ImVec4(0.0f,1.0f,1.0f,1.0f),
+  ImVec4(1.0f,1.0f,0.0f,1.0f),
+  ImVec4(1.0f,0.0f,0.0f,1.0f),
+  ImVec4(1.0f,0.0f,0.0f,1.0f),
+  ImVec4(0.5f,0.5f,1.0f,1.0f),
+  ImVec4(0.4f,0.4f,0.4f,1.0f),
+  ImVec4(1.0f,0.0f,1.0f,1.0f),
+};
+
+colType getFXColor(unsigned char fx) {
+  switch (fx+0x40) {
+    case 'A': case 'T':
+      return colSpeedEffect;
+      break;
+    case 'B': case 'C': case 'V': case 'W':
+      return colSongEffect;
+      break;
+    case 'D': case 'M': case 'N': case 'R':
+      return colVolEffect;
+      break;
+    case 'E': case 'F': case 'G': case 'H': case 'K': case 'L': case 'U':
+      return colPitchEffect;
+      break;
+    case 'I': case 'J': case 'O': case 'Q':
+      return colChanEffect;
+      break;
+    case 'S': case 'Z':
+      return colMiscEffect;
+      break;
+    case 'P': case 'X': case 'Y':
+      return colPanEffect;
+      break;
+  }
+  return colInvalidEffect;
+}
+
 void drawPatterns(float ypos) {
   ImGui::Begin("Pattern View",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus);
   ImGui::SetWindowPos("Pattern View",ImVec2(0.0f,ypos));
@@ -2729,32 +2771,51 @@ void drawPatterns(float ypos) {
 
   Pattern* p=song->getPattern(song->order[player.pat],false);
   int playerStep=player.step;
-  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV)) {
+  float lineHeight=(ImGui::GetTextLineHeight()+4*dpiScale);
+  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_ScrollX|ImGuiTableFlags_ScrollY)) {
+    ImGui::SetScrollY(lineHeight*playerStep);
     ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupScrollFreeze(1,1);
     for (int i=0; i<song->channels; i++) {
       ImGui::TableSetupColumn(fmt::sprintf("c%d",i).c_str(),ImGuiTableColumnFlags_WidthFixed);
     }
-    for (int i=0; i<p->length; i++) {
-      ImGui::TableNextRow();
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("%d",song->order[player.pat]);
+    for (int i=0; i<song->channels; i++) {
       ImGui::TableNextColumn();
-      ImGui::Text("%.2X",i);
-      if (i==playerStep) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,0x40ffffff);
+      ImGui::Button(fmt::sprintf("%d",i).c_str());
+    }
+    // dummy rows
+    for (int i=0; i<12; i++) {
+      ImGui::TableNextRow(0,lineHeight);
+    }
+    for (int i=0; i<p->length; i++) {
+      ImGui::TableNextRow(0,lineHeight);
+      ImGui::TableNextColumn();
+      ImGui::TextColored(colors[colRowNumber],"%.2X",i);
+      //if (i==playerStep) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,0x40ffffff);
       for (int j=0; j<song->channels; j++) {
         ImGui::TableNextColumn();
-        ImGui::Text("%s%s",getnote(p->data[i][j][0]),getoctave(p->data[i][j][0]));
+        if (p->data[i][j][0]==0) {
+          ImGui::TextColored(colors[colInvalidEffect],"...");
+        } else {
+          ImGui::Text("%s%s",getnote(p->data[i][j][0]),getoctave(p->data[i][j][0]));
+        }
         ImGui::SameLine(0.0f,0.0f);
         if (p->data[i][j][1]==0) {
-          ImGui::Text("..");
+          ImGui::TextColored(colors[colInvalidEffect],"..");
         } else {
-          ImGui::Text("%.2X",p->data[i][j][1]);
+          ImGui::TextColored(colors[colInstrument],"%.2X",p->data[i][j][1]);
         }
         ImGui::SameLine(0.0f,0.0f);
         if (p->data[i][j][2]==0) {
-          ImGui::Text("...");
+          ImGui::TextColored(colors[colInvalidEffect],"...");
         } else {
-          ImGui::Text("%s%.2X",getVFX(p->data[i][j][2]),getVFXVal(p->data[i][j][2]));
+          ImGui::TextColored(colors[colVolume],"%s%.2X",getVFX(p->data[i][j][2]),getVFXVal(p->data[i][j][2]));
         }
         ImGui::SameLine(0.0f,0.0f);
+        ImGui::PushStyleColor(ImGuiCol_Text,colors[getFXColor(p->data[i][j][3])]);
         ImGui::Text("%s",getFX(p->data[i][j][3]));
         ImGui::SameLine(0.0f,0.0f);
         if (p->data[i][j][4]==0) {
@@ -2762,7 +2823,12 @@ void drawPatterns(float ypos) {
         } else {
           ImGui::Text("%.2X",p->data[i][j][4]);
         }
+        ImGui::PopStyleColor();
       }
+    }
+    // dummy rows
+    for (int i=0; i<20; i++) {
+      ImGui::TableNextRow(0,lineHeight);
     }
     ImGui::EndTable();
   }
@@ -2896,7 +2962,7 @@ bool updateDisp() {
   ImGui::BeginChild("EditControls",ImVec2(0,0),true);
 
   int ONE=1;
-  ImGui::BeginColumns("EditControlsC",2);
+  ImGui::Columns(2);
   if (ImGui::InputScalar("speed",ImGuiDataType_U8,&player.speed,&ONE,&ONE)) {
     if (player.speed<1) player.speed=1;
   }
@@ -2917,7 +2983,7 @@ bool updateDisp() {
   }
   ImGui::NextColumn();
   ImGui::InputScalar("length",ImGuiDataType_U8,&song->getPattern(player.pat,true)->length,&ONE,&ONE);
-  ImGui::EndColumns();
+  ImGui::Columns(1);
 
   ImGui::Separator();
 
