@@ -9,10 +9,12 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
+#include "imgui_internal.h"
+#include <SDL2/SDL_video.h>
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
-#define sign(a) ((a>0)?(1):((a<0)?(-1):(0)))
+//#define sign(a) ((a>0)?(1):((a<0)?(-1):(0)))
 //#define MOUSE_GRID
 //#define NTSC // define for NTSC mode
 #define SOUNDS
@@ -36,6 +38,8 @@ bool ntsc=false;
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 #endif
+
+#include <fmt/printf.h>
 
 #include "ssinter.h"
 #ifdef JACK
@@ -258,6 +262,8 @@ float doScroll;
 Song* song=NULL;
 Player player;
 std::mutex canUseSong;
+
+bool insEditOpen=false;
 
 // NEW VARIABLES END //
 
@@ -2716,6 +2722,53 @@ double getScale() {
   return 1;
 }
 
+void drawPatterns(float ypos) {
+  ImGui::Begin("Pattern View",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus);
+  ImGui::SetWindowPos("Pattern View",ImVec2(0.0f,ypos));
+  ImGui::SetWindowSize("Pattern View",ImVec2(scrW*dpiScale,scrH*dpiScale-ypos),ImGuiCond_Always);
+
+  Pattern* p=song->getPattern(song->order[player.pat],false);
+  int playerStep=player.step;
+  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV)) {
+    ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
+    for (int i=0; i<song->channels; i++) {
+      ImGui::TableSetupColumn(fmt::sprintf("c%d",i).c_str(),ImGuiTableColumnFlags_WidthFixed);
+    }
+    for (int i=0; i<p->length; i++) {
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::Text("%.2X",i);
+      if (i==playerStep) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,0x40ffffff);
+      for (int j=0; j<song->channels; j++) {
+        ImGui::TableNextColumn();
+        ImGui::Text("%s%s",getnote(p->data[i][j][0]),getoctave(p->data[i][j][0]));
+        ImGui::SameLine(0.0f,0.0f);
+        if (p->data[i][j][1]==0) {
+          ImGui::Text("..");
+        } else {
+          ImGui::Text("%.2X",p->data[i][j][1]);
+        }
+        ImGui::SameLine(0.0f,0.0f);
+        if (p->data[i][j][2]==0) {
+          ImGui::Text("...");
+        } else {
+          ImGui::Text("%s%.2X",getVFX(p->data[i][j][2]),getVFXVal(p->data[i][j][2]));
+        }
+        ImGui::SameLine(0.0f,0.0f);
+        ImGui::Text("%s",getFX(p->data[i][j][3]));
+        ImGui::SameLine(0.0f,0.0f);
+        if (p->data[i][j][4]==0) {
+          ImGui::Text("..");
+        } else {
+          ImGui::Text("%.2X",p->data[i][j][4]);
+        }
+      }
+    }
+    ImGui::EndTable();
+  }
+  ImGui::End();
+}
+
 #define rangedInput(label,var,tempvar,min,max) \
   int tempvar=var; \
   if (ImGui::InputInt(label,&tempvar,1,16)) { \
@@ -2750,9 +2803,15 @@ double getScale() {
   ImGui::NextColumn(); \
   ImGui::PopID();
 
-void drawInsEditor(int i) {
-  ImGui::Begin("Instrument Editor");
-  Instrument* ins=song->ins[i];
+void drawInsEditor() {
+  if (!insEditOpen) return;
+  ImGui::Begin("Instrument Editor",&insEditOpen);
+  if (ImGui::InputInt("Instrument",&curins)) {
+    if (curins<1) curins=1;
+    if (curins>255) curins=1;
+  }
+
+  Instrument* ins=song->ins[curins];
 
   ImGui::InputText("Name",ins->name,32);
   rangedInput("Volume",ins->vol,tempVol,0,64);
@@ -2805,6 +2864,15 @@ bool updateDisp() {
   while (SDL_PollEvent(&ev)) {
     ImGui_ImplSDL2_ProcessEvent(&ev);
     switch (ev.type) {
+      case SDL_WINDOWEVENT:
+        switch (ev.window.event) {
+          case SDL_WINDOWEVENT_RESIZED:
+            printf("I am resized\n");
+            scrW=ev.window.data1/dpiScale;
+            scrH=ev.window.data2/dpiScale;
+            break;
+        }
+        break;
       case SDL_QUIT:
         return false;
         break;
@@ -2819,8 +2887,55 @@ bool updateDisp() {
   }
   ImGui::EndMainMenuBar();
 
-  ImGui::Begin("Controls");
+  ImGui::SetNextWindowSizeConstraints(ImVec2(scrW*dpiScale,32*dpiScale),ImVec2(scrW*dpiScale,160*dpiScale));
+  ImGui::Begin("Controls",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus);
+  ImGui::SetWindowPos("Controls",ImVec2(0.0f,ImGui::GetTextLineHeight()+ImGui::GetStyle().ItemSpacing.y*2));
 
+  ImGui::Columns(4);
+  
+  ImGui::BeginChild("EditControls",ImVec2(0,0),true);
+
+  int ONE=1;
+  ImGui::BeginColumns("EditControlsC",2);
+  if (ImGui::InputScalar("speed",ImGuiDataType_U8,&player.speed,&ONE,&ONE)) {
+    if (player.speed<1) player.speed=1;
+  }
+  ImGui::NextColumn();
+  if (ImGui::InputScalar("tempo",ImGuiDataType_U8,&player.tempo,&ONE,&ONE)) {
+    if (player.tempo<32) player.tempo=32;
+  }
+  ImGui::NextColumn();
+  if (ImGui::InputScalar("order",ImGuiDataType_U8,&player.pat,&ONE,&ONE)) {
+    if (player.pat>=song->orders) player.pat=0;
+    Play();
+  }
+  ImGui::NextColumn();
+  ImGui::InputScalar("pattern",ImGuiDataType_U8,&(song->order[player.pat]),&ONE,&ONE);
+  ImGui::NextColumn();
+  if (ImGui::InputScalar("octave",ImGuiDataType_U8,&curoctave,&ONE,&ONE)) {
+    if (curoctave>9) curoctave=9;
+  }
+  ImGui::NextColumn();
+  ImGui::InputScalar("length",ImGuiDataType_U8,&song->getPattern(player.pat,true)->length,&ONE,&ONE);
+  ImGui::EndColumns();
+
+  ImGui::Separator();
+
+  if (ImGui::BeginCombo("instrument",song->ins[curins]->name)) {
+    for (int i=1; i<255; i++) {
+      string insName=fmt::sprintf("[%d] %s",i,song->ins[i]->name);
+      if (ImGui::Selectable(insName.c_str(),curins==i)) {
+        curins=i;
+      }
+    }
+    ImGui::EndCombo();
+  }
+
+  ImGui::EndChild();
+
+  ImGui::NextColumn();
+
+  ImGui::BeginChild("PlayControls",ImVec2(0,0),true);
   if (ImGui::Button("Play")) {
     Play();
   }
@@ -2828,15 +2943,37 @@ bool updateDisp() {
   if (ImGui::Button("Stop")) {
     player.stop();
   }
-  ImGui::Text("Current pos: %d",player.step);
-  if (ImGui::InputInt("Instrument",&curins)) {
-    if (curins<1) curins=1;
-    if (curins>255) curins=1;
+  if (ImGui::Checkbox("NTSC",&ntsc)) {
+    if (!tempolock) {
+      if (ntsc) {
+        if (player.tempo==125) {
+          player.tempo=150;
+        }
+      } else {
+        if (player.tempo==150) {
+          player.tempo=125;
+        }
+      }
+    }
   }
+  ImGui::EndChild();
+
+  ImGui::NextColumn();
+
+  ImGui::BeginChild("PlayPos",ImVec2(80*dpiScale,0),true);
+  ImGui::Text("%d/%d",player.tick,player.speed);
+  ImGui::Text("%d/%d",player.step,song->getPattern(player.pat,false)->length);
+  ImGui::Text("%d:%d/%d",song->order[player.pat],player.pat,song->orders);
+
+  ImGui::EndChild();
+
+  float where=ImGui::GetWindowPos().y+ImGui::GetWindowSize().y;
 
   ImGui::End();
 
-  drawInsEditor(curins);
+  drawPatterns(where);
+
+  drawInsEditor();
 
   // end of frame
   ImGui::Render();
