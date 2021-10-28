@@ -2773,7 +2773,7 @@ void drawPatterns(float ypos) {
   int playerStep=player.step;
   float lineHeight=(ImGui::GetTextLineHeight()+4*dpiScale);
   if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_ScrollX|ImGuiTableFlags_ScrollY)) {
-    ImGui::SetScrollY(lineHeight*playerStep);
+    if (player.playMode!=0) ImGui::SetScrollY(lineHeight*playerStep);
     ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
     ImGui::TableSetupScrollFreeze(1,1);
     for (int i=0; i<song->channels; i++) {
