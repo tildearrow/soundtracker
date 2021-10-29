@@ -92,6 +92,7 @@ bool clockInfo=false;
 string name; // song name
 
 int curins=1; // selected instrument
+int curmacro=-1; // selected macro
 int curoctave=2;
 int curedchan=0; // cureditingchannel
 int curedmode=0; // current editing mode, 0=note, 1=instrument number 2=volume 3=effect name 4=effect value
@@ -262,6 +263,7 @@ Player player;
 std::mutex canUseSong;
 
 bool insEditOpen=false;
+bool macroEditOpen=false;
 
 // NEW VARIABLES END //
 
@@ -2765,17 +2767,17 @@ colType getFXColor(unsigned char fx) {
 }
 
 void drawPatterns(float ypos) {
-  ImGui::Begin("Pattern View",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus);
+  ImGui::Begin("Pattern View",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoScrollbar);
   ImGui::SetWindowPos("Pattern View",ImVec2(0.0f,ypos));
   ImGui::SetWindowSize("Pattern View",ImVec2(scrW*dpiScale,scrH*dpiScale-ypos),ImGuiCond_Always);
 
   Pattern* p=song->getPattern(song->order[player.pat],false);
   int playerStep=player.step;
   float lineHeight=(ImGui::GetTextLineHeight()+4*dpiScale);
-  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_ScrollX|ImGuiTableFlags_ScrollY)) {
-    if (player.playMode!=0) ImGui::SetScrollY(lineHeight*playerStep);
+  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV)) {
     ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
-    ImGui::TableSetupScrollFreeze(1,1);
+    ImGui::SetScrollY(0.0f);
+    ImGui::TableSetupScrollFreeze(1,0);
     for (int i=0; i<song->channels; i++) {
       ImGui::TableSetupColumn(fmt::sprintf("c%d",i).c_str(),ImGuiTableColumnFlags_WidthFixed);
     }
@@ -2786,15 +2788,17 @@ void drawPatterns(float ypos) {
       ImGui::TableNextColumn();
       ImGui::Button(fmt::sprintf("%d",i).c_str());
     }
-    // dummy rows
-    for (int i=0; i<12; i++) {
-      ImGui::TableNextRow(0,lineHeight);
+    int drawStart=playerStep-int((scrH*dpiScale-ypos)/(lineHeight*2))+2;
+    int drawEnd=drawStart+((scrH*dpiScale-ypos)/lineHeight)-1;
+    if (drawEnd>p->length) {
+      drawEnd=p->length;
     }
-    for (int i=0; i<p->length; i++) {
+    for (int i=drawStart; i<drawEnd; i++) {
       ImGui::TableNextRow(0,lineHeight);
+      if (i<0) continue;
       ImGui::TableNextColumn();
       ImGui::TextColored(colors[colRowNumber],"%.2X",i);
-      //if (i==playerStep) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,0x40ffffff);
+      if (i==playerStep) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,0x40ffffff);
       for (int j=0; j<song->channels; j++) {
         ImGui::TableNextColumn();
         if (p->data[i][j][0]==0) {
@@ -2825,10 +2829,6 @@ void drawPatterns(float ypos) {
         }
         ImGui::PopStyleColor();
       }
-    }
-    // dummy rows
-    for (int i=0; i<20; i++) {
-      ImGui::TableNextRow(0,lineHeight);
     }
     ImGui::EndTable();
   }
@@ -2864,7 +2864,10 @@ void drawPatterns(float ypos) {
   ImGui::SameLine(); \
   ImGui::Button("New"); \
   ImGui::SameLine(); \
-  ImGui::Button("Go"); \
+  if (ImGui::Button("Go")) { \
+    curmacro=var; \
+    macroEditOpen=true; \
+  } \
   ImGui::PopButtonRepeat(); \
   ImGui::NextColumn(); \
   ImGui::PopID();
@@ -2921,6 +2924,18 @@ void drawInsEditor() {
   macroSelector("CutSweep",ins->cutSweepMacro);
   macroSelector("PCM Position",ins->pcmPosMacro);
   ImGui::EndChild();
+
+  ImGui::End();
+}
+
+void drawMacroEditor() {
+  if (!macroEditOpen) return;
+  ImGui::Begin("Macro Editor",&insEditOpen);
+
+  if (ImGui::InputInt("Macro",&curmacro)) {
+    if (curmacro<-1) curmacro=-1;
+    if (curmacro>=(int)song->macros.size()) curmacro=song->macros.size()-1;
+  }
 
   ImGui::End();
 }
@@ -2987,7 +3002,7 @@ bool updateDisp() {
 
   ImGui::Separator();
 
-  if (ImGui::BeginCombo("instrument",song->ins[curins]->name)) {
+  if (ImGui::BeginCombo("instr",song->ins[curins]->name)) {
     for (int i=1; i<255; i++) {
       string insName=fmt::sprintf("[%d] %s",i,song->ins[i]->name);
       if (ImGui::Selectable(insName.c_str(),curins==i)) {
@@ -2995,6 +3010,10 @@ bool updateDisp() {
       }
     }
     ImGui::EndCombo();
+  }
+  ImGui::SameLine(0.0f,4*dpiScale);
+  if (ImGui::Button("edit")) {
+    insEditOpen=true;
   }
 
   ImGui::EndChild();
@@ -3040,6 +3059,8 @@ bool updateDisp() {
   drawPatterns(where);
 
   drawInsEditor();
+
+  drawMacroEditor();
 
   // end of frame
   ImGui::Render();
