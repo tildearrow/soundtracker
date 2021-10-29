@@ -674,7 +674,9 @@ enum MacroCommandType {
   cmdLoop,
   cmdLoopRel,
   cmdAdd,
-  cmdSub
+  cmdSub,
+
+  cmdMax
 };
 
 struct MacroCommand {

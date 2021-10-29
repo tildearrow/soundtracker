@@ -2657,6 +2657,13 @@ int playfx(const char* fxdata,int fxpos,int achan) {
   return toret;
 }
 
+short newMacro() {
+  if (song->macros.size()>=8192) return -1;
+  Macro* m=new Macro();
+  song->macros.push_back(m);
+  return short(song->macros.size()-1);
+}
+
 /// SEPARATOR
 
 #ifdef HAVE_GUI
@@ -2862,7 +2869,11 @@ void drawPatterns(float ypos) {
     if (var<short(song->macros.size()-1)) var++; \
   } \
   ImGui::SameLine(); \
-  ImGui::Button("New"); \
+  if (ImGui::Button("New")) { \
+    var=newMacro(); \
+    curmacro=var; \
+    macroEditOpen=true; \
+  } \
   ImGui::SameLine(); \
   if (ImGui::Button("Go")) { \
     curmacro=var; \
@@ -2930,11 +2941,119 @@ void drawInsEditor() {
 
 void drawMacroEditor() {
   if (!macroEditOpen) return;
-  ImGui::Begin("Macro Editor",&insEditOpen);
+  ImGui::Begin("Macro Editor",&macroEditOpen);
 
   if (ImGui::InputInt("Macro",&curmacro)) {
     if (curmacro<-1) curmacro=-1;
     if (curmacro>=(int)song->macros.size()) curmacro=song->macros.size()-1;
+  }
+
+  if (curmacro<0) {
+    ImGui::Text("no macro selected");
+  } else {
+    Macro* m=song->macros[curmacro];
+    bool doJump=m->jumpRelease!=-1;
+    if (ImGui::Checkbox("Jump on release",&doJump)) {
+      if (doJump) {
+        m->jumpRelease=0;
+      } else {
+        m->jumpRelease=-1;
+      }
+    }
+    if (doJump) {
+      ImGui::SameLine();
+      if (ImGui::InputInt("Position",&m->jumpRelease)) {
+        if (m->jumpRelease<0) m->jumpRelease=0;
+        if (m->jumpRelease>(int)m->cmds.size()) m->jumpRelease=(int)m->cmds.size();
+      }
+    }
+
+    if (ImGui::BeginTable("Macro",4,ImGuiTableFlags_BordersInnerV)) {
+      ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableSetupColumn("type",ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableSetupColumn("value",ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableSetupColumn("endFrame",ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::Text("pos");
+      ImGui::TableNextColumn();
+      ImGui::Text("type");
+      ImGui::TableNextColumn();
+      ImGui::Text("value");
+      ImGui::TableNextColumn();
+      ImGui::Text("tick");
+
+      for (size_t i=0; i<m->cmds.size(); i++) {
+        ImGui::PushID(i);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("%ld",i);
+        ImGui::TableNextColumn();
+        unsigned char cType=m->cmds[i].type&0x7f;
+        switch (cType) {
+          case cmdEnd:
+            ImGui::Text("End");
+            break;
+          case cmdSet:
+            ImGui::Text("Set");
+            break;
+          case cmdWait:
+            ImGui::Text("Wait");
+            break;
+          case cmdWaitRel:
+            ImGui::Text("Wait release");
+            break;
+          case cmdLoop:
+            ImGui::Text("Jump");
+            break;
+          case cmdLoopRel:
+            ImGui::Text("Jump until rel.");
+            break;
+          case cmdAdd:
+            ImGui::Text("Add");
+            break;
+          case cmdSub:
+            ImGui::Text("Subtract");
+            break;
+          default:
+            ImGui::Text("???");
+            break;
+        }
+        ImGui::SameLine();
+        ImGui::PushButtonRepeat(true);
+        if (ImGui::ArrowButton("##down",ImGuiDir_Down)) {
+          if ((m->cmds[i].type&0x7f)>0) m->cmds[i].type--;
+        }
+        ImGui::SameLine();
+        if (ImGui::ArrowButton("##up",ImGuiDir_Up)) {
+          if ((m->cmds[i].type&0x7f)<(cmdMax-1)) m->cmds[i].type++;
+        }
+        ImGui::PopButtonRepeat();
+        ImGui::TableNextColumn();
+        ImVec4 col=ImGui::ColorConvertU32ToFloat4(m->cmds[i].value);
+        if (ImGui::ColorEdit4("##Value",(float*)&col)) {
+          m->cmds[i].value=ImGui::ColorConvertFloat4ToU32(col);
+        }
+        ImGui::TableNextColumn();
+        bool endTick=m->cmds[i].type&0x80;
+        if (ImGui::Checkbox("##EndTick",&endTick)) {
+          if (endTick) {
+            m->cmds[i].type|=0x80;
+          } else {
+            m->cmds[i].type&=0x7f;
+          }
+        }
+        ImGui::PopID();
+      }
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::Text("-end-");
+      ImGui::TableNextColumn();
+      if (ImGui::Button("+##AddOne")) {
+        m->cmds.push_back(MacroCommand(cmdSet,0,true));
+      }
+      ImGui::EndTable();
+    }
   }
 
   ImGui::End();
