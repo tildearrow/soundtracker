@@ -3574,7 +3574,15 @@ int main(int argc, char **argv) {
   printf("done\n");
   // MAIN LOOP
   if (playermode) {
-    while (true) usleep(100000);
+    while (!quit) {
+      SDL_Event ev;
+      SDL_WaitEvent(&ev);
+      switch (ev.type) {
+        case SDL_QUIT:
+          quit=true;
+          break;
+      }
+    }
   } else {
 #ifdef HAVE_GUI
     while (updateDisp());
