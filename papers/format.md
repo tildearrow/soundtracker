@@ -36,7 +36,14 @@ read macros like this:
 1. read the macro length (4 bytes).
 2. read the "jump on release" position (4 bytes).
   * if this is -1, then it is "don't jump".
-3. skip 8 bytes (reserved section).
+3. read the macro intended use (1 byte):
+  - 0: generic
+  - 1: shape
+  - 2: pitch
+  - 3: panning
+  - 4: volume sweep
+  - 5: other sweep
+3. skip 7 bytes (reserved section).
 4. read the type. then switch based on it:
   - 0: end of macro.
   - 1: set. read four bytes for value.

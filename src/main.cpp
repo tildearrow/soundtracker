@@ -236,6 +236,47 @@ const char* pageNames[]={
   "about"
 };
 
+const char* noteNamesPat[256]={
+  "...", "C-0", "C#0", "D-0", "D#0", "E-0", "F-0", "F#0", "G-0", "G#0", "A-0", "A#0", "B-0", "===", "~~~", "^^^",
+  "...", "C-1", "C#1", "D-1", "D#1", "E-1", "F-1", "F#1", "G-1", "G#1", "A-1", "A#1", "B-1", "===", "~~~", "^^^",
+  "...", "C-2", "C#2", "D-2", "D#2", "E-2", "F-2", "F#2", "G-2", "G#2", "A-2", "A#2", "B-2", "===", "~~~", "^^^",
+  "...", "C-3", "C#3", "D-3", "D#3", "E-3", "F-3", "F#3", "G-3", "G#3", "A-3", "A#3", "B-3", "===", "~~~", "^^^",
+  "...", "C-4", "C#4", "D-4", "D#4", "E-4", "F-4", "F#4", "G-4", "G#4", "A-4", "A#4", "B-4", "===", "~~~", "^^^",
+  "...", "C-5", "C#5", "D-5", "D#5", "E-5", "F-5", "F#5", "G-5", "G#5", "A-5", "A#5", "B-5", "===", "~~~", "^^^",
+  "...", "C-6", "C#6", "D-6", "D#6", "E-6", "F-6", "F#6", "G-6", "G#6", "A-6", "A#6", "B-6", "===", "~~~", "^^^",
+  "...", "C-7", "C#7", "D-7", "D#7", "E-7", "F-7", "F#7", "G-7", "G#7", "A-7", "A#7", "B-7", "===", "~~~", "^^^",
+  "...", "C-8", "C#8", "D-8", "D#8", "E-8", "F-8", "F#8", "G-8", "G#8", "A-8", "A#8", "B-8", "===", "~~~", "^^^",
+  "...", "C-9", "C#9", "D-9", "D#9", "E-9", "F-9", "F#9", "G-9", "G#9", "A-9", "A#9", "B-9", "===", "~~~", "^^^",
+  "...", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "===", "~~~", "^^^",
+  "...", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "===", "~~~", "^^^",
+  "...", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "===", "~~~", "^^^",
+  "...", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "===", "~~~", "^^^",
+  "...", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "===", "~~~", "^^^",
+  "...", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "===", "~~~", "^^^"
+};
+
+const char* noteNames[256]={
+  "C-0", "C#0", "D-0", "D#0", "E-0", "F-0", "F#0", "G-0", "G#0", "A-0", "A#0", "B-0",
+  "C-1", "C#1", "D-1", "D#1", "E-1", "F-1", "F#1", "G-1", "G#1", "A-1", "A#1", "B-1",
+  "C-2", "C#2", "D-2", "D#2", "E-2", "F-2", "F#2", "G-2", "G#2", "A-2", "A#2", "B-2",
+  "C-3", "C#3", "D-3", "D#3", "E-3", "F-3", "F#3", "G-3", "G#3", "A-3", "A#3", "B-3",
+  "C-4", "C#4", "D-4", "D#4", "E-4", "F-4", "F#4", "G-4", "G#4", "A-4", "A#4", "B-4",
+  "C-5", "C#5", "D-5", "D#5", "E-5", "F-5", "F#5", "G-5", "G#5", "A-5", "A#5", "B-5",
+  "C-6", "C#6", "D-6", "D#6", "E-6", "F-6", "F#6", "G-6", "G#6", "A-6", "A#6", "B-6",
+  "C-7", "C#7", "D-7", "D#7", "E-7", "F-7", "F#7", "G-7", "G#7", "A-7", "A#7", "B-7",
+  "C-8", "C#8", "D-8", "D#8", "E-8", "F-8", "F#8", "G-8", "G#8", "A-8", "A#8", "B-8",
+  "C-9", "C#9", "D-9", "D#9", "E-9", "F-9", "F#9", "G-9", "G#9", "A-9", "A#9", "B-9",
+  "C-10", "C#10", "D-10", "D#10", "E-10", "F-10", "F#10", "G-10",
+  "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???",
+  "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???",
+  "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???",
+  "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???",
+  "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???",
+  "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???",
+  "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???",
+  "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???"
+};
+
 UIType iface;
 bool mobAltView;
 float mobScroll;
@@ -264,6 +305,7 @@ std::mutex canUseSong;
 
 bool insEditOpen=false;
 bool macroEditOpen=false;
+bool macroGraph=false;
 
 // NEW VARIABLES END //
 
@@ -525,94 +567,6 @@ char gethnibble(int nval) {
 }
 char getlnibble(int nval) {
   return HEXVALS[nval&15];
-}
-const char* getnote(int nval) {
-  switch(nval&15) {
-    case 0: return ".."; break;
-    case 1: return "C-"; break;
-    case 2: return "C#"; break;
-    case 3: return "D-"; break;
-    case 4: return "D#"; break;
-    case 5: return "E-"; break;
-    case 6: return "F-"; break;
-    case 7: return "F#"; break;
-    case 8: return "G-"; break;
-    case 9: return "G#"; break;
-    case 10: return "A-"; break;
-    case 11: return "A#"; break;
-    case 12: return "B-"; break;
-    case 13: return "=="; break;
-    case 14: return "~~"; break;
-    case 15: return "^^"; break;
-  }
-  return "?";
-}
-const char* getnotetransp(int nval) {
-  switch(nval%12) {
-    case 0: return "C-"; break;
-    case 1: return "C#"; break;
-    case 2: return "D-"; break;
-    case 3: return "D#"; break;
-    case 4: return "E-"; break;
-    case 5: return "F-"; break;
-    case 6: return "F#"; break;
-    case 7: return "G-"; break;
-    case 8: return "G#"; break;
-    case 9: return "A-"; break;
-    case 10: return "A#"; break;
-    case 11: return "B-"; break;
-  }
-  return "?-";
-}
-const char* getoctavetransp(int nval) {
-  switch(nval/12) {
-    case 0: return "0"; break;
-    case 1: return "1"; break;
-    case 2: return "2"; break;
-    case 3: return "3"; break;
-    case 4: return "4"; break;
-    case 5: return "5"; break;
-    case 6: return "6"; break;
-    case 7: return "7"; break;
-    case 8: return "8"; break;
-    case 9: return "9"; break;
-    case 10: return "I"; break;
-    case 11: return "I"; break;
-    case 12: return "I"; break;
-    case 13: return "I"; break;
-    case 14: return "I"; break;
-    case 15: return "I"; break;
-  }
-  return "?";
-}
-const char* getoctave(int nval) {
-  if ((nval&15)==0) {return ".";}
-  if (nval>12) {
-    switch (nval&15) {
-      case 13: return "="; break;
-      case 14: return "~"; break;
-      case 15: return "^"; break;
-    }
-  }
-  switch (nval>>4) {
-    case 0: return "0"; break;
-    case 1: return "1"; break;
-    case 2: return "2"; break;
-    case 3: return "3"; break;
-    case 4: return "4"; break;
-    case 5: return "5"; break;
-    case 6: return "6"; break;
-    case 7: return "7"; break;
-    case 8: return "8"; break;
-    case 9: return "9"; break;
-    case 10: return "I"; break;
-    case 11: return "I"; break;
-    case 12: return "I"; break;
-    case 13: return "I"; break;
-    case 14: return "I"; break;
-    case 15: return "I"; break;
-  }
-  return "?";
 }
 char getinsL(int nval) {
   if (nval==0) {return '.';}
@@ -1935,7 +1889,8 @@ int SaveFile() {
       macroparas[i]=ftell(sfile);
       fwrite(&len,4,1,sfile); // write length
       fwrite(&m->jumpRelease,4,1,sfile); // write jumpRelease
-      fwrite("\0\0\0\0\0\0\0\0",1,8,sfile); // reserved
+      fputc(m->intendedUse,sfile); // write intendedUse
+      fwrite("\0\0\0\0\0\0\0",1,7,sfile); // reserved
       for (MacroCommand& j: m->cmds) {
         fputc(j.type,sfile);
         fwrite(&j.value,4,1,sfile);
@@ -2416,6 +2371,20 @@ int LoadFile(const char* filename) {
         if (seqparas[i]==0) continue;
         for (int j=0; j<8; j++) {
           Macro* m=new Macro();
+          switch (j) {
+            case 4: // shape
+              m->intendedUse=iuShape;
+              break;
+            case 5: // pitch
+              m->intendedUse=iuPitch;
+              break;
+            case 6: case 7: // fine pitch and panning
+              m->intendedUse=iuPan;
+              break;
+            default:
+              m->intendedUse=iuGeneric;
+              break;
+          }
           for (int k=0; k<bytable[j][i][253]+1; k++) {
             switch (j) {
               case 4: // shape
@@ -2452,10 +2421,9 @@ int LoadFile(const char* filename) {
         Macro* m=new Macro();
         unsigned int len=fgeti(sfile);
         m->jumpRelease=fgeti(sfile);
-        int reserved1=fgeti(sfile);
-        int reserved2=fgeti(sfile);
-        reserved1=reserved2; // shut the compiler up
-        reserved2=reserved1;
+        int intendedUse=fgeti(sfile);
+        fgeti(sfile);
+        m->intendedUse=intendedUse;
         for (unsigned int j=0; j<len; j++) {
           unsigned char cType=fgetc(sfile);
           unsigned int cValue=fgeti(sfile);
@@ -2657,9 +2625,10 @@ int playfx(const char* fxdata,int fxpos,int achan) {
   return toret;
 }
 
-short newMacro() {
+short newMacro(MacroIntendedUse intendedUse=iuGeneric) {
   if (song->macros.size()>=8192) return -1;
   Macro* m=new Macro();
+  m->intendedUse=intendedUse;
   song->macros.push_back(m);
   return short(song->macros.size()-1);
 }
@@ -2811,7 +2780,7 @@ void drawPatterns(float ypos) {
         if (p->data[i][j][0]==0) {
           ImGui::TextColored(colors[colInvalidEffect],"...");
         } else {
-          ImGui::Text("%s%s",getnote(p->data[i][j][0]),getoctave(p->data[i][j][0]));
+          ImGui::Text("%s",noteNamesPat[p->data[i][j][0]]);
         }
         ImGui::SameLine(0.0f,0.0f);
         if (p->data[i][j][1]==0) {
@@ -2850,7 +2819,7 @@ void drawPatterns(float ypos) {
     var=tempvar; \
   }
 
-#define macroSelector(label,var) \
+#define macroSelector(label,var,intendedUse) \
   ImGui::PushID(#var); \
   ImGui::Text(label); \
   ImGui::NextColumn(); \
@@ -2870,7 +2839,7 @@ void drawPatterns(float ypos) {
   } \
   ImGui::SameLine(); \
   if (ImGui::Button("New")) { \
-    var=newMacro(); \
+    var=newMacro(intendedUse); \
     curmacro=var; \
     macroEditOpen=true; \
   } \
@@ -2882,6 +2851,41 @@ void drawPatterns(float ypos) {
   ImGui::PopButtonRepeat(); \
   ImGui::NextColumn(); \
   ImGui::PopID();
+
+const signed char S8_ONE=1;
+const signed char S8_FOUR=4;
+const int I_ZERO=0;
+const int I_U8_MAX=255;
+
+#define noteOffsetSelector(var) \
+  if (var>=0x80) { \
+    unsigned char theVal=var-0x80; \
+    ImGui::SetNextItemWidth(120.0f*dpiScale); \
+    if (ImGui::InputScalar("##OffSelector_" #var,ImGuiDataType_U8,&theVal,&S8_ONE,&S8_FOUR,noteNames[theVal])) { \
+      if (theVal>127) theVal=127; \
+      var=theVal+0x80; \
+    } \
+    ImGui::SameLine(); \
+    if (ImGui::Button("Absolute")) { \
+      var=0; \
+    } \
+  } else { \
+    signed char theVal=(var>=0x40)?0x40-var:var; \
+    ImGui::SetNextItemWidth(120.0f*dpiScale); \
+    if (ImGui::InputScalar("##OffSelector_" #var,ImGuiDataType_S8,&theVal,&S8_ONE,&S8_FOUR)) { \
+      if (theVal>63) theVal=63; \
+      if (theVal<-63) theVal=-63; \
+      if (theVal<0) { \
+        var=0x40-theVal; \
+      } else { \
+        var=theVal; \
+      } \
+    } \
+    ImGui::SameLine(); \
+    if (ImGui::Button("Relative")) { \
+      var=0x80+48; \
+    } \
+  }
 
 void drawInsEditor() {
   if (!insEditOpen) return;
@@ -2896,6 +2900,17 @@ void drawInsEditor() {
   ImGui::InputText("Name",ins->name,32);
   rangedInput("Volume",ins->vol,tempVol,0,64);
   rangedInput("Pitch",ins->pitch,tempPitch,-128,127);
+
+  ImGui::Text("Center Note");
+  ImGui::SameLine();
+  if (ImGui::BeginCombo("##CenterNote",noteNames[ins->noteOffset])) {
+    for (int i=0; i<128; i++) {
+      if (ImGui::Selectable(noteNames[i],i==ins->noteOffset)) {
+        ins->noteOffset=i;
+      }
+    }
+    ImGui::EndCombo();
+  }
 
   ImGui::Text("Filter Mode");
   ImGui::SameLine();
@@ -2917,27 +2932,97 @@ void drawInsEditor() {
   }
   ImGui::PopStyleColor();
 
-  ImGui::BeginChild("Macros",ImVec2(0,0),true,ImGuiWindowFlags_MenuBar);
+  unsigned short ZERO=0;
+  unsigned short SHORT_MAX=65535;
+  unsigned char CHAR_MAX=255;
+
+  ImGui::SliderScalar("Cutoff",ImGuiDataType_U16,&ins->filterH,&ZERO,&SHORT_MAX);
+  ImGui::SliderScalar("Resonance",ImGuiDataType_U8,&ins->res,&ZERO,&CHAR_MAX);
+
+  bool resetOsc=ins->flags&1;
+  bool resetFilter=ins->flags&4;
+  bool syncMod=ins->flags&32;
+
+  if (ImGui::Checkbox("Reset on new note",&resetOsc)) {
+    ins->flags&=~1;
+    ins->flags|=resetOsc;
+  }
+
+  if (ImGui::Checkbox("Reset filter on new note",&resetFilter)) {
+    ins->flags&=~4;
+    ins->flags|=resetFilter<<2;
+  }
+
+  if (ImGui::Checkbox("Sync modulation",&syncMod)) {
+    ins->flags&=~32;
+    ins->flags|=syncMod<<5;
+  }
+  ImGui::SameLine();
+  noteOffsetSelector(ins->LFO);
+
+  bool pcmOn=ins->filterMode&8;
+  ImGui::BeginChild("PCM",pcmOn?ImVec2(0,120.0f*dpiScale):ImVec2(0,24.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
+  ImGui::BeginMenuBar();
+  if (ImGui::Checkbox("PCM",&pcmOn)) {
+    ins->filterMode&=~8;
+    ins->filterMode|=pcmOn<<3;
+  }
+  ImGui::EndMenuBar();
+
+  if (pcmOn) {
+    ImGui::InputScalar("Position",ImGuiDataType_U16,&ins->pcmPos);
+    ImGui::InputScalar("Length",ImGuiDataType_U16,&ins->pcmLen);
+    ImGui::InputScalar("Loop",ImGuiDataType_U16,&ins->pcmLoop);
+    ImGui::SameLine();
+    bool pcmLoopOn=ins->pcmMult&128;
+    if (ImGui::Checkbox("##LoopOn",&pcmLoopOn)) {
+      ins->pcmMult&=~128;
+      ins->pcmMult|=pcmLoopOn<<7;
+    }
+  }
+  ImGui::EndChild();
+
+  ImGui::BeginChild("Macros",ImVec2(0,374.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
   ImGui::BeginMenuBar();
   ImGui::Text("Macros");
   ImGui::EndMenuBar();
   ImGui::Columns(3);
-  macroSelector("Volume",ins->volMacro);
-  macroSelector("Cutoff",ins->cutMacro);
-  macroSelector("Resonance",ins->resMacro);
-  macroSelector("Duty",ins->dutyMacro);
-  macroSelector("Shape",ins->shapeMacro);
-  macroSelector("Pitch",ins->pitchMacro);
-  macroSelector("FinePitch",ins->finePitchMacro);
-  macroSelector("Panning",ins->panMacro);
-  macroSelector("VolSweep",ins->volSweepMacro);
-  macroSelector("FreqSweep",ins->freqSweepMacro);
-  macroSelector("CutSweep",ins->cutSweepMacro);
-  macroSelector("PCM Position",ins->pcmPosMacro);
+  macroSelector("Volume",ins->volMacro,iuGeneric);
+  macroSelector("Cutoff",ins->cutMacro,iuGeneric);
+  macroSelector("Resonance",ins->resMacro,iuGeneric);
+  macroSelector("Duty",ins->dutyMacro,iuGeneric);
+  macroSelector("Shape",ins->shapeMacro,iuShape);
+  macroSelector("Pitch",ins->pitchMacro,iuPitch);
+  macroSelector("FinePitch",ins->finePitchMacro,iuPan);
+  macroSelector("Panning",ins->panMacro,iuPan);
+  macroSelector("VolSweep",ins->volSweepMacro,iuVolSweep);
+  macroSelector("FreqSweep",ins->freqSweepMacro,iuOtherSweep);
+  macroSelector("CutSweep",ins->cutSweepMacro,iuOtherSweep);
+  macroSelector("PCM Position",ins->pcmPosMacro,iuGeneric);
   ImGui::EndChild();
 
   ImGui::End();
 }
+
+const char* intendedUseNames[iuMax]={
+  "Generic",
+  "Shape",
+  "Pitch",
+  "FinePitch/Panning",
+  "VolSweep",
+  "Freq/CutSweep"
+};
+
+const char* shapeNames[8]={
+  "Pulse",
+  "Saw",
+  "Sine",
+  "Triangle",
+  "Noise",
+  "ShNoise",
+  "ElPiano",
+  "PulseSaw"
+};
 
 void drawMacroEditor() {
   if (!macroEditOpen) return;
@@ -2967,92 +3052,172 @@ void drawMacroEditor() {
         if (m->jumpRelease>(int)m->cmds.size()) m->jumpRelease=(int)m->cmds.size();
       }
     }
+    unsigned char ZERO=0;
+    unsigned char FIVE=5;
+    unsigned char SEVEN=7;
+    ImGui::SliderScalar("Type",ImGuiDataType_U8,&m->intendedUse,&ZERO,&FIVE,intendedUseNames[m->intendedUse]);
 
-    if (ImGui::BeginTable("Macro",4,ImGuiTableFlags_BordersInnerV)) {
-      ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
-      ImGui::TableSetupColumn("type",ImGuiTableColumnFlags_WidthFixed);
-      ImGui::TableSetupColumn("value",ImGuiTableColumnFlags_WidthFixed);
-      ImGui::TableSetupColumn("endFrame",ImGuiTableColumnFlags_WidthFixed);
-      ImGui::TableNextRow();
-      ImGui::TableNextColumn();
-      ImGui::Text("pos");
-      ImGui::TableNextColumn();
-      ImGui::Text("type");
-      ImGui::TableNextColumn();
-      ImGui::Text("value");
-      ImGui::TableNextColumn();
-      ImGui::Text("tick");
+    ImGui::Checkbox("View as graph",&macroGraph);
 
-      for (size_t i=0; i<m->cmds.size(); i++) {
-        ImGui::PushID(i);
+    if (macroGraph) {
+      ImGui::Text("Not done yet.");
+    } else {
+      if (ImGui::BeginTable("Macro",4,ImGuiTableFlags_BordersInnerV)) {
+        ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("type",ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("value",ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("endFrame",ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::Text("%ld",i);
+        ImGui::Text("pos");
         ImGui::TableNextColumn();
-        unsigned char cType=m->cmds[i].type&0x7f;
-        switch (cType) {
-          case cmdEnd:
-            ImGui::Text("End");
-            break;
-          case cmdSet:
-            ImGui::Text("Set");
-            break;
-          case cmdWait:
-            ImGui::Text("Wait");
-            break;
-          case cmdWaitRel:
-            ImGui::Text("Wait release");
-            break;
-          case cmdLoop:
-            ImGui::Text("Jump");
-            break;
-          case cmdLoopRel:
-            ImGui::Text("Jump until rel.");
-            break;
-          case cmdAdd:
-            ImGui::Text("Add");
-            break;
-          case cmdSub:
-            ImGui::Text("Subtract");
-            break;
-          default:
-            ImGui::Text("???");
-            break;
-        }
-        ImGui::SameLine();
-        ImGui::PushButtonRepeat(true);
-        if (ImGui::ArrowButton("##down",ImGuiDir_Down)) {
-          if ((m->cmds[i].type&0x7f)>0) m->cmds[i].type--;
-        }
-        ImGui::SameLine();
-        if (ImGui::ArrowButton("##up",ImGuiDir_Up)) {
-          if ((m->cmds[i].type&0x7f)<(cmdMax-1)) m->cmds[i].type++;
-        }
-        ImGui::PopButtonRepeat();
+        ImGui::Text("type");
         ImGui::TableNextColumn();
-        ImVec4 col=ImGui::ColorConvertU32ToFloat4(m->cmds[i].value);
-        if (ImGui::ColorEdit4("##Value",(float*)&col)) {
-          m->cmds[i].value=ImGui::ColorConvertFloat4ToU32(col);
-        }
+        ImGui::Text("value");
         ImGui::TableNextColumn();
-        bool endTick=m->cmds[i].type&0x80;
-        if (ImGui::Checkbox("##EndTick",&endTick)) {
-          if (endTick) {
-            m->cmds[i].type|=0x80;
-          } else {
-            m->cmds[i].type&=0x7f;
+        ImGui::Text("tick");
+
+        for (size_t i=0; i<m->cmds.size(); i++) {
+          ImGui::PushID(i);
+          ImGui::TableNextRow();
+          ImGui::TableNextColumn();
+          ImGui::Text("%ld",i);
+          ImGui::TableNextColumn();
+          unsigned char cType=m->cmds[i].type&0x7f;
+          switch (cType) {
+            case cmdEnd:
+              ImGui::Text("End");
+              break;
+            case cmdSet:
+              ImGui::Text("Set");
+              break;
+            case cmdWait:
+              ImGui::Text("Wait");
+              break;
+            case cmdWaitRel:
+              ImGui::Text("Wait release");
+              break;
+            case cmdLoop:
+              ImGui::Text("Jump");
+              break;
+            case cmdLoopRel:
+              ImGui::Text("Jump until rel.");
+              break;
+            case cmdAdd:
+              ImGui::Text("Add");
+              break;
+            case cmdSub:
+              ImGui::Text("Subtract");
+              break;
+            default:
+              ImGui::Text("???");
+              break;
           }
+          ImGui::SameLine();
+          ImGui::PushButtonRepeat(true);
+          if (ImGui::ArrowButton("##down",ImGuiDir_Down)) {
+            if ((m->cmds[i].type&0x7f)>0) m->cmds[i].type--;
+          }
+          ImGui::SameLine();
+          if (ImGui::ArrowButton("##up",ImGuiDir_Up)) {
+            if ((m->cmds[i].type&0x7f)<(cmdMax-1)) m->cmds[i].type++;
+          }
+          ImGui::PopButtonRepeat();
+          ImGui::TableNextColumn();
+          if (cType==cmdSet) {
+            switch (m->intendedUse) {
+              case iuGeneric:
+                ImGui::SliderScalar("##Value",ImGuiDataType_U32,&m->cmds[i].value,&I_ZERO,&I_U8_MAX);
+                break;
+              case iuShape: {
+                unsigned char rValue=m->cmds[i].value&7;
+                if (ImGui::SliderScalar("##Value",ImGuiDataType_U8,&rValue,&ZERO,&SEVEN,shapeNames[rValue])) {
+                  m->cmds[i].value=rValue;
+                }
+                break;
+              }
+              case iuPitch:
+                noteOffsetSelector(m->cmds[i].value);
+                break;
+              case iuPan:
+                ImGui::InputScalar("##Value",ImGuiDataType_S8,&m->cmds[i].value);
+                break;
+              case iuVolSweep: {
+                ImGui::InputScalar("Period",ImGuiDataType_U16,&m->cmds[i].value);
+                unsigned char rValue=((unsigned char*)&m->cmds[i].value)[2]&31;
+                bool dir=((unsigned char*)&m->cmds[i].value)[2]&32;
+                bool loop=((unsigned char*)&m->cmds[i].value)[2]&64;
+                bool loopi=((unsigned char*)&m->cmds[i].value)[2]&128;
+                if (ImGui::InputScalar("Amount",ImGuiDataType_U8,&rValue)) {
+                  if (rValue>31) {
+                    rValue=31;
+                  }
+                  ((unsigned char*)&m->cmds[i].value)[2]&=~0x1f;
+                  ((unsigned char*)&m->cmds[i].value)[2]|=rValue;
+                }
+                ImGui::InputScalar("Bound",ImGuiDataType_U8,((unsigned char*)&m->cmds[i].value)+3);
+                if (ImGui::Checkbox("Up",&dir)) {
+                  ((unsigned char*)&m->cmds[i].value)[2]&=~0x20;
+                  ((unsigned char*)&m->cmds[i].value)[2]|=dir<<5;
+                }
+                ImGui::SameLine();
+                if (ImGui::Checkbox("Loop",&loop)) {
+                  ((unsigned char*)&m->cmds[i].value)[2]&=~0x40;
+                  ((unsigned char*)&m->cmds[i].value)[2]|=loop<<6;
+                }
+                ImGui::SameLine();
+                if (ImGui::Checkbox("Flip",&loopi)) {
+                  ((unsigned char*)&m->cmds[i].value)[2]&=~0x80;
+                  ((unsigned char*)&m->cmds[i].value)[2]|=loopi<<7;
+                }
+                ImGui::SameLine();
+                break;
+              }
+              case iuOtherSweep: {
+                ImGui::InputScalar("Period",ImGuiDataType_U16,&m->cmds[i].value);
+                unsigned char rValue=((unsigned char*)&m->cmds[i].value)[2]&127;
+                bool dir=((unsigned char*)&m->cmds[i].value)[2]&128;
+                if (ImGui::InputScalar("Amount",ImGuiDataType_U8,&rValue)) {
+                  if (rValue>127) {
+                    rValue=127;
+                  }
+                  ((unsigned char*)&m->cmds[i].value)[2]&=~0x7f;
+                  ((unsigned char*)&m->cmds[i].value)[2]|=rValue;
+                }
+                ImGui::InputScalar("Bound",ImGuiDataType_U8,((unsigned char*)&m->cmds[i].value)+3);
+                if (ImGui::Checkbox("Up",&dir)) {
+                  ((unsigned char*)&m->cmds[i].value)[2]&=~0x80;
+                  ((unsigned char*)&m->cmds[i].value)[2]|=dir<<7;
+                }
+                break;
+              }
+              default:
+                ImGui::Text("???");
+                break;
+            }
+          } else if (cType!=cmdEnd && cType!=cmdWaitRel) {
+            ImGui::InputScalar("##Value",ImGuiDataType_U32,&m->cmds[i].value);
+          }
+          ImGui::TableNextColumn();
+          bool endTick=m->cmds[i].type&0x80;
+          if (ImGui::Checkbox("##EndTick",&endTick)) {
+            if (endTick) {
+              m->cmds[i].type|=0x80;
+            } else {
+              m->cmds[i].type&=0x7f;
+            }
+          }
+          ImGui::PopID();
         }
-        ImGui::PopID();
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("-end-");
+        ImGui::TableNextColumn();
+        if (ImGui::Button("+##AddOne")) {
+          m->cmds.push_back(MacroCommand(cmdSet,0,true));
+        }
+        ImGui::EndTable();
       }
-      ImGui::TableNextRow();
-      ImGui::TableNextColumn();
-      ImGui::Text("-end-");
-      ImGui::TableNextColumn();
-      if (ImGui::Button("+##AddOne")) {
-        m->cmds.push_back(MacroCommand(cmdSet,0,true));
-      }
-      ImGui::EndTable();
     }
   }
 
@@ -3067,7 +3232,6 @@ bool updateDisp() {
       case SDL_WINDOWEVENT:
         switch (ev.window.event) {
           case SDL_WINDOWEVENT_RESIZED:
-            printf("I am resized\n");
             scrW=ev.window.data1/dpiScale;
             scrH=ev.window.data2/dpiScale;
             break;

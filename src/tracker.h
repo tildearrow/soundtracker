@@ -679,6 +679,17 @@ enum MacroCommandType {
   cmdMax
 };
 
+enum MacroIntendedUse {
+  iuGeneric,
+  iuShape,
+  iuPitch,
+  iuPan,
+  iuVolSweep,
+  iuOtherSweep,
+  
+  iuMax
+};
+
 struct MacroCommand {
   unsigned char type;
   unsigned int value;
@@ -689,9 +700,11 @@ struct MacroCommand {
 
 struct Macro {
   int jumpRelease;
+  unsigned char intendedUse;
   std::vector<MacroCommand> cmds;
   Macro():
-    jumpRelease(-1) {}
+    jumpRelease(-1),
+    intendedUse(iuGeneric) {}
 };
 
 struct Pattern {

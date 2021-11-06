@@ -57,6 +57,9 @@ void Player::noteOn(int channel, int note) {
 
   /// FILTER MODE
   c.flags.fmode=ins->filterMode&7;
+  if (ins->filterMode&7) {
+    c.cutoff=ins->filterH;
+  }
   //printf("filter mode is now %d\n",c.flags.fmode);
   c.reson=48;
 
