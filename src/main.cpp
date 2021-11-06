@@ -35,6 +35,7 @@ bool ntsc=false;
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#include "ImGuiFileDialog.h"
 #endif
 
 #include <fmt/printf.h>
@@ -3062,7 +3063,7 @@ void drawMacroEditor() {
     if (macroGraph) {
       ImGui::Text("Not done yet.");
     } else {
-      if (ImGui::BeginTable("Macro",4,ImGuiTableFlags_BordersInnerV)) {
+      if (ImGui::BeginTable("Macro",5,ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("type",ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("value",ImGuiTableColumnFlags_WidthStretch);
@@ -3076,6 +3077,8 @@ void drawMacroEditor() {
         ImGui::Text("value");
         ImGui::TableNextColumn();
         ImGui::Text("tick");
+        ImGui::TableNextColumn();
+        ImGui::Text("del");
 
         for (size_t i=0; i<m->cmds.size(); i++) {
           ImGui::PushID(i);
@@ -3207,6 +3210,11 @@ void drawMacroEditor() {
               m->cmds[i].type&=0x7f;
             }
           }
+          ImGui::TableNextColumn();
+          if (ImGui::Button("-")) {
+            m->cmds.erase(m->cmds.begin()+i);
+            i--;
+          }
           ImGui::PopID();
         }
         ImGui::TableNextRow();
@@ -3247,7 +3255,24 @@ bool updateDisp() {
   ImGui::NewFrame();
 
   ImGui::BeginMainMenuBar();
-  if (ImGui::MenuItem("Help")) {
+  if (ImGui::BeginMenu("file")) {
+    if (ImGui::MenuItem("new")) {
+      CleanupPatterns();
+    }
+    if (ImGui::MenuItem("open...")) {
+      ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey","Open File",".*",".");
+    }
+    ImGui::Separator();
+    ImGui::MenuItem("save");
+    ImGui::MenuItem("save as...");
+    ImGui::Separator();
+    if (ImGui::MenuItem("exit")) {
+      quit=true;
+    }
+    ImGui::EndMenu();
+  }
+  if (ImGui::BeginMenu("help")) {
+    ImGui::EndMenu();
   }
   ImGui::EndMainMenuBar();
 
@@ -3344,6 +3369,18 @@ bool updateDisp() {
   drawInsEditor();
 
   drawMacroEditor();
+
+  if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
+    if (ImGuiFileDialog::Instance()->IsOk()) {
+      for (std::map<string,string>::value_type& e: ImGuiFileDialog::Instance()->GetSelection()) {
+        curfname=e.second;
+        break;
+      }
+      LoadFile(curfname.c_str());
+      printf("opens %s\n",curfname.c_str());
+    }
+    ImGuiFileDialog::Instance()->Close();
+  }
 
   // end of frame
   ImGui::Render();
