@@ -2857,6 +2857,13 @@ const signed char S8_ONE=1;
 const signed char S8_FOUR=4;
 const int I_ZERO=0;
 const int I_U8_MAX=255;
+const int ONE=1;
+const unsigned short ZERO=0;
+const unsigned short SHORT_MAX=65535;
+const unsigned char _CHAR_MAX=255;
+const unsigned char VOL_MAX=64;
+const signed char _SCHAR_MIN=-128;
+const signed char _SCHAR_MAX=127;
 
 #define noteOffsetSelector(var) \
   if (var>=0x80) { \
@@ -2896,11 +2903,13 @@ void drawInsEditor() {
     if (curins>255) curins=1;
   }
 
+  ImGui::Separator();
+
   Instrument* ins=song->ins[curins];
 
   ImGui::InputText("Name",ins->name,32);
-  rangedInput("Volume",ins->vol,tempVol,0,64);
-  rangedInput("Pitch",ins->pitch,tempPitch,-128,127);
+  ImGui::SliderScalar("Volume",ImGuiDataType_U8,&ins->vol,&ZERO,&VOL_MAX);
+  ImGui::SliderScalar("Pitch",ImGuiDataType_U8,&ins->pitch,&_SCHAR_MIN,&_SCHAR_MAX);
 
   ImGui::Text("Center Note");
   ImGui::SameLine();
@@ -2933,12 +2942,8 @@ void drawInsEditor() {
   }
   ImGui::PopStyleColor();
 
-  unsigned short ZERO=0;
-  unsigned short SHORT_MAX=65535;
-  unsigned char CHAR_MAX=255;
-
   ImGui::SliderScalar("Cutoff",ImGuiDataType_U16,&ins->filterH,&ZERO,&SHORT_MAX);
-  ImGui::SliderScalar("Resonance",ImGuiDataType_U8,&ins->res,&ZERO,&CHAR_MAX);
+  ImGui::SliderScalar("Resonance",ImGuiDataType_U8,&ins->res,&ZERO,&_CHAR_MAX);
 
   bool resetOsc=ins->flags&1;
   bool resetFilter=ins->flags&4;
@@ -3260,7 +3265,7 @@ bool updateDisp() {
       CleanupPatterns();
     }
     if (ImGui::MenuItem("open...")) {
-      ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey","Open File",".*",".");
+      ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Open File",".*",".");
     }
     ImGui::Separator();
     ImGui::MenuItem("save");
@@ -3272,6 +3277,9 @@ bool updateDisp() {
     ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("help")) {
+    ImGui::MenuItem("panic");
+    ImGui::Separator();
+    ImGui::MenuItem("about...");
     ImGui::EndMenu();
   }
   ImGui::EndMainMenuBar();
@@ -3284,7 +3292,6 @@ bool updateDisp() {
   
   ImGui::BeginChild("EditControls",ImVec2(0,0),true);
 
-  int ONE=1;
   ImGui::Columns(2);
   if (ImGui::InputScalar("speed",ImGuiDataType_U8,&player.speed,&ONE,&ONE)) {
     if (player.speed<1) player.speed=1;
@@ -3370,14 +3377,14 @@ bool updateDisp() {
 
   drawMacroEditor();
 
-  if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
+  if (ImGuiFileDialog::Instance()->Display("FileDialog")) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
+      curfname="";
       for (std::map<string,string>::value_type& e: ImGuiFileDialog::Instance()->GetSelection()) {
         curfname=e.second;
         break;
       }
-      LoadFile(curfname.c_str());
-      printf("opens %s\n",curfname.c_str());
+      if (curfname!="") LoadFile(curfname.c_str());
     }
     ImGuiFileDialog::Instance()->Close();
   }
