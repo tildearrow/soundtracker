@@ -33,6 +33,7 @@ bool ntsc=false;
 
 #ifdef HAVE_GUI
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 #include "ImGuiFileDialog.h"
@@ -101,8 +102,6 @@ int curedpage=0; // current page, 0-3
 int curselchan=0;
 int curselmode=0;
 int curzoom=1;
-int selStart=0;
-int selEnd=0;
 bool follow=true;
 int patRow=0;
 int chanstodisplay=8;
@@ -278,6 +277,44 @@ const char* noteNames[256]={
   "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???", "???"
 };
 
+const char* hexValues[256]={
+  "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E", "0F",
+  "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "1A", "1B", "1C", "1D", "1E", "1F",
+  "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "2A", "2B", "2C", "2D", "2E", "2F",
+  "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "3A", "3B", "3C", "3D", "3E", "3F",
+  "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "4A", "4B", "4C", "4D", "4E", "4F",
+  "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "5A", "5B", "5C", "5D", "5E", "5F",
+  "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "6A", "6B", "6C", "6D", "6E", "6F",
+  "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "7A", "7B", "7C", "7D", "7E", "7F",
+  "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "8A", "8B", "8C", "8D", "8E", "8F",
+  "90", "91", "92", "93", "94", "95", "96", "97", "98", "99", "9A", "9B", "9C", "9D", "9E", "9F",
+  "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "AA", "AB", "AC", "AD", "AE", "AF",
+  "B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "BA", "BB", "BC", "BD", "BE", "BF",
+  "C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "CA", "CB", "CC", "CD", "CE", "CF",
+  "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "DA", "DB", "DC", "DD", "DE", "DF",
+  "E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "EA", "EB", "EC", "ED", "EE", "EF",
+  "F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "FA", "FB", "FC", "FD", "FE", "FF"
+};
+
+const char* volValues[256]={
+  "...", "a01", "a02", "a03", "a04", "a05", "a06", "a07", "a08", "a09", "a0A", "a0B", "a0C", "a0D", "a0E", "a0F",
+  "b00", "b01", "b02", "b03", "b04", "b05", "b06", "b07", "b08", "b09", "b0A", "b0B", "b0C", "b0D", "b0E", "b0F",
+  "c00", "c01", "c02", "c03", "c04", "c05", "c06", "c07", "c08", "c09", "c0A", "c0B", "c0C", "c0D", "c0E", "c0F",
+  "d00", "d01", "d02", "d03", "d04", "d05", "d06", "d07", "d08", "d09", "d0A", "d0B", "d0C", "d0D", "d0E", "d0F",
+  "v00", "v01", "v02", "v03", "v04", "v05", "v06", "v07", "v08", "v09", "v0A", "v0B", "v0C", "v0D", "v0E", "v0F",
+  "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v1A", "v1B", "v1C", "v1D", "v1E", "v1F",
+  "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v2A", "v2B", "v2C", "v2D", "v2E", "v2F",
+  "v30", "v31", "v32", "v33", "v34", "v35", "v36", "v37", "v38", "v39", "v3A", "v3B", "v3C", "v3D", "v3E", "v3F",
+  "p00", "p01", "p02", "p03", "p04", "p05", "p06", "p07", "p08", "p09", "p0A", "p0B", "p0C", "p0D", "p0E", "p0F",
+  "p10", "p11", "p12", "p13", "p14", "p15", "p16", "p17", "p18", "p19", "p1A", "p1B", "p1C", "p1D", "p1E", "p1F",
+  "p20", "p21", "p22", "p23", "p24", "p25", "p26", "p27", "p28", "p29", "p2A", "p2B", "p2C", "p2D", "p2E", "p2F",
+  "p30", "p31", "p32", "p33", "p34", "p35", "p36", "p37", "p38", "p39", "p3A", "p3B", "p3C", "p3D", "p3E", "p3F",
+  "e00", "e01", "e02", "e03", "e04", "e05", "e06", "e07", "e08", "e09", "e0A", "e0B", "e0C", "e0D", "e0E", "e0F",
+  "f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07", "f08", "f09", "f0A", "f0B", "f0C", "f0D", "f0E", "f0F",
+  "g00", "g01", "g02", "g03", "g04", "g05", "g06", "g07", "g08", "g09", "g0A", "g0B", "g0C", "g0D", "g0E", "g0F",
+  "h00", "h01", "h02", "h03", "h04", "h05", "h06", "h07", "h08", "h09", "h0A", "h0B", "h0C", "h0D", "h0E", "h0F",  
+};
+
 UIType iface;
 bool mobAltView;
 float mobScroll;
@@ -307,6 +344,14 @@ std::mutex canUseSong;
 bool insEditOpen=false;
 bool macroEditOpen=false;
 bool macroGraph=false;
+
+struct SelectionPoint {
+  int x, y;
+  SelectionPoint():
+    x(-1), y(-1) {}
+} selStart, selEnd;
+
+bool selecting=false;
 
 // NEW VARIABLES END //
 
@@ -1605,7 +1650,8 @@ int ImportXM(FILE* xm) {
       return 1;
     }
     Pattern* p=song->getPattern(i,true);
-    p->length=ph.rows[0];
+    p->length=ph.rows[0]+(ph.rows[1]<<8);
+    if (p->length>256) p->length=256;
     fread(patData,1,ph.len[0]+(ph.len[1]<<8),xm);
     // decode pattern!
     sk=0;
@@ -2743,7 +2789,30 @@ colType getFXColor(unsigned char fx) {
   return colInvalidEffect;
 }
 
+void startSelection(int x, int y) {
+  selStart.x=x;
+  selStart.y=y;
+  selEnd.x=x;
+  selEnd.y=y;
+  selecting=true;
+}
+
+void updateSelection(int x, int y) {
+  if (!selecting) return;
+  if (x>selStart.x) {
+    selEnd.x=x;
+  } else {
+    selStart.x=x;
+  }
+  if (y>selStart.y) {
+    selEnd.y=y;
+  } else {
+    selStart.y=y;
+  }
+}
+
 void drawPatterns(float ypos) {
+  char id[16];
   ImGui::Begin("Pattern View",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoScrollbar);
   ImGui::SetWindowPos("Pattern View",ImVec2(0.0f,ypos));
   ImGui::SetWindowSize("Pattern View",ImVec2(scrW*dpiScale,scrH*dpiScale-ypos),ImGuiCond_Always);
@@ -2751,7 +2820,8 @@ void drawPatterns(float ypos) {
   Pattern* p=song->getPattern(song->order[player.pat],false);
   int playerStep=player.step;
   float lineHeight=(ImGui::GetTextLineHeight()+4*dpiScale);
-  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV)) {
+  ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,ImVec2(0.0f,0.0f));
+  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_ScrollX|ImGuiTableFlags_NoPadInnerX)) {
     ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
     ImGui::SetScrollY(0.0f);
     ImGui::TableSetupScrollFreeze(1,0);
@@ -2760,7 +2830,7 @@ void drawPatterns(float ypos) {
     }
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("%d",song->order[player.pat]);
+    ImGui::Text("%d ",song->order[player.pat]);
     for (int i=0; i<song->channels; i++) {
       ImGui::TableNextColumn();
       ImGui::Button(fmt::sprintf("%d",i).c_str());
@@ -2770,45 +2840,98 @@ void drawPatterns(float ypos) {
     if (drawEnd>p->length) {
       drawEnd=p->length;
     }
+    float oneCharSize=ImGui::CalcTextSize("A").x;
+    ImVec2 threeChars=ImVec2(oneCharSize*3.0f,lineHeight);
+    ImVec2 twoChars=ImVec2(oneCharSize*2.0f,lineHeight);
+    ImVec2 oneChar=ImVec2(oneCharSize,lineHeight);
     for (int i=drawStart; i<drawEnd; i++) {
       ImGui::TableNextRow(0,lineHeight);
       if (i<0) continue;
       ImGui::TableNextColumn();
-      ImGui::TextColored(colors[colRowNumber],"%.2X",i);
+      ImGui::TextColored(colors[colRowNumber],"%.2X ",i);
       if (i==playerStep) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,0x40ffffff);
+      bool selectedRow=(i>=selStart.y && i<=selEnd.y);
       for (int j=0; j<song->channels; j++) {
+        int selX=j*5;
+        bool selectedNote=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        selX++;
+        bool selectedIns=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        selX++;
+        bool selectedVol=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        selX++;
+        bool selectedEffect=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        selX++;
+        bool selectedEffectVal=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+
         ImGui::TableNextColumn();
+
+        // note
+        sprintf(id,"%s##PN%d_%.2X",noteNamesPat[p->data[i][j][0]],i,j);
         if (p->data[i][j][0]==0) {
-          ImGui::TextColored(colors[colInvalidEffect],"...");
-        } else {
-          ImGui::Text("%s",noteNamesPat[p->data[i][j][0]]);
+          ImGui::PushStyleColor(ImGuiCol_Text,colors[colInvalidEffect]);
+        }
+        ImGui::Selectable(id,selectedNote,ImGuiSelectableFlags_NoPadWithHalfSpacing,threeChars);
+        if (ImGui::IsItemClicked()) {
+          startSelection(j*5,i);
+        }
+        if (ImGui::IsItemHovered()) {
+          updateSelection(j*5,i);
+        }
+        if (p->data[i][j][0]==0) {
+          ImGui::PopStyleColor();
         }
         ImGui::SameLine(0.0f,0.0f);
+
+        // instrument
         if (p->data[i][j][1]==0) {
-          ImGui::TextColored(colors[colInvalidEffect],"..");
+          sprintf(id,"..##PI%d_%.2X",i,j);
+          ImGui::PushStyleColor(ImGuiCol_Text,colors[colInvalidEffect]);
         } else {
-          ImGui::TextColored(colors[colInstrument],"%.2X",p->data[i][j][1]);
+          sprintf(id,"%s##PI%d_%.2X",hexValues[p->data[i][j][1]],i,j);
+          ImGui::PushStyleColor(ImGuiCol_Text,colors[colInstrument]);
         }
-        ImGui::SameLine(0.0f,0.0f);
-        if (p->data[i][j][2]==0) {
-          ImGui::TextColored(colors[colInvalidEffect],"...");
-        } else {
-          ImGui::TextColored(colors[colVolume],"%s%.2X",getVFX(p->data[i][j][2]),getVFXVal(p->data[i][j][2]));
+        ImGui::Selectable(id,selectedIns,ImGuiSelectableFlags_NoPadWithHalfSpacing,twoChars);
+        if (ImGui::IsItemClicked()) {
+          startSelection(1+j*5,i);
         }
+        ImGui::PopStyleColor();
         ImGui::SameLine(0.0f,0.0f);
+
+        // volume
+        sprintf(id,"%s##PV%d_%.2X",volValues[p->data[i][j][2]],i,j);
+        ImGui::PushStyleColor(ImGuiCol_Text,colors[(p->data[i][j][2]==0)?colInvalidEffect:colVolume]);
+        ImGui::Selectable(id,selectedVol,ImGuiSelectableFlags_NoPadWithHalfSpacing,threeChars);
+        if (ImGui::IsItemClicked()) {
+          startSelection(2+j*5,i);
+        }
+        ImGui::PopStyleColor();
+        ImGui::SameLine(0.0f,0.0f);
+
+        // effect
+        sprintf(id,"%s##PE%d_%.2X",getFX(p->data[i][j][3]),i,j);
         ImGui::PushStyleColor(ImGuiCol_Text,colors[getFXColor(p->data[i][j][3])]);
-        ImGui::Text("%s",getFX(p->data[i][j][3]));
+        ImGui::Selectable(id,selectedEffect,ImGuiSelectableFlags_NoPadWithHalfSpacing,oneChar);
+        if (ImGui::IsItemClicked()) {
+          startSelection(3+j*5,i);
+        }
         ImGui::SameLine(0.0f,0.0f);
+
+        // effect value
         if (p->data[i][j][4]==0) {
-          ImGui::Text("..");
+          sprintf(id,"..##PF%d_%.2X",i,j);
         } else {
-          ImGui::Text("%.2X",p->data[i][j][4]);
+          sprintf(id,"%s##PF%d_%.2X",hexValues[p->data[i][j][4]],i,j);
+        }
+        ImGui::Selectable(id,selectedEffectVal,ImGuiSelectableFlags_NoPadWithHalfSpacing,twoChars);
+        if (ImGui::IsItemClicked()) {
+          startSelection(4+j*5,i);
         }
         ImGui::PopStyleColor();
       }
     }
     ImGui::EndTable();
   }
+  ImGui::PopStyleVar();
   ImGui::End();
 }
 
@@ -2897,116 +3020,116 @@ const signed char _SCHAR_MAX=127;
 
 void drawInsEditor() {
   if (!insEditOpen) return;
-  ImGui::Begin("Instrument Editor",&insEditOpen);
-  if (ImGui::InputInt("Instrument",&curins)) {
-    if (curins<1) curins=1;
-    if (curins>255) curins=1;
-  }
+  if (ImGui::Begin("Instrument Editor",&insEditOpen)) {
+    if (ImGui::InputInt("Instrument",&curins)) {
+      if (curins<1) curins=1;
+      if (curins>255) curins=1;
+    }
 
-  ImGui::Separator();
+    ImGui::Separator();
 
-  Instrument* ins=song->ins[curins];
+    Instrument* ins=song->ins[curins];
 
-  ImGui::InputText("Name",ins->name,32);
-  ImGui::SliderScalar("Volume",ImGuiDataType_U8,&ins->vol,&ZERO,&VOL_MAX);
-  ImGui::SliderScalar("Pitch",ImGuiDataType_U8,&ins->pitch,&_SCHAR_MIN,&_SCHAR_MAX);
+    ImGui::InputText("Name",ins->name,32);
+    ImGui::SliderScalar("Volume",ImGuiDataType_U8,&ins->vol,&ZERO,&VOL_MAX);
+    ImGui::SliderScalar("Pitch",ImGuiDataType_S8,&ins->pitch,&_SCHAR_MIN,&_SCHAR_MAX);
 
-  ImGui::Text("Center Note");
-  ImGui::SameLine();
-  if (ImGui::BeginCombo("##CenterNote",noteNames[ins->noteOffset])) {
-    for (int i=0; i<128; i++) {
-      if (ImGui::Selectable(noteNames[i],i==ins->noteOffset)) {
-        ins->noteOffset=i;
+    ImGui::Text("Center Note");
+    ImGui::SameLine();
+    if (ImGui::BeginCombo("##CenterNote",noteNames[ins->noteOffset])) {
+      for (int i=0; i<128; i++) {
+        if (ImGui::Selectable(noteNames[i],i==ins->noteOffset)) {
+          ins->noteOffset=i;
+        }
+      }
+      ImGui::EndCombo();
+    }
+
+    ImGui::Text("Filter Mode");
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&1)?0.6f:0.2f,0.2f,1.0f));
+    if (ImGui::Button("low")) {
+      ins->filterMode^=1;
+    }
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&2)?0.6f:0.2f,0.2f,1.0f));
+    if (ImGui::Button("high")) {
+      ins->filterMode^=2;
+    }
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&4)?0.6f:0.2f,0.2f,1.0f));
+    if (ImGui::Button("band")) {
+      ins->filterMode^=4;
+    }
+    ImGui::PopStyleColor();
+
+    ImGui::SliderScalar("Cutoff",ImGuiDataType_U16,&ins->filterH,&ZERO,&SHORT_MAX);
+    ImGui::SliderScalar("Resonance",ImGuiDataType_U8,&ins->res,&ZERO,&_CHAR_MAX);
+
+    bool resetOsc=ins->flags&1;
+    bool resetFilter=ins->flags&4;
+    bool syncMod=ins->flags&32;
+
+    if (ImGui::Checkbox("Reset on new note",&resetOsc)) {
+      ins->flags&=~1;
+      ins->flags|=resetOsc;
+    }
+
+    if (ImGui::Checkbox("Reset filter on new note",&resetFilter)) {
+      ins->flags&=~4;
+      ins->flags|=resetFilter<<2;
+    }
+
+    if (ImGui::Checkbox("Sync modulation",&syncMod)) {
+      ins->flags&=~32;
+      ins->flags|=syncMod<<5;
+    }
+    ImGui::SameLine();
+    noteOffsetSelector(ins->LFO);
+
+    bool pcmOn=ins->filterMode&8;
+    ImGui::BeginChild("PCM",pcmOn?ImVec2(0,120.0f*dpiScale):ImVec2(0,24.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
+    ImGui::BeginMenuBar();
+    if (ImGui::Checkbox("PCM",&pcmOn)) {
+      ins->filterMode&=~8;
+      ins->filterMode|=pcmOn<<3;
+    }
+    ImGui::EndMenuBar();
+
+    if (pcmOn) {
+      ImGui::InputScalar("Position",ImGuiDataType_U16,&ins->pcmPos);
+      ImGui::InputScalar("Length",ImGuiDataType_U16,&ins->pcmLen);
+      ImGui::InputScalar("Loop",ImGuiDataType_U16,&ins->pcmLoop);
+      ImGui::SameLine();
+      bool pcmLoopOn=ins->pcmMult&128;
+      if (ImGui::Checkbox("##LoopOn",&pcmLoopOn)) {
+        ins->pcmMult&=~128;
+        ins->pcmMult|=pcmLoopOn<<7;
       }
     }
-    ImGui::EndCombo();
+    ImGui::EndChild();
+
+    ImGui::BeginChild("Macros",ImVec2(0,374.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
+    ImGui::BeginMenuBar();
+    ImGui::Text("Macros");
+    ImGui::EndMenuBar();
+    ImGui::Columns(3);
+    macroSelector("Volume",ins->volMacro,iuGeneric);
+    macroSelector("Cutoff",ins->cutMacro,iuGeneric);
+    macroSelector("Resonance",ins->resMacro,iuGeneric);
+    macroSelector("Duty",ins->dutyMacro,iuGeneric);
+    macroSelector("Shape",ins->shapeMacro,iuShape);
+    macroSelector("Pitch",ins->pitchMacro,iuPitch);
+    macroSelector("FinePitch",ins->finePitchMacro,iuPan);
+    macroSelector("Panning",ins->panMacro,iuPan);
+    macroSelector("VolSweep",ins->volSweepMacro,iuVolSweep);
+    macroSelector("FreqSweep",ins->freqSweepMacro,iuOtherSweep);
+    macroSelector("CutSweep",ins->cutSweepMacro,iuOtherSweep);
+    macroSelector("PCM Position",ins->pcmPosMacro,iuGeneric);
+    ImGui::EndChild();
   }
-
-  ImGui::Text("Filter Mode");
-  ImGui::SameLine();
-  ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&1)?0.6f:0.2f,0.2f,1.0f));
-  if (ImGui::Button("low")) {
-    ins->filterMode^=1;
-  }
-  ImGui::PopStyleColor();
-  ImGui::SameLine();
-  ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&2)?0.6f:0.2f,0.2f,1.0f));
-  if (ImGui::Button("high")) {
-    ins->filterMode^=2;
-  }
-  ImGui::PopStyleColor();
-  ImGui::SameLine();
-  ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.2f,(ins->filterMode&4)?0.6f:0.2f,0.2f,1.0f));
-  if (ImGui::Button("band")) {
-    ins->filterMode^=4;
-  }
-  ImGui::PopStyleColor();
-
-  ImGui::SliderScalar("Cutoff",ImGuiDataType_U16,&ins->filterH,&ZERO,&SHORT_MAX);
-  ImGui::SliderScalar("Resonance",ImGuiDataType_U8,&ins->res,&ZERO,&_CHAR_MAX);
-
-  bool resetOsc=ins->flags&1;
-  bool resetFilter=ins->flags&4;
-  bool syncMod=ins->flags&32;
-
-  if (ImGui::Checkbox("Reset on new note",&resetOsc)) {
-    ins->flags&=~1;
-    ins->flags|=resetOsc;
-  }
-
-  if (ImGui::Checkbox("Reset filter on new note",&resetFilter)) {
-    ins->flags&=~4;
-    ins->flags|=resetFilter<<2;
-  }
-
-  if (ImGui::Checkbox("Sync modulation",&syncMod)) {
-    ins->flags&=~32;
-    ins->flags|=syncMod<<5;
-  }
-  ImGui::SameLine();
-  noteOffsetSelector(ins->LFO);
-
-  bool pcmOn=ins->filterMode&8;
-  ImGui::BeginChild("PCM",pcmOn?ImVec2(0,120.0f*dpiScale):ImVec2(0,24.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
-  ImGui::BeginMenuBar();
-  if (ImGui::Checkbox("PCM",&pcmOn)) {
-    ins->filterMode&=~8;
-    ins->filterMode|=pcmOn<<3;
-  }
-  ImGui::EndMenuBar();
-
-  if (pcmOn) {
-    ImGui::InputScalar("Position",ImGuiDataType_U16,&ins->pcmPos);
-    ImGui::InputScalar("Length",ImGuiDataType_U16,&ins->pcmLen);
-    ImGui::InputScalar("Loop",ImGuiDataType_U16,&ins->pcmLoop);
-    ImGui::SameLine();
-    bool pcmLoopOn=ins->pcmMult&128;
-    if (ImGui::Checkbox("##LoopOn",&pcmLoopOn)) {
-      ins->pcmMult&=~128;
-      ins->pcmMult|=pcmLoopOn<<7;
-    }
-  }
-  ImGui::EndChild();
-
-  ImGui::BeginChild("Macros",ImVec2(0,374.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
-  ImGui::BeginMenuBar();
-  ImGui::Text("Macros");
-  ImGui::EndMenuBar();
-  ImGui::Columns(3);
-  macroSelector("Volume",ins->volMacro,iuGeneric);
-  macroSelector("Cutoff",ins->cutMacro,iuGeneric);
-  macroSelector("Resonance",ins->resMacro,iuGeneric);
-  macroSelector("Duty",ins->dutyMacro,iuGeneric);
-  macroSelector("Shape",ins->shapeMacro,iuShape);
-  macroSelector("Pitch",ins->pitchMacro,iuPitch);
-  macroSelector("FinePitch",ins->finePitchMacro,iuPan);
-  macroSelector("Panning",ins->panMacro,iuPan);
-  macroSelector("VolSweep",ins->volSweepMacro,iuVolSweep);
-  macroSelector("FreqSweep",ins->freqSweepMacro,iuOtherSweep);
-  macroSelector("CutSweep",ins->cutSweepMacro,iuOtherSweep);
-  macroSelector("PCM Position",ins->pcmPosMacro,iuGeneric);
-  ImGui::EndChild();
-
   ImGui::End();
 }
 
@@ -3312,7 +3435,10 @@ bool updateDisp() {
     if (curoctave>9) curoctave=9;
   }
   ImGui::NextColumn();
-  ImGui::InputScalar("length",ImGuiDataType_U8,&song->getPattern(player.pat,true)->length,&ONE,&ONE);
+  if (ImGui::InputScalar("length",ImGuiDataType_U16,&song->getPattern(player.pat,true)->length,&ONE,&ONE)) {
+    if (song->getPattern(player.pat,true)->length>256) song->getPattern(player.pat,true)->length=256;
+    if (song->getPattern(player.pat,true)->length<1) song->getPattern(player.pat,true)->length=1;
+  }
   ImGui::Columns(1);
 
   ImGui::Separator();
