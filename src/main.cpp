@@ -9,6 +9,9 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
+#include "SDL_events.h"
+#include "SDL_keycode.h"
+#include <stdexcept>
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
@@ -352,6 +355,22 @@ struct SelectionPoint {
 } selStart, selEnd;
 
 bool selecting=false;
+
+int delayedStep=0;
+int delayedPat=0;
+
+enum WindowTypes {
+  wPattern,
+  wInstrument,
+  wMacro,
+  wHeaderBar
+};
+
+int curWindow=wPattern;
+
+std::map<SDL_Keycode,int> noteKeys;
+std::map<SDL_Keycode,int> valueKeys;
+std::map<SDL_Keycode,int> effectKeys;
 
 // NEW VARIABLES END //
 
@@ -2799,69 +2818,86 @@ void startSelection(int x, int y) {
 
 void updateSelection(int x, int y) {
   if (!selecting) return;
-  if (x>selStart.x) {
-    selEnd.x=x;
-  } else {
-    selStart.x=x;
+  selEnd.x=x;
+  selEnd.y=y;
+}
+
+void finishSelection() {
+  // swap points if required
+  if (selEnd.x<selStart.x) {
+    selEnd.x^=selStart.x;
+    selStart.x^=selEnd.x;
+    selEnd.x^=selStart.x;
   }
-  if (y>selStart.y) {
-    selEnd.y=y;
-  } else {
-    selStart.y=y;
+  if (selEnd.y<selStart.y) {
+    selEnd.y^=selStart.y;
+    selStart.y^=selEnd.y;
+    selEnd.y^=selStart.y;
   }
+  selecting=false;
 }
 
 void drawPatterns(float ypos) {
   char id[16];
+  SelectionPoint visStart=selStart;
+  SelectionPoint visEnd=selEnd;
+  // swap points if required
+  if (visEnd.x<visStart.x) {
+    visEnd.x^=visStart.x;
+    visStart.x^=visEnd.x;
+    visEnd.x^=visStart.x;
+  }
+  if (visEnd.y<visStart.y) {
+    visEnd.y^=visStart.y;
+    visStart.y^=visEnd.y;
+    visEnd.y^=visStart.y;
+  }
   ImGui::Begin("Pattern View",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoScrollbar);
   ImGui::SetWindowPos("Pattern View",ImVec2(0.0f,ypos));
   ImGui::SetWindowSize("Pattern View",ImVec2(scrW*dpiScale,scrH*dpiScale-ypos),ImGuiCond_Always);
 
-  Pattern* p=song->getPattern(song->order[player.pat],false);
+  Pattern* p=song->getPattern(song->order[delayedPat],false);
   int playerStep=player.step;
-  float lineHeight=(ImGui::GetTextLineHeight()+4*dpiScale);
+  float lineHeight=(ImGui::GetTextLineHeight()+2*dpiScale);
   ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,ImVec2(0.0f,0.0f));
-  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_ScrollX|ImGuiTableFlags_NoPadInnerX)) {
+  if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_ScrollX|ImGuiTableFlags_ScrollY|ImGuiTableFlags_NoPadInnerX)) {
     ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
-    ImGui::SetScrollY(0.0f);
-    ImGui::TableSetupScrollFreeze(1,0);
+    ImGui::SetScrollY(lineHeight*playerStep);
+    ImGui::TableSetupScrollFreeze(1,1);
     for (int i=0; i<song->channels; i++) {
       ImGui::TableSetupColumn(fmt::sprintf("c%d",i).c_str(),ImGuiTableColumnFlags_WidthFixed);
     }
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("%d ",song->order[player.pat]);
+    ImGui::Text("%d ",song->order[delayedPat]);
     for (int i=0; i<song->channels; i++) {
       ImGui::TableNextColumn();
       ImGui::Button(fmt::sprintf("%d",i).c_str());
     }
-    int drawStart=playerStep-int((scrH*dpiScale-ypos)/(lineHeight*2))+2;
-    int drawEnd=drawStart+((scrH*dpiScale-ypos)/lineHeight)-1;
-    if (drawEnd>p->length) {
-      drawEnd=p->length;
-    }
+    int drawStart=int((scrH*dpiScale-ypos)/(lineHeight*2));
+    int drawEnd=p->length;
     float oneCharSize=ImGui::CalcTextSize("A").x;
     ImVec2 threeChars=ImVec2(oneCharSize*3.0f,lineHeight);
     ImVec2 twoChars=ImVec2(oneCharSize*2.0f,lineHeight);
     ImVec2 oneChar=ImVec2(oneCharSize,lineHeight);
-    for (int i=drawStart; i<drawEnd; i++) {
+    for (int i=1-drawStart; i<drawEnd; i++) {
       ImGui::TableNextRow(0,lineHeight);
       if (i<0) continue;
       ImGui::TableNextColumn();
       ImGui::TextColored(colors[colRowNumber],"%.2X ",i);
-      if (i==playerStep) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,0x40ffffff);
-      bool selectedRow=(i>=selStart.y && i<=selEnd.y);
+      if (player.playMode!=0 && i==delayedStep) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,0x40ffffff);
+      bool selectedRow=(i>=visStart.y && i<=visEnd.y);
       for (int j=0; j<song->channels; j++) {
         int selX=j*5;
-        bool selectedNote=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        bool selectedNote=(selectedRow && selX>=visStart.x && selX<=visEnd.x);
         selX++;
-        bool selectedIns=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        bool selectedIns=(selectedRow && selX>=visStart.x && selX<=visEnd.x);
         selX++;
-        bool selectedVol=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        bool selectedVol=(selectedRow && selX>=visStart.x && selX<=visEnd.x);
         selX++;
-        bool selectedEffect=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        bool selectedEffect=(selectedRow && selX>=visStart.x && selX<=visEnd.x);
         selX++;
-        bool selectedEffectVal=(selectedRow && selX>=selStart.x && selX<=selEnd.x);
+        bool selectedEffectVal=(selectedRow && selX>=visStart.x && selX<=visEnd.x);
 
         ImGui::TableNextColumn();
 
@@ -2874,7 +2910,7 @@ void drawPatterns(float ypos) {
         if (ImGui::IsItemClicked()) {
           startSelection(j*5,i);
         }
-        if (ImGui::IsItemHovered()) {
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
           updateSelection(j*5,i);
         }
         if (p->data[i][j][0]==0) {
@@ -2894,6 +2930,9 @@ void drawPatterns(float ypos) {
         if (ImGui::IsItemClicked()) {
           startSelection(1+j*5,i);
         }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+          updateSelection(1+j*5,i);
+        }
         ImGui::PopStyleColor();
         ImGui::SameLine(0.0f,0.0f);
 
@@ -2904,6 +2943,9 @@ void drawPatterns(float ypos) {
         if (ImGui::IsItemClicked()) {
           startSelection(2+j*5,i);
         }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+          updateSelection(2+j*5,i);
+        }
         ImGui::PopStyleColor();
         ImGui::SameLine(0.0f,0.0f);
 
@@ -2913,6 +2955,9 @@ void drawPatterns(float ypos) {
         ImGui::Selectable(id,selectedEffect,ImGuiSelectableFlags_NoPadWithHalfSpacing,oneChar);
         if (ImGui::IsItemClicked()) {
           startSelection(3+j*5,i);
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+          updateSelection(3+j*5,i);
         }
         ImGui::SameLine(0.0f,0.0f);
 
@@ -2926,12 +2971,21 @@ void drawPatterns(float ypos) {
         if (ImGui::IsItemClicked()) {
           startSelection(4+j*5,i);
         }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+          updateSelection(4+j*5,i);
+        }
         ImGui::PopStyleColor();
       }
     }
+    for (int i=0; i<=drawStart; i++) {
+      ImGui::TableNextRow(0,lineHeight);
+    }
     ImGui::EndTable();
   }
+  delayedStep=playerStep;
+  delayedPat=player.pat;
   ImGui::PopStyleVar();
+  if (ImGui::IsWindowFocused()) curWindow=wPattern;
   ImGui::End();
 }
 
@@ -3109,6 +3163,7 @@ void drawInsEditor() {
         ins->pcmMult|=pcmLoopOn<<7;
       }
     }
+    if (ImGui::IsWindowFocused()) curWindow=wInstrument;
     ImGui::EndChild();
 
     ImGui::BeginChild("Macros",ImVec2(0,374.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
@@ -3128,7 +3183,10 @@ void drawInsEditor() {
     macroSelector("FreqSweep",ins->freqSweepMacro,iuOtherSweep);
     macroSelector("CutSweep",ins->cutSweepMacro,iuOtherSweep);
     macroSelector("PCM Position",ins->pcmPosMacro,iuGeneric);
+    if (ImGui::IsWindowFocused()) curWindow=wInstrument;
     ImGui::EndChild();
+
+    if (ImGui::IsWindowFocused()) curWindow=wInstrument;
   }
   ImGui::End();
 }
@@ -3357,7 +3415,155 @@ void drawMacroEditor() {
     }
   }
 
+  if (ImGui::IsWindowFocused()) curWindow=wMacro;
+
   ImGui::End();
+}
+
+void doNoteInput(SDL_Event& ev) {
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  int type=selStart.x%5;
+  int channel=selStart.x/5;
+  if (selStart.x<0 || selStart.y<0 || channel>=song->channels || selStart.y>=p->length) return;
+  switch (type) {
+    case 0: // note
+      try {
+        int note=noteKeys.at(ev.key.keysym.sym);
+        p->data[selStart.y][channel][0]=hscale(curoctave*12+note);
+        p->data[selStart.y][channel][1]=curins;
+      } catch (std::out_of_range& e) {
+      }
+      break;
+    case 1: case 4: // instrument or effect value
+      try {
+        int value=valueKeys.at(ev.key.keysym.sym);
+        p->data[selStart.y][channel][type]=(p->data[selStart.y][channel][type]<<4)|value;
+      } catch (std::out_of_range& e) {
+      }
+      break;
+    case 2: // volume
+      try {
+        int value=valueKeys.at(ev.key.keysym.sym);
+        if (p->data[selStart.y][channel][2]==0) p->data[selStart.y][channel][2]=0x40;
+        if ((p->data[selStart.y][channel][2]&0xc0)==0x40 || (p->data[selStart.y][channel][2]&0xc0)==0x80) {
+          unsigned char newVal=((p->data[selStart.y][channel][2]&0x3f)<<4)|value;
+          if (newVal>0x3f) {
+            p->data[selStart.y][channel][2]=(p->data[selStart.y][channel][2]&0xc0)|0x30|value;
+          } else {
+            p->data[selStart.y][channel][2]=(p->data[selStart.y][channel][2]&0xc0)|newVal;
+          }
+        } else {
+          p->data[selStart.y][channel][2]=(p->data[selStart.y][channel][2]&0xf0)|value;
+        }
+      } catch (std::out_of_range& e) {
+      }
+      break;
+    case 3: // effect
+      try {
+        int value=effectKeys.at(ev.key.keysym.sym);
+        p->data[selStart.y][channel][3]=value;
+      } catch (std::out_of_range& e) {
+      }
+      break;
+  }
+}
+
+void doDelete() {
+  finishSelection();
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  for (int i=selStart.x; i<=selEnd.x; i++) {
+    if (i<0 || (i/5)>=song->channels) continue;
+    for (int j=selStart.y; j<=selEnd.y; j++) {
+      if (j<0 || j>=p->length) continue;
+      p->data[j][i/5][i%5]=0;
+    }
+  }
+}
+
+void doPullDelete() {
+  finishSelection();
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  int distance=selEnd.y-selStart.y+1;
+  for (int i=selStart.x; i<=selEnd.x; i++) {
+    for (int j=selStart.y; j<p->length; j++) {
+      if (j+distance>=p->length) {
+        p->data[j][i/5][i%5]=0;
+      } else {
+        p->data[j][i/5][i%5]=p->data[j+distance][i/5][i%5];
+      }
+    }
+  }
+}
+
+void doInsert() {
+  finishSelection();
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  for (int i=selStart.x; i<=selEnd.x; i++) {
+    for (int j=p->length-1; j>=selStart.y; j--) {
+      p->data[j][i/5][i%5]=p->data[j-1][i/5][i%5];
+    }
+  }
+}
+
+void keyDown(SDL_Event& ev) {
+  switch (curWindow) {
+    case wPattern: {
+      switch (ev.key.keysym.sym) {
+        case SDLK_BACKSPACE:
+          doPullDelete();
+          break;
+        case SDLK_INSERT:
+          doInsert();
+          break;
+        case SDLK_DELETE:
+          doDelete();
+          break;
+        case SDLK_UP:
+          if (--selStart.y<0) selStart.y=0;
+          selEnd=selStart;
+          break;
+        case SDLK_DOWN: {
+          Pattern* p=song->getPattern(song->order[player.pat],true);
+          if (++selStart.y>=p->length) selStart.y=p->length-1;
+          selEnd=selStart;
+          break;
+        }
+        case SDLK_LEFT:
+          if (--selStart.x<0) selStart.x=0;
+          selEnd=selStart;
+          break;
+        case SDLK_RIGHT:
+          if (++selStart.x>=5*song->channels) selStart.x=5*song->channels-1;
+          selEnd=selStart;
+          break;
+        case SDLK_HOME:
+          selStart.y=0;
+          selEnd=selStart;
+          break;
+        case SDLK_END: {
+          Pattern* p=song->getPattern(song->order[player.pat],true);
+          selStart.y=p->length-1;
+          selEnd=selStart;
+          break;
+        }
+        default:
+          doNoteInput(ev);
+          break;
+      }
+      break;
+    }
+    case wInstrument:
+      try {
+        int note=1+noteKeys.at(ev.key.keysym.sym);
+        player.testNoteOn(0,curins,curoctave*12+note);
+      } catch (std::out_of_range& e) {
+      }
+      break;
+  }
+}
+
+void keyUp(SDL_Event& ev) {
+
 }
 
 bool updateDisp() {
@@ -3365,6 +3571,21 @@ bool updateDisp() {
   while (SDL_PollEvent(&ev)) {
     ImGui_ImplSDL2_ProcessEvent(&ev);
     switch (ev.type) {
+      case SDL_KEYDOWN:
+        if (!ImGui::GetIO().WantCaptureKeyboard) {
+          keyDown(ev);
+        }
+        break;
+      case SDL_KEYUP:
+        if (!ImGui::GetIO().WantCaptureKeyboard) {
+          keyUp(ev);
+        }
+        break;
+      case SDL_MOUSEBUTTONUP:
+        if (ev.button.button==1) {
+          finishSelection();
+        }
+        break;
       case SDL_WINDOWEVENT:
         switch (ev.window.event) {
           case SDL_WINDOWEVENT_RESIZED:
@@ -3378,6 +3599,7 @@ bool updateDisp() {
         break;
     }
   }
+  curWindow=wPattern;
   ImGui_ImplSDLRenderer_NewFrame();
   ImGui_ImplSDL2_NewFrame(sdlWin);
   ImGui::NewFrame();
@@ -3551,6 +3773,90 @@ bool initGUI() {
     printf("could not load UI font!\n");
     return false;
   }
+
+  // octave 1
+  noteKeys[SDLK_z]=0;
+  noteKeys[SDLK_s]=1;
+  noteKeys[SDLK_x]=2;
+  noteKeys[SDLK_d]=3;
+  noteKeys[SDLK_c]=4;
+  noteKeys[SDLK_v]=5;
+  noteKeys[SDLK_g]=6;
+  noteKeys[SDLK_b]=7;
+  noteKeys[SDLK_h]=8;
+  noteKeys[SDLK_n]=9;
+  noteKeys[SDLK_j]=10;
+  noteKeys[SDLK_m]=11;
+
+  // octave 2
+  noteKeys[SDLK_q]=12;
+  noteKeys[SDLK_2]=13;
+  noteKeys[SDLK_w]=14;
+  noteKeys[SDLK_3]=15;
+  noteKeys[SDLK_e]=16;
+  noteKeys[SDLK_r]=17;
+  noteKeys[SDLK_5]=18;
+  noteKeys[SDLK_t]=19;
+  noteKeys[SDLK_6]=20;
+  noteKeys[SDLK_y]=21;
+  noteKeys[SDLK_7]=22;
+  noteKeys[SDLK_u]=23;
+
+  // octave 3
+  noteKeys[SDLK_i]=24;
+  noteKeys[SDLK_9]=25;
+  noteKeys[SDLK_o]=26;
+  noteKeys[SDLK_0]=27;
+  noteKeys[SDLK_p]=28;
+  noteKeys[SDLK_LEFTBRACKET]=29;
+  noteKeys[SDLK_RIGHTBRACKET]=31;
+
+  // value keys
+  valueKeys[SDLK_0]=0;
+  valueKeys[SDLK_1]=1;
+  valueKeys[SDLK_2]=2;
+  valueKeys[SDLK_3]=3;
+  valueKeys[SDLK_4]=4;
+  valueKeys[SDLK_5]=5;
+  valueKeys[SDLK_6]=6;
+  valueKeys[SDLK_7]=7;
+  valueKeys[SDLK_8]=8;
+  valueKeys[SDLK_9]=9;
+  valueKeys[SDLK_a]=10;
+  valueKeys[SDLK_b]=11;
+  valueKeys[SDLK_c]=12;
+  valueKeys[SDLK_d]=13;
+  valueKeys[SDLK_e]=14;
+  valueKeys[SDLK_f]=15;
+  
+  // effect keys
+  effectKeys[SDLK_a]=1;
+  effectKeys[SDLK_b]=2;
+  effectKeys[SDLK_c]=3;
+  effectKeys[SDLK_d]=4;
+  effectKeys[SDLK_e]=5;
+  effectKeys[SDLK_f]=6;
+  effectKeys[SDLK_g]=7;
+  effectKeys[SDLK_h]=8;
+  effectKeys[SDLK_i]=9;
+  effectKeys[SDLK_j]=10;
+  effectKeys[SDLK_k]=11;
+  effectKeys[SDLK_l]=12;
+  effectKeys[SDLK_m]=13;
+  effectKeys[SDLK_n]=14;
+  effectKeys[SDLK_o]=15;
+  effectKeys[SDLK_p]=16;
+  effectKeys[SDLK_q]=17;
+  effectKeys[SDLK_r]=18;
+  effectKeys[SDLK_s]=19;
+  effectKeys[SDLK_t]=20;
+  effectKeys[SDLK_u]=21;
+  effectKeys[SDLK_v]=22;
+  effectKeys[SDLK_w]=23;
+  effectKeys[SDLK_x]=24;
+  effectKeys[SDLK_y]=25;
+  effectKeys[SDLK_z]=26;
+
 
   return true;
 }

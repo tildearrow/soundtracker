@@ -258,3 +258,7 @@ void soundchip::Reset() {
   }
   memset(chan,0,sizeof(channel)*8);
 }
+
+soundchip::soundchip() {
+  Init();
+}

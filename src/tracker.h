@@ -32,6 +32,7 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 #include <string>
+#include <queue>
 #include <vector>
 #include <mutex>
 
@@ -833,9 +834,19 @@ struct ChannelStatus {
     panbValue(0) {}
 };
 
+struct ScheduledNote {
+  int chan, ins, note;
+  ScheduledNote(int c, int i, int n):
+    chan(c),
+    ins(i),
+    note(n) {}
+};
+
 class Player {
   Song* song;
   soundchip* chip;
+
+  std::queue<ScheduledNote> scheduledNotes;
 
   public:
     int pat, step, tick, playMode;
@@ -850,6 +861,7 @@ class Player {
 
     float offsetNote(float note, unsigned char off);
 
+    void testNoteOn(int channel, int ins, int note);
     void noteOn(int channel, int note);
     void noteOff(int channel);
     void noteCut(int channel);

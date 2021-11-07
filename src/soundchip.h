@@ -95,6 +95,7 @@ class soundchip {
     void NextSample(short* l, short* r);
     void Init();
     void Reset();
+    soundchip();
 };
 
 class HLESoundchip: public soundchip {

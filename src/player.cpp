@@ -199,6 +199,10 @@ void Player::notePanChange(int channel, signed char val) {
   c.pan=val;
 }
 
+void Player::testNoteOn(int channel, int ins, int note) {
+  scheduledNotes.push(ScheduledNote(channel,ins,note));
+}
+
 void Player::processChanRow(Pattern* p, int i) {
   ChannelStatus& status=chan[i];
   // instrument
@@ -395,11 +399,19 @@ void Player::nextRow() {
 }
 
 void Player::update() {
+  while (!scheduledNotes.empty()) {
+    if (playMode==0) playMode=2;
+    ScheduledNote s=scheduledNotes.front();
+    noteProgramChange(s.chan,s.ins);
+    noteOn(s.chan,s.note);
+    scheduledNotes.pop();
+  }
+
   if (playMode==0) return;
   if (song==NULL) return;
 
   // next tick
-  if (--tick<=0) {
+  if (playMode==1) if (--tick<=0) {
     nextRow();
   }
   
@@ -678,6 +690,7 @@ void Player::stop() {
   playMode=0;
   for (int i=0; i<song->channels; i++) {
     chip[i>>3].chan[i&7].vol=0;
+    chip[i>>3].chan[i&7].flags.swvol=0;
   }
 }
 
