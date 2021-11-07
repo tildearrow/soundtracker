@@ -359,6 +359,8 @@ bool selecting=false;
 int delayedStep=0;
 int delayedPat=0;
 
+float nextScroll=-1.0f;
+
 enum WindowTypes {
   wPattern,
   wInstrument,
@@ -2837,6 +2839,12 @@ void finishSelection() {
   selecting=false;
 }
 
+void updateScroll(int amount) {
+  float lineHeight=(ImGui::GetTextLineHeight()+2*dpiScale);
+  printf("called\n");
+  nextScroll=lineHeight*amount;
+}
+
 void drawPatterns(float ypos) {
   char id[16];
   SelectionPoint visStart=selStart;
@@ -2862,7 +2870,12 @@ void drawPatterns(float ypos) {
   ImGui::PushStyleVar(ImGuiStyleVar_CellPadding,ImVec2(0.0f,0.0f));
   if (ImGui::BeginTable("Pattern",song->channels+1,ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_ScrollX|ImGuiTableFlags_ScrollY|ImGuiTableFlags_NoPadInnerX)) {
     ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
-    ImGui::SetScrollY(lineHeight*playerStep);
+    if (player.playMode==1) updateScroll(playerStep);
+    if (nextScroll>-0.5f) {
+      printf("setting scroll.\n");
+      ImGui::SetScrollY(nextScroll);
+      nextScroll=-1.0f;
+    }
     ImGui::TableSetupScrollFreeze(1,1);
     for (int i=0; i<song->channels; i++) {
       ImGui::TableSetupColumn(fmt::sprintf("c%d",i).c_str(),ImGuiTableColumnFlags_WidthFixed);
@@ -3431,6 +3444,11 @@ void doNoteInput(SDL_Event& ev) {
         int note=noteKeys.at(ev.key.keysym.sym);
         p->data[selStart.y][channel][0]=hscale(curoctave*12+note);
         p->data[selStart.y][channel][1]=curins;
+
+        selStart.y++;
+        if (selStart.y>=p->length) selStart.y=p->length-1;
+        selEnd=selStart;
+        updateScroll(selStart.y);
       } catch (std::out_of_range& e) {
       }
       break;
@@ -3521,11 +3539,13 @@ void keyDown(SDL_Event& ev) {
         case SDLK_UP:
           if (--selStart.y<0) selStart.y=0;
           selEnd=selStart;
+          updateScroll(selStart.y);
           break;
         case SDLK_DOWN: {
           Pattern* p=song->getPattern(song->order[player.pat],true);
           if (++selStart.y>=p->length) selStart.y=p->length-1;
           selEnd=selStart;
+          updateScroll(selStart.y);
           break;
         }
         case SDLK_LEFT:
@@ -3539,11 +3559,27 @@ void keyDown(SDL_Event& ev) {
         case SDLK_HOME:
           selStart.y=0;
           selEnd=selStart;
+          updateScroll(selStart.y);
           break;
         case SDLK_END: {
           Pattern* p=song->getPattern(song->order[player.pat],true);
           selStart.y=p->length-1;
           selEnd=selStart;
+          updateScroll(selStart.y);
+          break;
+        }
+        case SDLK_PAGEUP:
+          selStart.y-=16;
+          if (selStart.y<0) selStart.y=0;
+          selEnd=selStart;
+          updateScroll(selStart.y);
+          break;
+        case SDLK_PAGEDOWN: {
+          Pattern* p=song->getPattern(song->order[player.pat],true);
+          selStart.y+=16;
+          if (selStart.y>=p->length) selStart.y=p->length-1;
+          selEnd=selStart;
+          updateScroll(selStart.y);
           break;
         }
         default:
