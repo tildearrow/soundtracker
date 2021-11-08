@@ -9,6 +9,8 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
+#include "SDL_clipboard.h"
+#include "SDL_keycode.h"
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
@@ -392,10 +394,9 @@ enum UndoAction {
 };
 
 struct UndoData {
-  unsigned char pattern, row, column, oldData, newData;
+  unsigned char row, column, oldData, newData;
   unsigned char reserved[3];
-  UndoData(unsigned char pat, unsigned char r, unsigned char c, unsigned char o, unsigned char n):
-    pattern(pat),
+  UndoData(unsigned char r, unsigned char c, unsigned char o, unsigned char n):
     row(r),
     column(c),
     oldData(o),
@@ -404,6 +405,7 @@ struct UndoData {
 
 struct UndoStep {
   UndoAction action;
+  unsigned char pattern;
   std::vector<UndoData> data;
 };
 
@@ -874,6 +876,8 @@ void CleanupPatterns() {
   song=new Song;
   player.setSong(song);
   origin="Unknown";
+  undoHist.clear();
+  redoHist.clear();
   canUseSong.unlock();
 }
 
@@ -3322,6 +3326,16 @@ void drawMacroEditor() {
           ImGui::Text("%ld",i);
           ImGui::TableNextColumn();
           unsigned char cType=m->cmds[i].type&0x7f;
+          ImGui::PushButtonRepeat(true);
+          if (ImGui::ArrowButton("##down",ImGuiDir_Down)) {
+            if ((m->cmds[i].type&0x7f)>0) m->cmds[i].type--;
+          }
+          ImGui::SameLine();
+          if (ImGui::ArrowButton("##up",ImGuiDir_Up)) {
+            if ((m->cmds[i].type&0x7f)<(cmdMax-1)) m->cmds[i].type++;
+          }
+          ImGui::PopButtonRepeat();
+          ImGui::SameLine();
           switch (cType) {
             case cmdEnd:
               ImGui::Text("End");
@@ -3351,16 +3365,6 @@ void drawMacroEditor() {
               ImGui::Text("???");
               break;
           }
-          ImGui::SameLine();
-          ImGui::PushButtonRepeat(true);
-          if (ImGui::ArrowButton("##down",ImGuiDir_Down)) {
-            if ((m->cmds[i].type&0x7f)>0) m->cmds[i].type--;
-          }
-          ImGui::SameLine();
-          if (ImGui::ArrowButton("##up",ImGuiDir_Up)) {
-            if ((m->cmds[i].type&0x7f)<(cmdMax-1)) m->cmds[i].type++;
-          }
-          ImGui::PopButtonRepeat();
           ImGui::TableNextColumn();
           if (cType==cmdSet) {
             switch (m->intendedUse) {
@@ -3507,21 +3511,69 @@ void prepareUndo() {
 bool makeUndo(UndoAction action) {
   UndoStep d;
   d.action=action;
+  d.pattern=song->order[player.pat];
   Pattern* p=song->getPattern(song->order[player.pat],true);
   for (int i=0; i<p->length; i++) {
     for (int j=0; j<song->channels; j++) {
       for (int k=0; k<5; k++) {
         if (p->data[i][j][k]!=oldPat[i][j][k]) {
-          d.data.push_back(UndoData(song->order[player.pat],i,j*5+k,oldPat[i][j][k],p->data[i][j][k]));
+          printf("adding undo data: %d %d\n",i,j*5+k);
+          d.data.push_back(UndoData(i,j*5+k,oldPat[i][j][k],p->data[i][j][k]));
         }
       }
     }
   }
   if (!d.data.empty()) {
     undoHist.push_back(d);
+    redoHist.clear();
+    if (undoHist.size()>100) undoHist.pop_front();
     return true;
   }
   return false;
+}
+
+void doUndo() {
+  if (undoHist.empty()) {
+    printf("no more steps to undo\n");
+    return;
+  }
+  printf("undoing\n");
+  UndoStep& us=undoHist.back();
+  redoHist.push_back(us);
+
+  switch (us.action) {
+    case undoPatternNote: case undoPatternDelete: case undoPatternInsert: case undoPatternPullDelete:
+    case undoPatternCut: case undoPatternPaste:
+      Pattern* p=song->getPattern(us.pattern,true);
+      for (UndoData& i: us.data) {
+        p->data[i.row][i.column/5][i.column%5]=i.oldData;
+      }
+      break;
+  }
+
+  undoHist.pop_back();
+}
+
+void doRedo() {
+  if (redoHist.empty()) {
+    printf("no more steps to redo\n");
+    return;
+  }
+  printf("redoing\n");
+  UndoStep& us=redoHist.back();
+  undoHist.push_back(us);
+
+  switch (us.action) {
+    case undoPatternNote: case undoPatternDelete: case undoPatternInsert: case undoPatternPullDelete:
+    case undoPatternCut: case undoPatternPaste:
+      Pattern* p=song->getPattern(us.pattern,true);
+      for (UndoData& i: us.data) {
+        p->data[i.row][i.column/5][i.column%5]=i.newData;
+      }
+      break;
+  }
+
+  redoHist.pop_back();
 }
 
 void doNoteInput(SDL_Event& ev) {
@@ -3529,6 +3581,7 @@ void doNoteInput(SDL_Event& ev) {
   int type=selStart.x%5;
   int channel=selStart.x/5;
   if (selStart.x<0 || selStart.y<0 || channel>=song->channels || selStart.y>=p->length) return;
+  prepareUndo();
   switch (type) {
     case 0: // note
       try {
@@ -3575,10 +3628,12 @@ void doNoteInput(SDL_Event& ev) {
       }
       break;
   }
+  makeUndo(undoPatternNote);
 }
 
 void doDelete() {
   finishSelection();
+  prepareUndo();
   Pattern* p=song->getPattern(song->order[player.pat],true);
   for (int i=selStart.x; i<=selEnd.x; i++) {
     if (i<0 || (i/5)>=song->channels) continue;
@@ -3587,10 +3642,12 @@ void doDelete() {
       p->data[j][i/5][i%5]=0;
     }
   }
+  makeUndo(undoPatternDelete);
 }
 
 void doPullDelete() {
   finishSelection();
+  prepareUndo();
   Pattern* p=song->getPattern(song->order[player.pat],true);
   int distance=selEnd.y-selStart.y+1;
   for (int i=selStart.x; i<=selEnd.x; i++) {
@@ -3602,22 +3659,138 @@ void doPullDelete() {
       }
     }
   }
+  makeUndo(undoPatternPullDelete);
 }
 
 void doInsert() {
   finishSelection();
+  prepareUndo();
   Pattern* p=song->getPattern(song->order[player.pat],true);
   for (int i=selStart.x; i<=selEnd.x; i++) {
     for (int j=p->length-1; j>=selStart.y; j--) {
       p->data[j][i/5][i%5]=p->data[j-1][i/5][i%5];
     }
   }
+  makeUndo(undoPatternInsert);
+}
+
+void doCopy() {
+  finishSelection();
+  string data=fmt::sprintf("org.tildearrow.soundtracker - Pattern Data (%d)\n%d",TRACKER_VER,selStart.x%5);
+
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  for (int j=selStart.y; j<=selEnd.y; j++) {
+    if (j<0 || j>=p->length) continue;
+    data+='\n';
+    for (int i=selStart.x; i<=selEnd.x; i++) {
+      if (i<0 || (i/5)>=song->channels) continue;
+      data+=fmt::sprintf("%.2X",p->data[j][i/5][i%5]);
+    }
+  }
+
+  SDL_SetClipboardText(data.c_str());
+}
+
+void doCut() {
+  doCopy();
+  prepareUndo();
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  for (int i=selStart.x; i<=selEnd.x; i++) {
+    if (i<0 || (i/5)>=song->channels) continue;
+    for (int j=selStart.y; j<=selEnd.y; j++) {
+      if (j<0 || j>=p->length) continue;
+      p->data[j][i/5][i%5]=0;
+    }
+  }
+  makeUndo(undoPatternCut);
+}
+
+void doPaste() {
+  finishSelection();
+  char* dataPtr=SDL_GetClipboardText();
+  std::vector<string> data;
+  string tempS;
+  for (char* i=dataPtr; *i; i++) {
+    if (*i=='\r') continue;
+    if (*i=='\n') {
+      data.push_back(tempS);
+      tempS="";
+      continue;
+    }
+    tempS+=*i;
+  }
+  data.push_back(tempS);
+  SDL_free(dataPtr);
+  int startOff=-1;
+  bool invalidData=false;
+
+  if (data.size()<2) return;
+
+  if (data[0]!=fmt::sprintf("org.tildearrow.soundtracker - Pattern Data (%d)",TRACKER_VER)) return;
+  if (sscanf(data[1].c_str(),"%d",&startOff)!=1) return;
+  if (startOff<0 || startOff>4) return;
+
+  prepareUndo();
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  selStart.x=(5*(selStart.x/5))+startOff;
+  if (selEnd.x<selStart.x) selEnd.x=selStart.x;
+  for (size_t i=2; i<data.size(); i++) {
+    unsigned char nextByte=0;
+    bool pushByte=false;
+    std::vector<unsigned char> udata;
+    udata.clear();
+    int row=selStart.y+i-2;
+    if (row<0 || row>=p->length) continue;
+
+    for (char j: data[i]) {
+      if (j>='0' && j<='9') {
+        nextByte=(nextByte<<4)|(j-'0');
+      } else if (j>='A' && j<='F') {
+        nextByte=(nextByte<<4)|(j-'A'+10);
+      } else {
+        invalidData=true;
+        break;
+      }
+      if (pushByte) {
+        udata.push_back(nextByte);
+        nextByte=0;
+      }
+      pushByte=!pushByte;
+    }
+    if (invalidData) break;
+    for (size_t j=0; j<udata.size(); j++) {
+      int col=j+selStart.x;
+      if (col<0 || col>=song->channels*5) continue;
+
+      p->data[row][col/5][col%5]=udata[j];
+    }
+  }
+  makeUndo(undoPatternPaste);
 }
 
 void keyDown(SDL_Event& ev) {
   switch (curWindow) {
     case wPattern: {
-      switch (ev.key.keysym.sym) {
+      if (ev.key.keysym.mod&KMOD_CTRL) {
+        switch (ev.key.keysym.sym) {
+          case SDLK_z:
+            if (ev.key.keysym.mod&KMOD_SHIFT) {
+              doRedo();
+            } else {
+              doUndo();
+            }
+            break;
+          case SDLK_x:
+            doCut();
+            break;
+          case SDLK_c:
+            doCopy();
+            break;
+          case SDLK_v:
+            doPaste();
+            break;
+        }
+      } else switch (ev.key.keysym.sym) {
         case SDLK_BACKSPACE:
           doPullDelete();
           break;
@@ -3746,6 +3919,23 @@ bool updateDisp() {
     if (ImGui::MenuItem("exit")) {
       quit=true;
     }
+    ImGui::EndMenu();
+  }
+  if (ImGui::BeginMenu("edit")) {
+    if (ImGui::MenuItem("undo",NULL,false,!undoHist.empty())) {
+      doUndo();
+    }
+    if (ImGui::MenuItem("redo",NULL,false,!redoHist.empty())) {
+      doRedo();
+    }
+    ImGui::Separator();
+    ImGui::MenuItem("cut");
+    ImGui::MenuItem("copy");
+    ImGui::MenuItem("paste");
+    ImGui::MenuItem("delete");
+    ImGui::MenuItem("select all");
+    ImGui::Separator();
+    ImGui::MenuItem("clear...");
     ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("window")) {
