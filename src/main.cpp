@@ -3768,6 +3768,29 @@ void doPaste() {
   makeUndo(undoPatternPaste);
 }
 
+void doSelectAll() {
+  finishSelection();
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  if ((selStart.x%5)==0 && (selEnd.x%5)==4) {
+    if (selStart.y==0 && selEnd.y==p->length-1) { // select entire pattern
+      selStart.x=0;
+      selEnd.x=(song->channels*5)-1;
+    } else { // select entire column
+      selStart.y=0;
+      selEnd.y=p->length-1;
+    }
+  } else {
+    float aspect=float(selEnd.x-selStart.x+1)/float(selEnd.y-selStart.y+1);
+    if (aspect<1.0f && !(selStart.y==0 && selEnd.y==p->length-1)) { // up-down
+      selStart.y=0;
+      selEnd.y=p->length-1;
+    } else { // left-right
+      selStart.x=5*(selStart.x/5);
+      selEnd.x=5*(selEnd.x/5)+4;
+    }
+  }
+}
+
 void keyDown(SDL_Event& ev) {
   switch (curWindow) {
     case wPattern: {
@@ -3788,6 +3811,9 @@ void keyDown(SDL_Event& ev) {
             break;
           case SDLK_v:
             doPaste();
+            break;
+          case SDLK_a:
+            doSelectAll();
             break;
         }
       } else switch (ev.key.keysym.sym) {
@@ -3929,11 +3955,21 @@ bool updateDisp() {
       doRedo();
     }
     ImGui::Separator();
-    ImGui::MenuItem("cut");
-    ImGui::MenuItem("copy");
-    ImGui::MenuItem("paste");
-    ImGui::MenuItem("delete");
-    ImGui::MenuItem("select all");
+    if (ImGui::MenuItem("cut")) {
+      doCut();
+    }
+    if (ImGui::MenuItem("copy")) {
+      doCopy();
+    }
+    if (ImGui::MenuItem("paste")) {
+      doPaste();
+    }
+    if (ImGui::MenuItem("delete")) {
+      doDelete();
+    }
+    if (ImGui::MenuItem("select all")) {
+      doSelectAll();
+    }
     ImGui::Separator();
     ImGui::MenuItem("clear...");
     ImGui::EndMenu();
