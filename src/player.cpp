@@ -447,7 +447,7 @@ void Player::update() {
 
     status.macroDuty.next();
     if (status.macroDuty.hasChanged) {
-      c.duty=status.macroDuty.value>>1;
+      c.duty=(status.macroDuty.value>>1)&0x7f;
     }
 
     status.macroShape.next();
