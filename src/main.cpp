@@ -9,9 +9,6 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
-#include "SDL_events.h"
-#include "SDL_keycode.h"
-#include <stdexcept>
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
@@ -33,6 +30,9 @@ bool ntsc=false;
 
 //// INCLUDES AND STUFF ////
 #include "tracker.h"
+
+#include <deque>
+#include <stdexcept>
 
 #ifdef HAVE_GUI
 #include "imgui.h"
@@ -318,6 +318,11 @@ const char* volValues[256]={
   "h00", "h01", "h02", "h03", "h04", "h05", "h06", "h07", "h08", "h09", "h0A", "h0B", "h0C", "h0D", "h0E", "h0F",  
 };
 
+const char* chanValueNames[32]={
+  "<FREQ", ">FREQ", "VOL", "PAN", "<CNT", ">CNT", "<CUT", ">CUT", "DUTY", "RES", "<PCMP", ">PCMP", "<PCMB", ">PCMB", "<PCMR", ">PCMR",
+  "<SWFS", ">SWFS", "SWFA", "SWFB", "<SWVS", ">SWVS", "SWVA", "SWVB", "<SWCS", ">SWCS", "SWCA", "SWCB", "<PCMC", ">PCMC", "<RESET", ">RESET"
+};
+
 UIType iface;
 bool mobAltView;
 float mobScroll;
@@ -346,6 +351,7 @@ std::mutex canUseSong;
 
 bool insEditOpen=false;
 bool macroEditOpen=false;
+bool memViewOpen=false;
 bool macroGraph=false;
 
 struct SelectionPoint {
@@ -358,8 +364,10 @@ bool selecting=false;
 
 int delayedStep=0;
 int delayedPat=0;
+int mvChip=0;
 
 float nextScroll=-1.0f;
+float amp=1.0f;
 
 enum WindowTypes {
   wPattern,
@@ -373,6 +381,36 @@ int curWindow=wPattern;
 std::map<SDL_Keycode,int> noteKeys;
 std::map<SDL_Keycode,int> valueKeys;
 std::map<SDL_Keycode,int> effectKeys;
+
+enum UndoAction {
+  undoPatternNote,
+  undoPatternInsert,
+  undoPatternDelete,
+  undoPatternPullDelete,
+  undoPatternCut,
+  undoPatternPaste
+};
+
+struct UndoData {
+  unsigned char pattern, row, column, oldData, newData;
+  unsigned char reserved[3];
+  UndoData(unsigned char pat, unsigned char r, unsigned char c, unsigned char o, unsigned char n):
+    pattern(pat),
+    row(r),
+    column(c),
+    oldData(o),
+    newData(n) {}
+};
+
+struct UndoStep {
+  UndoAction action;
+  std::vector<UndoData> data;
+};
+
+std::deque<UndoStep> undoHist;
+std::deque<UndoStep> redoHist;
+
+unsigned char oldPat[256][32][8];
 
 // NEW VARIABLES END //
 
@@ -478,13 +516,13 @@ static void nothing(void* userdata, Uint8* stream, int len) {
   
   for (size_t i=0; i<nframes; i++) {
 #ifdef JACK
-    buf[0][i]=float(bbOut[0][i])/16384;
-    buf[1][i]=float(bbOut[1][i])/16384;
+    buf[0][i]=amp*float(bbOut[0][i])/16384.0f;
+    buf[1][i]=amp*float(bbOut[1][i])/16384.0f;
 #else
     switch (ar.format) {
         case AUDIO_F32:
-          buf[0][i*ar.channels]=float(bbOut[0][i])/16384;
-          buf[0][1+(i*ar.channels)]=float(bbOut[1][i])/16384;
+          buf[0][i*ar.channels]=amp*float(bbOut[0][i])/16384.0f;
+          buf[0][1+(i*ar.channels)]=amp*float(bbOut[1][i])/16384.0f;
           break;
         case AUDIO_S16:
           buf16[0][i*ar.channels]=bbOut[0][i];
@@ -2841,7 +2879,6 @@ void finishSelection() {
 
 void updateScroll(int amount) {
   float lineHeight=(ImGui::GetTextLineHeight()+2*dpiScale);
-  printf("called\n");
   nextScroll=lineHeight*amount;
 }
 
@@ -2872,7 +2909,6 @@ void drawPatterns(float ypos) {
     ImGui::TableSetupColumn("pos",ImGuiTableColumnFlags_WidthFixed);
     if (player.playMode==1) updateScroll(playerStep);
     if (nextScroll>-0.5f) {
-      printf("setting scroll.\n");
       ImGui::SetScrollY(nextScroll);
       nextScroll=-1.0f;
     }
@@ -3433,6 +3469,61 @@ void drawMacroEditor() {
   ImGui::End();
 }
 
+void drawMemoryView() {
+  if (!memViewOpen) return;
+  if (ImGui::Begin("Memory View",&memViewOpen)) {
+    if (ImGui::SliderInt("Soundchip",&mvChip,0,3)) {
+      if (mvChip<0) mvChip=0;
+      if (mvChip>3) mvChip=3;
+    }
+    if (ImGui::BeginTable("Memory",17)) {    
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      for (int i=0; i<16; i++) {
+        ImGui::TableNextColumn();
+        ImGui::Text(" %X",i);
+      }
+      for (int i=0; i<16; i++) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("%X0",i);
+        for (int j=0; j<16; j++) {
+          ImGui::TableNextColumn();
+          ImGui::Text("%.2x",((unsigned char*)chip[mvChip].chan)[j+(i<<4)]);
+          if (ImGui::IsItemHovered()) ImGui::SetTooltip("$%.2x: %s%d",j+(i<<4),chanValueNames[(j+(i<<4))&0x1f],i>>1);
+        }
+      }
+      ImGui::EndTable();
+    }
+  }
+  ImGui::End();
+}
+
+void prepareUndo() {
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  memcpy(oldPat,p->data,p->length*32*8);
+}
+
+bool makeUndo(UndoAction action) {
+  UndoStep d;
+  d.action=action;
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  for (int i=0; i<p->length; i++) {
+    for (int j=0; j<song->channels; j++) {
+      for (int k=0; k<5; k++) {
+        if (p->data[i][j][k]!=oldPat[i][j][k]) {
+          d.data.push_back(UndoData(song->order[player.pat],i,j*5+k,oldPat[i][j][k],p->data[i][j][k]));
+        }
+      }
+    }
+  }
+  if (!d.data.empty()) {
+    undoHist.push_back(d);
+    return true;
+  }
+  return false;
+}
+
 void doNoteInput(SDL_Event& ev) {
   Pattern* p=song->getPattern(song->order[player.pat],true);
   int type=selStart.x%5;
@@ -3657,6 +3748,18 @@ bool updateDisp() {
     }
     ImGui::EndMenu();
   }
+  if (ImGui::BeginMenu("window")) {
+    if (ImGui::MenuItem("instrument editor")) {
+      insEditOpen=!insEditOpen;
+    }
+    if (ImGui::MenuItem("macro editor")) {
+      macroEditOpen=!macroEditOpen;
+    }
+    if (ImGui::MenuItem("memory view")) {
+      memViewOpen=!memViewOpen;
+    }
+    ImGui::EndMenu();
+  }
   if (ImGui::BeginMenu("help")) {
     ImGui::MenuItem("panic");
     ImGui::Separator();
@@ -3740,6 +3843,13 @@ bool updateDisp() {
       }
     }
   }
+
+  float multAmp=amp*100.0f;
+  if (ImGui::SliderFloat("Volume",&multAmp,0.0f,200.0f,"%.0f%%")) {
+    if (multAmp>200.0f) multAmp=200.0f;
+    if (multAmp<0.0f) multAmp=0.0f;
+    amp=multAmp/100.0f;
+  }
   ImGui::EndChild();
 
   ImGui::NextColumn();
@@ -3760,6 +3870,8 @@ bool updateDisp() {
   drawInsEditor();
 
   drawMacroEditor();
+
+  drawMemoryView();
 
   if (ImGuiFileDialog::Instance()->Display("FileDialog")) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
