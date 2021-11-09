@@ -2901,10 +2901,32 @@ void drawPatterns(float ypos) {
     visStart.y^=visEnd.y;
     visEnd.y^=visStart.y;
   }
+  float oneCharSize=ImGui::CalcTextSize("A").x;
+
   ImGui::Begin("Pattern View",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoScrollbar);
   ImGui::SetWindowPos("Pattern View",ImVec2(0.0f,ypos));
   ImGui::SetWindowSize("Pattern View",ImVec2(scrW*dpiScale,scrH*dpiScale-ypos),ImGuiCond_Always);
+  ImGui::Columns(2);
+  ImGui::SetColumnWidth(0,oneCharSize*2+ImGui::GetStyle().ItemSpacing.x*2+ImGui::GetStyle().ItemInnerSpacing.x*2+ImGui::GetStyle().ScrollbarSize);
 
+  // order view
+  if (ImGui::BeginTable("OrdersList",1,ImGuiTableFlags_BordersInnerH|ImGuiTableFlags_BordersInnerV|ImGuiTableFlags_BordersOuterH|ImGuiTableFlags_BordersOuterV|ImGuiTableFlags_ScrollY)) {
+    char orderName[10];
+    for (int i=0; i<=song->orders; i++) {
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      sprintf(orderName,"%.2X##OL%d",song->order[i],i);
+      ImGui::Selectable(orderName,delayedPat==i);
+      if (ImGui::IsItemClicked()) {
+        player.pat=i;
+        if (player.playMode==1) Play();
+      }
+    }
+    ImGui::EndTable();
+  }
+  ImGui::NextColumn();
+
+  // pattern view
   Pattern* p=song->getPattern(song->order[delayedPat],false);
   int playerStep=player.step;
   float lineHeight=(ImGui::GetTextLineHeight()+2*dpiScale);
@@ -2922,14 +2944,66 @@ void drawPatterns(float ypos) {
     }
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Text("%d ",song->order[delayedPat]);
+    ImGui::Text("%.2X ",song->order[delayedPat]);
     for (int i=0; i<song->channels; i++) {
+      soundchip::channel& c=chip[i>>3].chan[i&7];
       ImGui::TableNextColumn();
-      ImGui::Button(fmt::sprintf("%d",i).c_str());
+      if (c.flags.pcm) {
+        ImGui::PushStyleColor(ImGuiCol_Header,ImVec4(
+          0.6f, 0.1f, 0.1f,
+          (float)c.vol/127.0f
+        ));
+      } else {
+        ImGui::PushStyleColor(ImGuiCol_Header,ImVec4(
+          (c.flags.shape==4 || c.flags.shape==1 || c.flags.shape==5)?0.6f:0.1f,
+          (c.flags.shape!=5)?0.6f:0.1f,
+          (c.flags.shape!=1 && c.flags.shape!=2)?0.6f:0.1f,
+          (float)c.vol/127.0f
+        ));
+      }
+      if (player.channelMask[i]) {
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive,ImVec4(0.8f,0.6f,0.1f,1.0f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImVec4(0.4f,0.1f,0.1f,1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.4f,0.4f,0.4f,1.0f));
+      } else {
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive,ImVec4(0.8f,0.6f,0.1f,1.0f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImVec4(0.1f,0.3f,0.1f,1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(1.0f,1.0f,1.0f,1.0f));
+      }
+      ImGui::Selectable(fmt::sprintf(" %d##_CH%d",i,i).c_str(),!player.channelMask[i],ImGuiSelectableFlags_NoPadWithHalfSpacing,ImVec2(0.0f,lineHeight+2.0f*dpiScale));
+      ImGui::PopStyleColor();
+      ImGui::PopStyleColor();
+      ImGui::PopStyleColor();
+      ImGui::PopStyleColor();
+      if (ImGui::IsItemClicked()) {
+        player.toggleChannel(i);
+      }
+      if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        bool isSolo=false;
+        for (int j=0; j<song->channels; j++) {
+          if (j==i) {
+            isSolo=true;
+            continue;
+          }
+          if (!player.channelMask[j]) {
+            isSolo=false;
+            break;
+          }
+        }
+        if (isSolo) {
+          for (int j=0; j<song->channels; j++) {
+            player.maskChannel(j,false);
+          }
+        } else {
+          for (int j=0; j<song->channels; j++) {
+            player.maskChannel(j,true);
+          }
+          player.maskChannel(i,false);
+        }
+      }
     }
     int drawStart=int((scrH*dpiScale-ypos)/(lineHeight*2));
     int drawEnd=p->length;
-    float oneCharSize=ImGui::CalcTextSize("A").x;
     ImVec2 threeChars=ImVec2(oneCharSize*3.0f,lineHeight);
     ImVec2 twoChars=ImVec2(oneCharSize*2.0f,lineHeight);
     ImVec2 oneChar=ImVec2(oneCharSize,lineHeight);
@@ -4013,7 +4087,7 @@ bool updateDisp() {
   ImGui::NextColumn();
   if (ImGui::InputScalar("order",ImGuiDataType_U8,&player.pat,&ONE,&ONE)) {
     if (player.pat>=song->orders) player.pat=0;
-    Play();
+    if (player.playMode==1) Play();
   }
   ImGui::NextColumn();
   ImGui::InputScalar("pattern",ImGuiDataType_U8,&(song->order[player.pat]),&ONE,&ONE);
