@@ -359,7 +359,7 @@ bool macroGraph=false;
 struct SelectionPoint {
   int x, y;
   SelectionPoint():
-    x(-1), y(-1) {}
+    x(0), y(0) {}
 } selStart, selEnd;
 
 bool selecting=false;
