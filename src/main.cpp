@@ -1994,8 +1994,10 @@ int SaveFile(const char* filename) {
     
     fclose(sfile);
     printf("done\n");
+    curfname=filename;
     return 0;
   }
+  curfname="";
   return 1;
 }
 
@@ -3928,7 +3930,8 @@ bool updateDisp() {
         ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Save File",".*",curdir,1,NULL,ImGuiFileDialogFlags_ConfirmOverwrite);
         isSaving=true;
       } else {
-        SaveFile(curfname.c_str());
+        string copyofName=curfname;
+        SaveFile(copyofName.c_str());
       }
     }
     if (ImGui::MenuItem("save as...")) {
