@@ -175,7 +175,7 @@ size_t maxinputsize=string::npos;
 bool imeActive=false;
 SDL_Rect inputRefRect;
 char* curdir;
-string curfname, loadedfname;
+string curfname;
 int pcmeditscale=0;
 int pcmeditseek=0;
 int pcmeditoffset=0;
@@ -363,6 +363,7 @@ struct SelectionPoint {
 } selStart, selEnd;
 
 bool selecting=false;
+bool isSaving=false;
 
 int delayedStep=0;
 int delayedPat=0;
@@ -879,6 +880,7 @@ void CleanupPatterns() {
   undoHist.clear();
   redoHist.clear();
   canUseSong.unlock();
+  curfname="";
 }
 
 void ParentDir(char* thedir) {
@@ -1854,104 +1856,10 @@ int ImportXM(FILE* xm) {
   return 0;
 }
 
-#ifdef _WIN32
-int print_entry(const char* filepath) {
-  HANDLE flist;
-  WIN32_FIND_DATAW next;
-  string actualfp;
-  FileInList neext;
-  int increment=0;
-  if (strcmp(filepath,"")==0) {
-    unsigned int drivemask;
-    drivemask=GetLogicalDrives();
-    filenames.clear();
-    for (int i=0; i<26; i++) {
-      if ((drivemask>>i)&1) {
-        neext.name="";
-        neext.name+='A'+i;
-	neext.name+=":\\";
-        neext.isdir=true;
-        filenames.push_back(neext);
-        increment++;
-      }
-    }
-    return true;
-  }
-  actualfp=filepath;
-  actualfp+="\\*";
-  flist=FindFirstFileW(utf8To16(actualfp.c_str()).c_str(),&next);
-  printf("listing dir...\n");
-  neext.name="";
-  neext.isdir=false;
-  // clean file list
-  filenames.clear();
-  if (flist!=INVALID_HANDLE_VALUE) {
-    do {
-      if (wcscmp(next.cFileName,L".")==0) continue;
-      if (wcscmp(next.cFileName,L"..")==0) continue;
-      neext.name=utf16To8(next.cFileName);
-      neext.isdir=next.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY;
-      filenames.push_back(neext);
-      increment++;
-    } while (FindNextFileW(flist,&next));
-    FindClose(flist);
-  } else {
-    return -GetLastError();
-  }
-  printf("finish.\n");
-  return true;
-}
-#else
-int print_entry(const char* filepath) {
-  DIR* flist;
-  struct dirent* next;
-  flist=opendir(filepath);
-  // clean file list
-  filenames.clear();
-  if (flist==NULL) {
-    return -errno;
-  }
-  printf("listing dir...\n");
-  int increment=0;
-  FileInList neext;
-  neext.name="";
-  neext.isdir=false;
-  
-  while ((next=readdir(flist))!=NULL) {
-    if (strcmp(next->d_name,".")==0) continue;
-    if (strcmp(next->d_name,"..")==0) continue;
-    neext.name=next->d_name;
-    neext.isdir=next->d_type&DT_DIR;
-    filenames.push_back(neext);
-    increment++;
-  }
-  closedir(flist);
-  // sort the files
-  string tempname;
-  bool tempisdir=false;
-  tempname="";
-  for (size_t ii=0; ii<filenames.size(); ii++) {
-    for (size_t j=0; j<filenames.size()-1; j++) {
-      if (strcmp(filenames[j].name.c_str(), filenames[j+1].name.c_str()) > 0) {
-        tempname=filenames[j].name;
-        tempisdir=filenames[j].isdir;
-        filenames[j].name=filenames[j+1].name;
-        filenames[j].isdir=filenames[j+1].isdir;
-        filenames[j+1].name=tempname;
-        filenames[j+1].isdir=tempisdir;
-      }
-    }
-  }
-  printf("finish.\n");
-  return true;
-}
-#endif
-
-int SaveFile() {
+int SaveFile(const char* filename) {
   // save file
   FILE *sfile;
   //printf("\nplease write filename? ");
-  //char rfn[256];
   int sk=0;
   int maskdata=0; // mask byte
   int CPL=0; // current pattern packlength
@@ -1962,14 +1870,11 @@ int SaveFile() {
   int pcmpointer=0;
   bool IS_INS_BLANK[256];
   bool IS_PAT_BLANK[256];
-  char rfn[4096];
   int oldseek=0;
   
   // temporary, gonna get replaced by a better thing soon
   // just for the sake of linux
-  strcpy(rfn,(S(curdir)+S(SDIR_SEPARATOR)+curfname).c_str());
-  
-  sfile=ps_fopen(rfn,"wb");
+  sfile=ps_fopen(filename,"wb");
   if (sfile!=NULL) { // write the file
     fseek(sfile,0,SEEK_SET); // seek to 0
 
@@ -2089,7 +1994,6 @@ int SaveFile() {
     
     fclose(sfile);
     printf("done\n");
-    print_entry(curdir);
     return 0;
   }
   return 1;
@@ -2261,25 +2165,31 @@ int LoadFile(const char* filename) {
       case FormatTRACK:
         break;
       case FormatTRACKINS:
+        curfname="";
         triggerfx(1);
         popbox=PopupBox("Error","todo");
         return 1;
         break;
       case FormatMOD:
+        curfname="";
         return ImportMOD(sfile);
         break;
       case FormatS3M:
+        curfname="";
         return ImportS3M(sfile);
         break;
       case FormatIT:
+        curfname="";
         return ImportIT(sfile);
         break;
       case FormatXM:
+        curfname="";
         return ImportXM(sfile);
         break;
       default:
         printf("error: not a compatible file!\n");fclose(sfile);
         triggerfx(1);
+        curfname="";
         popbox=PopupBox("Error","not a compatible file!");
         return 1;
         break;
@@ -2295,6 +2205,7 @@ int LoadFile(const char* filename) {
       fclose(sfile);
       triggerfx(1);
       popbox=PopupBox("Error","invalid song header!");
+      curfname="";
       return 1;
     }
 
@@ -2679,11 +2590,13 @@ int LoadFile(const char* filename) {
     } else {
       SDL_SetWindowTitle(sdlWin,(name+S(" - ")+S(PROGRAM_NAME)).c_str());
     }
-    
+    printf("setting filename to %s\n",filename);
+    curfname=filename;
     return 0;
   } else {
     perror("can't open file");
     popbox=PopupBox("Error","can't open file!");
+    curfname="";
     #ifdef SOUNDS
     triggerfx(1);
     #endif
@@ -3591,7 +3504,6 @@ bool makeUndo(UndoAction action) {
     for (int j=0; j<song->channels; j++) {
       for (int k=0; k<5; k++) {
         if (p->data[i][j][k]!=oldPat[i][j][k]) {
-          printf("adding undo data: %d %d\n",i,j*5+k);
           d.data.push_back(UndoData(i,j*5+k,oldPat[i][j][k],p->data[i][j][k]));
         }
       }
@@ -3608,10 +3520,8 @@ bool makeUndo(UndoAction action) {
 
 void doUndo() {
   if (undoHist.empty()) {
-    printf("no more steps to undo\n");
     return;
   }
-  printf("undoing\n");
   UndoStep& us=undoHist.back();
   redoHist.push_back(us);
 
@@ -3630,10 +3540,8 @@ void doUndo() {
 
 void doRedo() {
   if (redoHist.empty()) {
-    printf("no more steps to redo\n");
     return;
   }
-  printf("redoing\n");
   UndoStep& us=redoHist.back();
   undoHist.push_back(us);
 
@@ -3995,6 +3903,7 @@ bool updateDisp() {
         }
         break;
       case SDL_QUIT:
+        quit=true;
         return false;
         break;
     }
@@ -4010,11 +3919,22 @@ bool updateDisp() {
       CleanupPatterns();
     }
     if (ImGui::MenuItem("open...")) {
-      ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Open File",".*",".");
+      ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Open File",".*",curdir);
+      isSaving=false;
     }
     ImGui::Separator();
-    ImGui::MenuItem("save");
-    ImGui::MenuItem("save as...");
+    if (ImGui::MenuItem("save")) {
+      if (curfname=="") {
+        ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Save File",".*",curdir,1,NULL,ImGuiFileDialogFlags_ConfirmOverwrite);
+        isSaving=true;
+      } else {
+        SaveFile(curfname.c_str());
+      }
+    }
+    if (ImGui::MenuItem("save as...")) {
+      ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Save File",".*",curdir,1,NULL,ImGuiFileDialogFlags_ConfirmOverwrite);
+      isSaving=true;
+    }
     ImGui::Separator();
     if (ImGui::MenuItem("exit")) {
       quit=true;
@@ -4175,13 +4095,20 @@ bool updateDisp() {
 
   if (ImGuiFileDialog::Instance()->Display("FileDialog")) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
-      curfname="";
-      for (std::map<string,string>::value_type& e: ImGuiFileDialog::Instance()->GetSelection()) {
-        curfname=e.second;
-        break;
+      curfname=ImGuiFileDialog::Instance()->GetFilePathName();
+      if (curfname!="") {
+        string copyOfName=curfname;
+        if (isSaving) {
+          printf("saving: %s\n",copyOfName.c_str());
+          SaveFile(copyOfName.c_str());
+          isSaving=false;
+        } else {
+          LoadFile(copyOfName.c_str());
+        }
       }
-      if (curfname!="") LoadFile(curfname.c_str());
     }
+    strcpy(curdir,ImGuiFileDialog::Instance()->GetCurrentPath().c_str());
+    strcat(curdir,"/");
     ImGuiFileDialog::Instance()->Close();
   }
 
@@ -4395,18 +4322,7 @@ int main(int argc, char **argv) {
   GetCurrentDirectory(4095,curdir);
 #else
   getcwd(curdir,4095);
-#endif
-  int peerrno=print_entry(curdir);
-
-#ifdef ANDROID
-  if (peerrno<0) {
-    popbox=PopupBox("Error","you need to grant Storage permission to this app.");
-    noStoragePerm=true;
-  }
-#else
-  if (peerrno<0) {
-    popbox=PopupBox("Error","you need to grant Storage permission to this app.");
-  }
+  strcat(curdir,"/");
 #endif
 
   if (!playermode) {
@@ -4465,8 +4381,7 @@ int main(int argc, char **argv) {
     }
   } else {
 #ifdef HAVE_GUI
-    while (updateDisp());
-    quit=true;
+    while (!quit) updateDisp();
 #else
     while (true) usleep(100000);
 #endif
