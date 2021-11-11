@@ -4017,7 +4017,7 @@ bool updateDisp() {
   }
   ImGui::NextColumn();
   if (ImGui::InputScalar("order",ImGuiDataType_U8,&player.pat,&ONE,&ONE)) {
-    if (player.pat>=song->orders) player.pat=0;
+    if (player.pat>song->orders) player.pat=0;
     if (player.playMode==1) Play();
   }
   ImGui::NextColumn();
