@@ -3824,6 +3824,13 @@ void keyDown(SDL_Event& ev) {
             break;
         }
       } else switch (ev.key.keysym.sym) {
+        case SDLK_RETURN:
+          if (player.playMode==1) {
+            player.stop();
+          } else {
+            player.play();
+          }
+          break;
         case SDLK_BACKSPACE:
           doPullDelete();
           break;
