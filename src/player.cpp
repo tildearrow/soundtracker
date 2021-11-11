@@ -118,16 +118,19 @@ void Player::noteOn(int channel, int note) {
     status.macroVolSweep.load(song->macros[ins->volSweepMacro]);
   } else {
     status.macroVolSweep.load(NULL);
+    c.flags.swvol=false;
   }
   if (ins->freqSweepMacro>=0) {
     status.macroFreqSweep.load(song->macros[ins->freqSweepMacro]);
   } else {
     status.macroFreqSweep.load(NULL);
+    c.flags.swfreq=false;
   }
   if (ins->cutSweepMacro>=0) {
     status.macroCutSweep.load(song->macros[ins->cutSweepMacro]);
   } else {
     status.macroCutSweep.load(NULL);
+    c.flags.swcut=false;
   }
   if (ins->pcmPosMacro>=0) {
     status.macroPCM.load(song->macros[ins->pcmPosMacro]);
