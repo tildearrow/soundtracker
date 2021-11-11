@@ -9,8 +9,6 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
-#include "SDL_clipboard.h"
-#include "SDL_keycode.h"
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
@@ -377,9 +375,11 @@ enum WindowTypes {
 
 int curWindow=wPattern;
 
+#ifdef HAVE_GUI
 std::map<SDL_Keycode,int> noteKeys;
 std::map<SDL_Keycode,int> valueKeys;
 std::map<SDL_Keycode,int> effectKeys;
+#endif
 
 enum UndoAction {
   undoPatternNote,
