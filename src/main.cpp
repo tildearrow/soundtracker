@@ -354,6 +354,7 @@ std::mutex canUseSong;
 bool insEditOpen=false;
 bool macroEditOpen=false;
 bool memViewOpen=false;
+bool songEditOpen=false;
 bool macroGraph=false;
 
 struct SelectionPoint {
@@ -883,6 +884,15 @@ void CleanupPatterns() {
   curfname="";
 }
 
+void updateWindowTitle() {
+  name=song->name;
+  if (name=="") {
+    SDL_SetWindowTitle(sdlWin,PROGRAM_NAME);
+  } else {
+    SDL_SetWindowTitle(sdlWin,(name+S(" - ")+S(PROGRAM_NAME)).c_str());
+  }
+}
+
 void ParentDir(char* thedir) {
   // set thedir to parent directory
 #ifdef ANDROID
@@ -1166,11 +1176,7 @@ int ImportIT(FILE* it) {
   }
   else {printf("error while importing file! file doesn't exist\n"); return 1;}
   if (!playermode && !fileswitch) {player.pat=0;}
-  if (name=="") {
-    SDL_SetWindowTitle(sdlWin,PROGRAM_NAME);
-  } else {
-    SDL_SetWindowTitle(sdlWin,(name+S(" - ")+S(PROGRAM_NAME)).c_str());
-  }
+  updateWindowTitle();
   song->orders--;
   if (song->order[song->orders]==0xff) song->orders--;
   return 0;
@@ -1437,11 +1443,7 @@ int ImportMOD(FILE* mod) {
   else {/*cout << "error while importing file! file doesn't exist\n";*/ return 1;}
   song->detune=0x1b; // Amiga compat
   if (!playermode && !fileswitch) {player.pat=0;}
-  if (name=="") {
-    SDL_SetWindowTitle(sdlWin,PROGRAM_NAME);
-  } else {
-    SDL_SetWindowTitle(sdlWin,(name+S(" - ")+S(PROGRAM_NAME)).c_str());
-  }
+  updateWindowTitle();
   song->channels=chans;
   song->orders--;
   return 0;
@@ -1848,11 +1850,7 @@ int ImportXM(FILE* xm) {
   fclose(xm);
   
   if (!playermode && !fileswitch) {player.pat=0;}
-  if (name=="") {
-    SDL_SetWindowTitle(sdlWin,PROGRAM_NAME);
-  } else {
-    SDL_SetWindowTitle(sdlWin,(name+S(" - ")+S(PROGRAM_NAME)).c_str());
-  }
+  updateWindowTitle();
   return 0;
 }
 
@@ -2587,11 +2585,7 @@ int LoadFile(const char* filename) {
     printf("done\n");
     if (!playermode && !fileswitch) {player.pat=0;}
     if (oplaymode==1) {Play();}
-    if (name=="") {
-      SDL_SetWindowTitle(sdlWin,PROGRAM_NAME);
-    } else {
-      SDL_SetWindowTitle(sdlWin,(name+S(" - ")+S(PROGRAM_NAME)).c_str());
-    }
+    updateWindowTitle();
     printf("setting filename to %s\n",filename);
     curfname=filename;
     return 0;
@@ -3492,6 +3486,17 @@ void drawMemoryView() {
   ImGui::End();
 }
 
+void drawSongInfo() {
+  if (!songEditOpen) return;
+  if (ImGui::Begin("Song Information",&songEditOpen)) {
+    if (ImGui::InputText("Name",song->name,32)) {
+      updateWindowTitle();
+    }
+    ImGui::SliderScalar("Detune",ImGuiDataType_S8,&song->detune,&_SCHAR_MIN,&_SCHAR_MAX);
+  }
+  ImGui::End();
+}
+
 void prepareUndo() {
   Pattern* p=song->getPattern(song->order[player.pat],true);
   memcpy(oldPat,p->data,p->length*32*8);
@@ -3978,6 +3983,9 @@ bool updateDisp() {
     if (ImGui::MenuItem("macro editor")) {
       macroEditOpen=!macroEditOpen;
     }
+    if (ImGui::MenuItem("song info")) {
+      songEditOpen=!songEditOpen;
+    }
     if (ImGui::MenuItem("memory view")) {
       memViewOpen=!memViewOpen;
     }
@@ -4095,6 +4103,8 @@ bool updateDisp() {
   drawMacroEditor();
 
   drawMemoryView();
+
+  drawSongInfo();
 
   if (ImGuiFileDialog::Instance()->Display("FileDialog")) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
