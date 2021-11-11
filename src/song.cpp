@@ -18,7 +18,7 @@ Song::Song():
   orders(0),
   speed(6),
   flags(0),
-  tempo(125),
+  tempo(0),
   DFM(0),
   channels(8),
   macrosC(0),

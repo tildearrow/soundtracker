@@ -96,8 +96,6 @@ bool hexmode=false;
 bool quit=false;
 bool clockInfo=false;
 
-string name; // song name
-
 int curins=1; // selected instrument
 int curmacro=-1; // selected macro
 int curoctave=2;
@@ -340,9 +338,6 @@ PopupBox popbox;
 Point maxTSize;
 
 // new file dialog
-Button bdNew;
-Button bdOpen;
-Button bdSave;
 Swiper diskopSwiper;
 float doScroll;
 
@@ -818,24 +813,10 @@ int mscale(int nval) {
   return ((nval/16)*12)+((nval-1)%16);
 }
 
-string strFormat(const char* format, ...) {
-  va_list va;
-  char str[4096];
-  string ret;
-  va_start(va,format);
-  if (vsnprintf(str,4095,format,va)<0) {
-    va_end(va);
-    return string("");
-  }
-  va_end(va);
-  ret=str;
-  return ret;
-}
-
 string getVisPat(unsigned char p) {
   if (p==254) return "--";
   if (p==255) return "==";
-  return strFormat("%.2X",p);
+  return fmt::sprintf("%.2X",p);
 }
 
 // formula to calculate 6203.34:
@@ -877,7 +858,7 @@ void CleanupPatterns() {
   }
   song=new Song;
   player.setSong(song);
-  origin="Unknown";
+  origin="";
   undoHist.clear();
   redoHist.clear();
   canUseSong.unlock();
@@ -885,7 +866,7 @@ void CleanupPatterns() {
 }
 
 void updateWindowTitle() {
-  name=song->name;
+  string name=song->name;
   if (name=="") {
     SDL_SetWindowTitle(sdlWin,PROGRAM_NAME);
   } else {
@@ -1048,12 +1029,12 @@ int ImportIT(FILE* it) {
     printf("IT module detected\n");
     CleanupPatterns();
     // name
-    name="";
+    memset(song->name,0,32);
     for (sk=4;sk<30;sk++) {
       if (memblock[sk]==0) break;
-      name+=memblock[sk];
+      song->name[sk-4]=memblock[sk];
     }
-    printf("module name is %s\n",name.c_str());
+    printf("module name is %s\n",song->name);
     origin="Impulse Tracker";
     // orders, instruments, samples and patterns
     printf("%d orders, %d instruments, %d samples, %d patterns\n",(int)memblock[0x20],(int)memblock[0x22],(int)memblock[0x24],(int)memblock[0x26]);
@@ -1250,7 +1231,7 @@ int ImportMOD(FILE* mod) {
         break;
       case 0x214b264d: // M&K!
         printf("echobea3.mod detected\n");
-        origin="congratulations. you are a master.";
+        origin="early ProTracker/NoiseTracker";
         chans=4;
         break;
     }
@@ -1320,12 +1301,12 @@ int ImportMOD(FILE* mod) {
       song->ins[ii+1]->filterMode|=8;
     }
     // name
-    name="";
+    memset(song->name,0,32);
     for (sk=0;sk<20;sk++) {
       if (h.name[sk]==0) break;
-      name+=h.name[sk];
+      song->name[sk]=h.name[sk];
     }
-    printf("module name is %s\n",name.c_str());
+    printf("module name is %s\n",song->name);
     if (karsten) {
       for (sk=0;sk<128;sk++) {
         song->order[sk]=(*((ClassicMODHeader*)&h)).ord[sk];
@@ -1469,11 +1450,12 @@ int ImportS3M(FILE* s3m) {
     printf("success, now importing file\n");
     CleanupPatterns();
   // module name
+  memset(song->name,0,32);
   for (sk=0;sk<28;sk++) {
     if (memblock[sk]==0) break;
-    name+=memblock[sk];
+    song->name[sk]=memblock[sk];
   }
-  printf("module name is %s\n",name.c_str());
+  printf("module name is %s\n",song->name);
   song->orders=memblock[0x20];
   instruments=memblock[0x22];
   patterns=memblock[0x24]*2;
@@ -1682,16 +1664,16 @@ int ImportXM(FILE* xm) {
   fread(&h,1,336,xm);
   
   CleanupPatterns();
-  name="";
+  memset(song->name,0,32);
   for (int i=0; i<20; i++) {
     if (h.name[i+17]==0) break;
-    name+=h.name[i+17];
+    song->name[i]=h.name[i+17];
   }
   
   origin="";
   for (int i=0; i<20; i++) {
-    if (h.name[i+17]==0) break;
-    origin+=h.name[i+17];
+    if (h.program[i]==0) break;
+    origin+=h.program[i];
   }
 
   for (int i=0; i<32; i++) {
@@ -1711,7 +1693,7 @@ int ImportXM(FILE* xm) {
   for (int i=0; i<h.pats; i++) {
     fread(&ph,1,9,xm);
     if (ph.size!=9) {
-      popbox=PopupBox("Error",strFormat("pattern %d header size mismatch! %d != 9",i,ph.size));
+      popbox=PopupBox("Error",fmt::sprintf("pattern %d header size mismatch! %d != 9",i,ph.size));
       triggerfx(1);
       fclose(xm);
       return 1;
@@ -1993,6 +1975,7 @@ int SaveFile(const char* filename) {
     fclose(sfile);
     printf("done\n");
     curfname=filename;
+    origin=fmt::sprintf("soundtracker (r%d)\n",song->version);
     return 0;
   }
   curfname="";
@@ -2210,7 +2193,7 @@ int LoadFile(const char* filename) {
     }
 
     printf("module version %d\n",song->version);
-    origin=strFormat("soundtracker dev%d\n",song->version);
+    origin=fmt::sprintf("soundtracker (r%d)\n",song->version);
     if (song->version<60) {printf("-applying filter mode compatibility\n");}
     if (song->version<65) {printf("-applying volume column compatibility\n");}
     if (song->version<106) {printf("-applying loop point fix compatibility\n");}
@@ -2241,11 +2224,6 @@ int LoadFile(const char* filename) {
     }
     if (song->version<150) {
       song->tempo=0; // tempo
-    }
-    name="";
-    for (int i=0; i<32; i++) {
-      if (song->name[i]==0) break;
-      name+=song->name[i];
     }
     if (song->version<146) {
       detectChans=true;
@@ -3066,6 +3044,7 @@ void drawPatterns(float ypos) {
   ImGui::NextColumn(); \
   ImGui::PopID();
 
+// silly constants
 const signed char S8_ONE=1;
 const signed char S8_FOUR=4;
 const int I_ZERO=0;
@@ -3077,6 +3056,7 @@ const unsigned char _CHAR_MAX=255;
 const unsigned char VOL_MAX=64;
 const signed char _SCHAR_MIN=-128;
 const signed char _SCHAR_MAX=127;
+const unsigned char THIRTY_TWO=32;
 
 #define noteOffsetSelector(var) \
   if (var>=0x80) { \
@@ -3492,7 +3472,41 @@ void drawSongInfo() {
     if (ImGui::InputText("Name",song->name,32)) {
       updateWindowTitle();
     }
+    if (ImGui::InputScalar("Speed",ImGuiDataType_U8,&song->speed,&ONE,&ONE)) {
+      if (song->speed<1) song->speed=1;
+      player.speed=song->speed;
+    }
+    if (ImGui::InputScalar("Tempo",ImGuiDataType_U8,&song->tempo,&ONE,&ONE,(song->tempo==0)?"VSync":"%d")) {
+      if (song->tempo==1) song->tempo=125;
+      if (song->tempo<32) song->tempo=0;
+      if (song->tempo==0) {
+        if (ntsc) {
+          player.tempo=150;
+        } else {
+          player.tempo=125;
+        }
+      } else {
+        player.tempo=song->tempo;
+      }
+    }
+    if (ImGui::InputScalar("Length",ImGuiDataType_U8,&song->orders,&ONE,&ONE)) {
+    }
     ImGui::SliderScalar("Detune",ImGuiDataType_S8,&song->detune,&_SCHAR_MIN,&_SCHAR_MAX);
+    if (ImGui::SliderScalar("Channels",ImGuiDataType_U8,&song->channels,&ONE,&THIRTY_TWO)) {
+      if (song->channels>32) song->channels=32;
+      if (song->channels<1) song->channels=1;
+      if (player.playMode==1) player.play();
+    }
+    bool compNoise=song->flags&4;
+    if (ImGui::Checkbox("compatible noise mode",&compNoise)) {
+      song->flags&=~4;
+      song->flags|=compNoise<<2;
+    }
+    if (origin!="") {
+      ImGui::Text("last saved with %s",origin.c_str());
+    } else {
+      ImGui::Text("not saved");
+    }
   }
   ImGui::End();
 }
@@ -3575,8 +3589,12 @@ void doNoteInput(SDL_Event& ev) {
     case 0: // note
       try {
         int note=noteKeys.at(ev.key.keysym.sym);
-        p->data[selStart.y][channel][0]=hscale(curoctave*12+note);
-        p->data[selStart.y][channel][1]=curins;
+        if (note>250) {
+          p->data[selStart.y][channel][0]=note&15;
+        } else {
+          p->data[selStart.y][channel][0]=hscale(curoctave*12+note);
+          p->data[selStart.y][channel][1]=curins;
+        }
 
         selStart.y++;
         if (selStart.y>=p->length) selStart.y=p->length-1;
@@ -3870,7 +3888,9 @@ void keyDown(SDL_Event& ev) {
     case wInstrument:
       try {
         int note=1+noteKeys.at(ev.key.keysym.sym);
-        player.testNoteOn(0,curins,curoctave*12+note);
+        if (note<250) {
+          player.testNoteOn(0,curins,curoctave*12+note);
+        }
       } catch (std::out_of_range& e) {
       }
       break;
@@ -4063,6 +4083,7 @@ bool updateDisp() {
   }
   if (ImGui::Checkbox("NTSC",&ntsc)) {
     if (!tempolock) {
+      player.ntsc=ntsc;
       if (ntsc) {
         if (player.tempo==125) {
           player.tempo=150;
@@ -4127,9 +4148,9 @@ bool updateDisp() {
 
   // end of frame
   ImGui::Render();
-  SDL_RenderClear(sdlRend);
   ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
   SDL_RenderPresent(sdlRend);
+  SDL_RenderClear(sdlRend);
 
   return true;
 }
@@ -4198,6 +4219,10 @@ bool initGUI() {
   noteKeys[SDLK_p]=28;
   noteKeys[SDLK_LEFTBRACKET]=29;
   noteKeys[SDLK_RIGHTBRACKET]=31;
+
+  // special
+  noteKeys[SDLK_EQUALS]=253;
+  noteKeys[SDLK_1]=254;
 
   // value keys
   valueKeys[SDLK_0]=0;
@@ -4365,7 +4390,7 @@ int main(int argc, char **argv) {
     if (LoadFile(argv[filearg])) return 1;
       if (playermode) {
         Play();
-        printf("playing: %s\n",name.c_str());
+        printf("playing: %s\n",song->name);
       }
   } else {
     if (filearg!=0) {
@@ -4393,6 +4418,7 @@ int main(int argc, char **argv) {
       }
     }
   } else {
+    SDL_RenderClear(sdlRend);
 #ifdef HAVE_GUI
     while (!quit) updateDisp();
 #else
