@@ -163,8 +163,6 @@ int16_t ver=TRACKER_VER; // version number
 string comments;
 int inputcurpos=0;
 int chantoplayfx=0;
-string* inputvar=NULL;
-string candInput;
 string origin;
 int inputwhere=0; // 0=none, 1=songname, 2=insname, 3=filepath, 4=comments, 5=filename
 size_t maxinputsize=string::npos;
@@ -188,12 +186,6 @@ double noProc;
 double procPos;
 
 int selectedfileindex=-1;
-struct FileInList {
-  string name;
-  bool isdir;
-};
-std::vector<FileInList> filenames;
-std::vector<FileInList> filessorted;
 int scrW, scrH;
 Texture patternbitmap;
 Texture pianoroll;
@@ -328,15 +320,11 @@ float topScroll;
 bool pageSelectShow;
 bool noStoragePerm;
 
-Swiper swX;
-Swiper swY;
-
 PopupBox popbox;
 
 Point maxTSize;
 
 // new file dialog
-Swiper diskopSwiper;
 float doScroll;
 
 // new things
@@ -4368,8 +4356,6 @@ int main(int argc, char **argv) {
   } else {
     player.tempo=125;
   }
-  filessorted.resize(1024);
-  filenames.resize(1024);
   if (iface==UIMobile) {
     scrW=360;
     scrH=640;
