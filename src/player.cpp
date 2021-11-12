@@ -483,7 +483,7 @@ void Player::update() {
     status.macroVolSweep.next();
     if (status.macroVolSweep.hasChanged) {
       *(unsigned int*)(&c.swvol)=status.macroVolSweep.value;
-      c.flags.swvol=(status.macroVolSweep.value!=0);
+      c.flags.swvol=((status.macroVolSweep.value!=0) && !channelMask[i]);
     }
 
     status.macroFreqSweep.next();
@@ -700,6 +700,7 @@ void Player::stop() {
 void Player::maskChannel(int channel, bool mask) {
   channelMask[channel]=mask;
   if (channelMask[channel]) {
+    chip[channel>>3].chan[channel&7].flags.swvol=0;
     chip[channel>>3].chan[channel&7].vol=0;
   }
   chan[channel].volChanged=true;
