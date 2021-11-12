@@ -96,7 +96,7 @@ bool clockInfo=false;
 
 int curins=1; // selected instrument
 int curmacro=-1; // selected macro
-int curoctave=2;
+int curoctave=3;
 int curedchan=0; // cureditingchannel
 int curedmode=0; // current editing mode, 0=note, 1=instrument number 2=volume 3=effect name 4=effect value
 int curedpage=0; // current page, 0-3
