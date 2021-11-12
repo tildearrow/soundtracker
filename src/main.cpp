@@ -1160,6 +1160,7 @@ int ImportIT(FILE* it) {
   updateWindowTitle();
   song->orders--;
   if (song->order[song->orders]==0xff) song->orders--;
+  player.reset();
   return 0;
 }
 
@@ -1427,6 +1428,7 @@ int ImportMOD(FILE* mod) {
   updateWindowTitle();
   song->channels=chans;
   song->orders--;
+  player.reset();
   return 0;
 }
 int ImportS3M(FILE* s3m) {
@@ -1522,6 +1524,7 @@ int ImportS3M(FILE* s3m) {
   delete[] memblock;
   }
   origin="Scream Tracker 3";
+  player.reset();
   return 0;
 }
 
@@ -1833,6 +1836,7 @@ int ImportXM(FILE* xm) {
   
   if (!playermode && !fileswitch) {player.pat=0;}
   updateWindowTitle();
+  player.reset();
   return 0;
 }
 
@@ -2561,6 +2565,7 @@ int LoadFile(const char* filename) {
     //printf("%d ",ftell(sfile));
     fclose(sfile);
     printf("done\n");
+    player.reset();
     if (!playermode && !fileswitch) {player.pat=0;}
     if (oplaymode==1) {Play();}
     updateWindowTitle();
@@ -3139,12 +3144,18 @@ void drawInsEditor() {
     ImGui::SliderScalar("Resonance",ImGuiDataType_U8,&ins->res,&ZERO,&_CHAR_MAX);
 
     bool resetOsc=ins->flags&1;
+    bool syncVibrato=ins->flags&2;
     bool resetFilter=ins->flags&4;
     bool syncMod=ins->flags&32;
 
     if (ImGui::Checkbox("Reset on new note",&resetOsc)) {
       ins->flags&=~1;
       ins->flags|=resetOsc;
+    }
+
+    if (ImGui::Checkbox("Vibrato affects sync modulator too",&syncVibrato)) {
+      ins->flags&=~2;
+      ins->flags|=syncVibrato<<1;
     }
 
     if (ImGui::Checkbox("Reset filter on new note",&resetFilter)) {
@@ -3593,7 +3604,8 @@ void doNoteInput(SDL_Event& ev) {
           p->data[selStart.y][channel][0]=note&15;
         } else {
           p->data[selStart.y][channel][0]=hscale(curoctave*12+note);
-          p->data[selStart.y][channel][1]=curins;
+          if (curins!=0) p->data[selStart.y][channel][1]=curins;
+          player.testNoteOn(channel,p->data[selStart.y][channel][1],1+curoctave*12+note);
         }
 
         selStart.y++;
@@ -3905,7 +3917,20 @@ void keyDown(SDL_Event& ev) {
 }
 
 void keyUp(SDL_Event& ev) {
-
+  switch (curWindow) {
+    case wPattern: {
+      if ((selStart.x%5)==0) {
+        try {
+          int note=noteKeys.at(ev.key.keysym.sym);
+          if (note<=250) {
+            player.testNoteOff(selStart.x/5);
+          }
+        } catch (std::out_of_range& e) {
+        }
+      }
+      break;
+    }
+  }
 }
 
 bool updateDisp() {

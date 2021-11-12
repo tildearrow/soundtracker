@@ -527,6 +527,7 @@ class Player {
     float offsetNote(float note, unsigned char off);
 
     void testNoteOn(int channel, int ins, int note);
+    void testNoteOff(int channel);
     void noteOn(int channel, int note);
     void noteOff(int channel);
     void noteCut(int channel);

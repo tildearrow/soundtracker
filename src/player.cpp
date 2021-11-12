@@ -207,6 +207,10 @@ void Player::testNoteOn(int channel, int ins, int note) {
   scheduledNotes.push(ScheduledNote(channel,ins,note));
 }
 
+void Player::testNoteOff(int channel) {
+  scheduledNotes.push(ScheduledNote(channel,-1,0));
+}
+
 void Player::processChanRow(Pattern* p, int i) {
   ChannelStatus& status=chan[i];
   // instrument
@@ -406,8 +410,12 @@ void Player::update() {
   while (!scheduledNotes.empty()) {
     if (playMode==0) playMode=2;
     ScheduledNote s=scheduledNotes.front();
-    noteProgramChange(s.chan,s.ins);
-    noteOn(s.chan,s.note);
+    if (s.ins==-1) { // note off
+      noteCut(s.chan);
+    } else {
+      noteProgramChange(s.chan,s.ins);
+      noteOn(s.chan,s.note);
+    }
     scheduledNotes.pop();
   }
 
@@ -597,7 +605,7 @@ void Player::update() {
         c.freq=freq;
       }
 
-      if (ins->flags&32) c.restimer=getNotePeriod(offsetNote(status.note,ins->LFO));
+      if (ins->flags&32) c.restimer=getNotePeriod(offsetNote(status.note+((ins->flags&2)?status.vibValue:0.0f),ins->LFO));
 
       status.freqChanged=false;
     }
@@ -642,6 +650,11 @@ void Player::reset() {
   }
   for (int i=0; i<32; i++) {
     chan[i]=ChannelStatus();
+    if (song!=NULL) {
+      chan[i].channelPan=song->defaultPan[i];
+      chan[i].channelVol=song->defaultVol[i];
+      chip[i>>3].chan[i&7].pan=chan[i].channelPan;
+    }
   }
 }
 
