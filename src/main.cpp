@@ -13,9 +13,6 @@
 
 //// DEFINITIONS ////
 //#define sign(a) ((a>0)?(1):((a<0)?(-1):(0)))
-//#define MOUSE_GRID
-//#define NTSC // define for NTSC mode
-#define SOUNDS
 int dpiScale;
 
 #ifdef _WIN32
@@ -69,14 +66,11 @@ int prevSample[2]={0,0};
 short bbOut[2][32768];
 
 int doframe;
-unsigned char colorof[6]={0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff};
 // init sound stuff
 bool AlreadySkipped=false;
 enum filters {
   fNone, fLowPass, fHighPass, fNotch, fBandPass, fLowBand, fHighBand, fAllPass
 };
-int scrollpos=0;
-int valuewidth=4;
 int oldpat=-1;
 unsigned char CurrentIns=1;
 unsigned char CurrentEnv=0;
@@ -109,12 +103,9 @@ int chanstodisplay=8;
 int maxCTD=8;
 double patseek=0;
 int screen=0; // 0=patterns, 1=instruments 2=diskop 3=song 4=mixer 5=config 6=help 7=about
-float diskopscrollpos=0;
-bool tickstart=false;
 bool linearslides=true;
 bool playermode=false;
 bool fileswitch=false;
-bool reversemode=false;
 int sfxpos=-1; // sound effect position
 const char* sfxdata[32]={
   // pause
@@ -130,7 +121,6 @@ const char* sfxdata[32]={
   NULL
 }; // sound effect data
 int cursfx=0; // current effect
-const char HEXVALS[17]="0123456789ABCDEF"; // 17 for the null
 
 SSInter sfxInst;
 
@@ -315,17 +305,12 @@ const char* chanValueNames[32]={
 
 UIType iface;
 bool mobAltView;
-float mobScroll;
-float topScroll;
 bool pageSelectShow;
 bool noStoragePerm;
 
 PopupBox popbox;
 
 Point maxTSize;
-
-// new file dialog
-float doScroll;
 
 // new things
 Song* song=NULL;
@@ -401,12 +386,8 @@ unsigned char oldPat[256][32][8];
 
 // NEW VARIABLES END //
 
-void Playback();
 int playfx(const char* fxdata,int fxpos,int achan);
 void triggerfx(int num);
-#define interpolatee(aa,bb,cc) (aa+((bb-aa)*cc))
-
-#define resaf 0.33631372025095791864295318996109
 
 #ifdef JACK
 int nothing(jack_nframes_t nframes, void* arg) {
@@ -645,29 +626,6 @@ unsigned short bswapu16(unsigned short x) {
 float interpolate(float p1, float p2, float amt) {
   return p1+((p2-p1)*amt);
 }
-float lengthdir_x(float len,float dir) {
-  return len*cos(dir*(M_PI/180));
-}
-float lengthdir_y(float len,float dir) {
-  return len*sin(dir*(M_PI/180));
-}
-char gethnibble(int nval) {
-  if (nval<256) {
-    return HEXVALS[nval>>4];
-  }
-  return '?';
-}
-char getlnibble(int nval) {
-  return HEXVALS[nval&15];
-}
-char getinsL(int nval) {
-  if (nval==0) {return '.';}
-  else{return getlnibble(nval);}
-}
-char getinsH(int nval) {
-  if (nval==0) {return '.';}
-  else{return gethnibble(nval);}
-}
 const char* getVFX(int fxval) {
   if (fxval==0) {return ".";} // 0
   switch (fxval>>4) {
@@ -807,33 +765,9 @@ string getVisPat(unsigned char p) {
   return fmt::sprintf("%.2X",p);
 }
 
-// formula to calculate 6203.34:
-// - 65536*440/(chipClock/64)
-// chipClock is 297500 (PAL)
-// or 309000 (NTSC)
-unsigned int mnoteperiod(float note, int chan) {
-  return (int)((6203.34-(song->detune*2))*(pow(2.0f,(float)(((float)note-58)/12.0f))));
-}
-
-int msnoteperiod(float note, int chan) {
-  return ((297500+(song->detune*100))/(440*(pow(2.0f,(float)(((float)note-58)/12)))));
-}
-
-void Zxx(unsigned char value) {
-  // process Zxx effect
-  if (value>0x7f) {
-  switch(value) {
-    //case 
-  }
-  }
-}
 int FreeChannel() {
   // TODO
   return 0;
-}
-
-void Playback() {
-  // TODO
 }
 
 void CleanupPatterns() {
@@ -956,12 +890,6 @@ float getRKeyOff(int tone) {
       return 10;
     default: return 7;
   }
-}
-
-void Play() {
-  // reset cursor position
-  tickstart=true;
-  player.play();
 }
 unsigned char ITVolumeConverter(unsigned char itvol) {
   if (itvol<65) {return minval(itvol+64,127);} // 64-127
@@ -2555,7 +2483,7 @@ int LoadFile(const char* filename) {
     printf("done\n");
     player.reset();
     if (!playermode && !fileswitch) {player.pat=0;}
-    if (oplaymode==1) {Play();}
+    if (oplaymode==1) {player.play();}
     updateWindowTitle();
     printf("setting filename to %s\n",filename);
     curfname=filename;
@@ -2564,9 +2492,6 @@ int LoadFile(const char* filename) {
     perror("can't open file");
     popbox=PopupBox("Error","can't open file!");
     curfname="";
-    #ifdef SOUNDS
-    triggerfx(1);
-    #endif
     }
     delete[] checkstr;
   return 1;
@@ -2799,7 +2724,7 @@ void drawPatterns(float ypos) {
       ImGui::Selectable(orderName,delayedPat==i);
       if (ImGui::IsItemClicked()) {
         player.pat=i;
-        if (player.playMode==1) Play();
+        if (player.playMode==1) player.play();
       }
     }
     ImGui::EndTable();
@@ -4058,7 +3983,7 @@ bool updateDisp() {
   ImGui::NextColumn();
   if (ImGui::InputScalar("order",ImGuiDataType_U8,&player.pat,&ONE,&ONE)) {
     if (player.pat>song->orders) player.pat=0;
-    if (player.playMode==1) Play();
+    if (player.playMode==1) player.play();
   }
   ImGui::NextColumn();
   ImGui::InputScalar("pattern",ImGuiDataType_U8,&(song->order[player.pat]),&ONE,&ONE);
@@ -4095,7 +4020,7 @@ bool updateDisp() {
 
   ImGui::BeginChild("PlayControls",ImVec2(0,0),true);
   if (ImGui::Button("Play")) {
-    Play();
+    player.play();
   }
   ImGui::SameLine();
   if (ImGui::Button("Stop")) {
@@ -4315,8 +4240,6 @@ int main(int argc, char **argv) {
   mobAltView=false;
   pageSelectShow=false;
   noStoragePerm=false;
-  mobScroll=0;
-  topScroll=0;
   popbox=PopupBox(false);
   
   if (argc>1) {
@@ -4407,7 +4330,7 @@ int main(int argc, char **argv) {
   if (playermode || fileswitch) {
     if (LoadFile(argv[filearg])) return 1;
       if (playermode) {
-        Play();
+        player.play();
         printf("playing: %s\n",song->name);
       }
   } else {
