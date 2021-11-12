@@ -360,7 +360,8 @@ enum UndoAction {
   undoPatternDelete,
   undoPatternPullDelete,
   undoPatternCut,
-  undoPatternPaste
+  undoPatternPaste,
+  undoPatternTranspose
 };
 
 struct UndoData {
@@ -3472,7 +3473,7 @@ void doUndo() {
 
   switch (us.action) {
     case undoPatternNote: case undoPatternDelete: case undoPatternInsert: case undoPatternPullDelete:
-    case undoPatternCut: case undoPatternPaste:
+    case undoPatternCut: case undoPatternPaste: case undoPatternTranspose:
       Pattern* p=song->getPattern(us.pattern,true);
       for (UndoData& i: us.data) {
         p->data[i.row][i.column/5][i.column%5]=i.oldData;
@@ -3492,7 +3493,7 @@ void doRedo() {
 
   switch (us.action) {
     case undoPatternNote: case undoPatternDelete: case undoPatternInsert: case undoPatternPullDelete:
-    case undoPatternCut: case undoPatternPaste:
+    case undoPatternCut: case undoPatternPaste: case undoPatternTranspose:
       Pattern* p=song->getPattern(us.pattern,true);
       for (UndoData& i: us.data) {
         p->data[i.row][i.column/5][i.column%5]=i.newData;
@@ -3700,6 +3701,25 @@ void doPaste() {
   makeUndo(undoPatternPaste);
 }
 
+void doTranspose(int amount) {
+  finishSelection();
+  prepareUndo();
+  Pattern* p=song->getPattern(song->order[player.pat],true);
+  for (int i=selStart.x; i<=selEnd.x; i++) {
+    if (i<0 || (i/5)>=song->channels) continue;
+    if ((i%5)!=0) continue;
+    for (int j=selStart.y; j<=selEnd.y; j++) {
+      if (j<0 || j>=p->length) continue;
+      if ((p->data[j][i/5][0]&15)>12 || (p->data[j][i/5][0]&15)<1) continue;
+      int note=mscale(p->data[j][i/5][0])+amount;
+      if (note<0) note=0;
+      if (note>119) note=119;
+      p->data[j][i/5][0]=hscale(note);
+    }
+  }
+  makeUndo(undoPatternTranspose);
+}
+
 void doSelectAll() {
   finishSelection();
   Pattern* p=song->getPattern(song->order[player.pat],true);
@@ -3746,6 +3766,23 @@ void keyDown(SDL_Event& ev) {
             break;
           case SDLK_a:
             doSelectAll();
+            break;
+        }
+      } else if (ev.key.keysym.mod&KMOD_ALT) {
+        switch (ev.key.keysym.sym) {
+          case SDLK_q:
+            if (ev.key.keysym.mod&KMOD_SHIFT) {
+              doTranspose(12);
+            } else {
+              doTranspose(1);
+            }
+            break;
+          case SDLK_a:
+            if (ev.key.keysym.mod&KMOD_SHIFT) {
+              doTranspose(-12);
+            } else {
+              doTranspose(-1);
+            }
             break;
         }
       } else switch (ev.key.keysym.sym) {
@@ -3891,13 +3928,13 @@ bool updateDisp() {
       CleanupPatterns();
     }
     if (ImGui::MenuItem("open...")) {
-      ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Open File",".*",curdir);
+      ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Open File","soundtracker song{.sus},Other modules (import){.mod,.s3m,.xm,.it},.*",curdir);
       isSaving=false;
     }
     ImGui::Separator();
     if (ImGui::MenuItem("save")) {
       if (curfname=="") {
-        ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Save File",".*",curdir,1,NULL,ImGuiFileDialogFlags_ConfirmOverwrite);
+        ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Save File","soundtracker song{.sus}",curdir,1,NULL,ImGuiFileDialogFlags_ConfirmOverwrite);
         isSaving=true;
       } else {
         string copyofName=curfname;
@@ -3905,7 +3942,7 @@ bool updateDisp() {
       }
     }
     if (ImGui::MenuItem("save as...")) {
-      ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Save File",".*",curdir,1,NULL,ImGuiFileDialogFlags_ConfirmOverwrite);
+      ImGuiFileDialog::Instance()->OpenDialog("FileDialog","Save File","soundtracker song{.sus}",curdir,1,NULL,ImGuiFileDialogFlags_ConfirmOverwrite);
       isSaving=true;
     }
     ImGui::Separator();
@@ -3936,6 +3973,19 @@ bool updateDisp() {
     }
     if (ImGui::MenuItem("select all")) {
       doSelectAll();
+    }
+    ImGui::Separator();
+    if (ImGui::MenuItem("note up")) {
+      doTranspose(1);
+    }
+    if (ImGui::MenuItem("note down")) {
+      doTranspose(-1);
+    }
+    if (ImGui::MenuItem("octave up")) {
+      doTranspose(12);
+    }
+    if (ImGui::MenuItem("octave down")) {
+      doTranspose(-12);
     }
     ImGui::Separator();
     ImGui::MenuItem("clear...");
@@ -4076,6 +4126,11 @@ bool updateDisp() {
     if (ImGuiFileDialog::Instance()->IsOk()) {
       curfname=ImGuiFileDialog::Instance()->GetFilePathName();
       if (curfname!="") {
+        if (isSaving) {
+          if (curfname.size()<4 || curfname.rfind(".sus")!=curfname.size()-4) {
+            curfname+=".sus";
+          }
+        }
         string copyOfName=curfname;
         if (isSaving) {
           printf("saving: %s\n",copyOfName.c_str());
@@ -4099,6 +4154,8 @@ bool updateDisp() {
 
   return true;
 }
+
+#define IGFD_FileStyleByExtension IGFD_FileStyleByExtention
 
 bool initGUI() {
   sdlWin=SDL_CreateWindow("soundtracker",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,scrW*dpiScale,scrH*dpiScale,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
@@ -4215,6 +4272,18 @@ bool initGUI() {
   effectKeys[SDLK_y]=25;
   effectKeys[SDLK_z]=26;
 
+  // file dialog
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByTypeDir,"",ImVec4(0.0f,1.0f,1.0f,1.0f),">");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByTypeFile,"",ImVec4(0.7f,0.7f,0.7f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".sus",ImVec4(0.5f,1.0f,0.5f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".mod",ImVec4(1.0f,1.0f,0.5f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".it",ImVec4(1.0f,1.0f,0.5f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".s3m",ImVec4(1.0f,1.0f,0.5f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".xm",ImVec4(1.0f,1.0f,0.5f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".wav",ImVec4(1.0f,0.5f,0.5f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".iff",ImVec4(1.0f,0.5f,0.5f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".aiff",ImVec4(1.0f,0.5f,0.5f,1.0f)," ");
+  ImGuiFileDialog::Instance()->SetFileStyle(IGFD_FileStyleByExtension,".ogg",ImVec4(1.0f,0.5f,0.5f,1.0f)," ");
 
   return true;
 }
