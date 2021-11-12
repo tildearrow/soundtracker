@@ -469,6 +469,7 @@ struct ChannelStatus {
     note(0),
     instr(0),
     vol(0),
+    channelVol(128),
     envVol(255),
     finePitch(0),
     fx(0),
