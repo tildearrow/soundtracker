@@ -171,6 +171,7 @@ void Player::noteCut(int channel) {
   soundchip::channel& c=chip[channel>>3].chan[channel&7];
   status.vol=0;
   c.vol=0;
+  c.flags.swvol=0;
   status.active=false;
 }
 
