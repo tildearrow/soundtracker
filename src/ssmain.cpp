@@ -89,7 +89,11 @@ static void process(void* userdata, Uint8* stream, int len) {
       HANDLE so=GetStdHandle(STD_OUTPUT_HANDLE);
       GetConsoleScreenBufferInfo(so,&oCoord);
  #endif
+#ifdef _WIN32
+      fprintf(stderr,"ssinter: filename                      % 8ld/%lld  % 8d",ftell(f),fsize,frame);
+#else
       fprintf(stderr,"ssinter: filename                      % 8ld/%ld  % 8d",ftell(f),fsize,frame);
+#endif
       if (viewMemory) {
         fprintf(stderr,"\x1b[1;33m----\x1b[32m--\x1b[36m--\x1b[m----\x1b[1;34m----\x1b[31m--\x1b[35m--\x1b[30m------------\x1b[33m--------\x1b[32m--------\x1b[34m--------\x1b[m----\x1b[33m----\x1b[m\n");
         for (int i=0; i<256; i++) {

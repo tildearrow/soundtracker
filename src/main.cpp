@@ -1182,9 +1182,9 @@ int ImportMOD(FILE* mod) {
       insMax=15;
     }
     for (int ii=0;ii<insMax;ii++) {
-      h.ins[ii].len=ntohs(h.ins[ii].len);
-      h.ins[ii].loopStart=ntohs(h.ins[ii].loopStart);
-      h.ins[ii].loopLen=ntohs(h.ins[ii].loopLen);
+      h.ins[ii].len=bswapu16(h.ins[ii].len);
+      h.ins[ii].loopStart=bswapu16(h.ins[ii].loopStart);
+      h.ins[ii].loopLen=bswapu16(h.ins[ii].loopLen);
       for (int jj=0;jj<22;jj++) {
         song->ins[ii+1]->name[jj]=h.ins[ii].name[jj];
       }
@@ -3211,7 +3211,11 @@ void drawMacroEditor() {
           ImGui::PushID(i);
           ImGui::TableNextRow();
           ImGui::TableNextColumn();
+#ifdef _WIN32
+          ImGui::Text("%lld",i);
+#else
           ImGui::Text("%ld",i);
+#endif
           ImGui::TableNextColumn();
           unsigned char cType=m->cmds[i].type&0x7f;
           ImGui::PushButtonRepeat(true);
@@ -4444,3 +4448,9 @@ int main(int argc, char **argv) {
   printf("finished\n");
   return 0;
 }
+
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE inst, HINSTANCE prevInst, PSTR argv, int argc) {
+  return main(0,NULL);
+}
+#endif
