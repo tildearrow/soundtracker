@@ -43,19 +43,7 @@ extern "C" {
 #define minval(a,b) (((a)<(b))?(a):(b)) // for Linux compatibility
 #define maxval(a,b) (((a)>(b))?(a):(b)) // for Linux compatibility
 
-typedef std::string string;
-typedef std::wstring wstring;
-#define S(x) string(x)
-
-size_t utf8len(const char* s);
-size_t utf8clen(const char* s);
-size_t utf8pos(const char* s, size_t inpos);
-size_t utf8cpos(const char* s, size_t inpos);
-size_t utf8findcpos(const char* s, float inpos);
-char utf8csize(const unsigned char* c);
-
-wstring utf8To16(const char* in);
-string utf16To8(const wchar_t* in);
+#include "utfutils.h"
 
 bool PIR(float x1, float y1, float x2, float y2, float checkx, float checky);
 

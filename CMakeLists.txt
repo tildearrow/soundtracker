@@ -33,7 +33,7 @@ if (APPLE)
 else (APPLE)
   find_library(HAVE_JACK jack)
 endif (APPLE)
-add_executable(ssinter src/soundchip.cpp src/ssinter.cpp src/ssmain.cpp)
+add_executable(ssinter src/soundchip.cpp src/ssinter.cpp src/ssmain.cpp src/utfutils.cpp)
 add_executable(ssbench src/soundchip.cpp src/ssinter.cpp src/ssbench.cpp)
 set(GUI_SRC imgui/imgui.cpp
 imgui/imgui_demo.cpp

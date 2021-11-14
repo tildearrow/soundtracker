@@ -4146,7 +4146,11 @@ bool updateDisp() {
       }
     }
     strcpy(curdir,ImGuiFileDialog::Instance()->GetCurrentPath().c_str());
+#ifdef _WIN32
+    strcat(curdir,"\\");
+#else
     strcat(curdir,"/");
+#endif
     ImGuiFileDialog::Instance()->Close();
   }
 
@@ -4369,9 +4373,10 @@ int main(int argc, char **argv) {
   memset(curdir,0,4096);
 #ifdef ANDROID
   // TODO: find the actual path
-  strcpy(curdir,"/storage/emulated/0");
+  strcpy(curdir,"/storage/emulated/0/");
 #elif defined(_WIN32)
   GetCurrentDirectory(4095,curdir);
+  strcat(curdir,"\\");
 #else
   getcwd(curdir,4095);
   strcat(curdir,"/");
@@ -4450,7 +4455,5 @@ int main(int argc, char **argv) {
 }
 
 #ifdef _WIN32
-int WINAPI WinMain(HINSTANCE inst, HINSTANCE prevInst, PSTR argv, int argc) {
-  return main(0,NULL);
-}
+#include "winMain.cpp"
 #endif
