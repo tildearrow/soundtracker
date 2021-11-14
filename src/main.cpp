@@ -251,45 +251,20 @@ int prevSample[2]={0,0};
 
 short bbOut[2][32768];
 
-int doframe;
 // init sound stuff
-bool AlreadySkipped=false;
 enum filters {
   fNone, fLowPass, fHighPass, fNotch, fBandPass, fLowBand, fHighBand, fAllPass
 };
-int oldpat=-1;
-unsigned char CurrentIns=1;
-unsigned char CurrentEnv=0;
 // init tracker stuff
-string tempInsName;
 Instrument blankIns;
 int instruments=0;
 int patterns=0;
 int seqs=255;
-bool leftpress=false;
-bool rightpress=false;
-bool leftrelease=false;
-bool rightrelease=false;
-bool hexmode=false;
 bool quit=false;
-bool clockInfo=false;
 
 int curins=1; // selected instrument
 int curmacro=-1; // selected macro
 int curoctave=3;
-int curedchan=0; // cureditingchannel
-int curedmode=0; // current editing mode, 0=note, 1=instrument number 2=volume 3=effect name 4=effect value
-int curedpage=0; // current page, 0-3
-int curselchan=0;
-int curselmode=0;
-int curzoom=1;
-bool follow=true;
-int patRow=0;
-int chanstodisplay=8;
-int maxCTD=8;
-double patseek=0;
-int screen=0; // 0=patterns, 1=instruments 2=diskop 3=song 4=mixer 5=config 6=help 7=about
-bool linearslides=true;
 bool playermode=false;
 bool fileswitch=false;
 int sfxpos=-1; // sound effect position
@@ -362,11 +337,6 @@ double procPos;
 
 int selectedfileindex=-1;
 int scrW, scrH;
-Texture patternbitmap;
-Texture pianoroll;
-Texture pianoroll_temp;
-Texture piano;
-Texture mixer;
 Texture osc;
 bool firstframe=true;
 float oscbuf[65536]={}; // safe oscilloscope buffer
@@ -393,19 +363,6 @@ SDL_Renderer* sdlRend;
 
 ImFont* mainFont=NULL;
 ImFont* patFont=NULL;
-
-const char* pageNames[]={
-  "pattern",
-  "instr",
-  "soundfx",
-  "song",
-  "file",
-  "memory",
-  "mixer",
-  "config",
-  "visual",
-  "about"
-};
 
 const char* noteNamesPat[256]={
   "...", "C-0", "C#0", "D-0", "D#0", "E-0", "F-0", "F#0", "G-0", "G#0", "A-0", "A#0", "B-0", "===", "~~~", "^^^",
@@ -4642,12 +4599,6 @@ int main(int argc, char **argv) {
       printf("couldn't initialize display...\n");
       return 1;
     }
-#ifdef ANDROID
-    curzoom=dpiScale-1;
-    if (curzoom<1) curzoom=1;
-#else
-    curzoom=dpiScale;
-#endif
 #else
     printf("GUI not available!\n");
     return 1;
