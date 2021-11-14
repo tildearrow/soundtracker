@@ -1,8 +1,10 @@
 // please read `papers/ibm-plex-license.txt` for more information.
 // File: 'IBMPlexMono-Regular.ttf' (113376 bytes)
 // Exported using binary_to_compressed_c.cpp
-static const unsigned int defFont_pat_compressed_size = 69508;
-static const unsigned int defFont_pat_compressed_data[69508/4] =
+#include "fonts.h"
+
+const unsigned int defFont_pat_compressed_size = 69508;
+const unsigned int defFont_pat_compressed_data[69508/4] =
 {
     0x0000bc57, 0x00000000, 0xe0ba0100, 0x00000400, 0x00010025, 0x82120000, 0x00042604, 0x49534420, 0x240d8247, 0xba010001, 0x2c0782d8, 0x45444708, 
     0x1b661b46, 0xab010049, 0x080f828c, 0x5047822c, 0x9a18534f, 0x01009f5a, 0x000010ac, 0x53470c05, 0x6e314255, 0x01006a81, 0x00001cb1, 0x534fba09, 

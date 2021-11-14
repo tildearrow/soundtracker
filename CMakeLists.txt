@@ -53,6 +53,8 @@ src/hlesoundchip.cpp
 src/ssinter.cpp
 src/fextra.cpp
 src/utfutils.cpp
+src/font_main.cpp
+src/font_pat.cpp
 src/main.cpp)
 if (BUILD_GUI)
   list(APPEND TRACKER_SRC ${GUI_SRC})

@@ -38,7 +38,10 @@ extern "C" {
 #include "fextra.h"
 #include "soundchip.h"
 
+// format version
 #define TRACKER_VER 153
+// actual version
+#define TRACKER_FULLVER "v1.0pre"
 
 #define minval(a,b) (((a)<(b))?(a):(b)) // for Linux compatibility
 #define maxval(a,b) (((a)>(b))?(a):(b)) // for Linux compatibility

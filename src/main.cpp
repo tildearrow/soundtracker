@@ -23,10 +23,196 @@ int dpiScale;
 #define SDIR_SEPARATOR "/"
 #endif
 
+const char* sdl2_License="Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>\n"
+"\n"
+"This software is provided 'as-is', without any express or implied\n"
+"warranty.  In no event will the authors be held liable for any damages\n"
+"arising from the use of this software.\n"
+"\n"
+"Permission is granted to anyone to use this software for any purpose,\n"
+"including commercial applications, and to alter it and redistribute it\n"
+"freely, subject to the following restrictions:\n"
+"  \n"
+"1. The origin of this software must not be misrepresented; you must not\n"
+"   claim that you wrote the original software. If you use this software\n"
+"   in a product, an acknowledgment in the product documentation would be\n"
+"   appreciated but is not required. \n"
+"2. Altered source versions must be plainly marked as such, and must not be\n"
+"   misrepresented as being the original software.\n"
+"3. This notice may not be removed or altered from any source distribution.";
+const char* fmt_License="Copyright (c) 2012 - present, Victor Zverovich\n"
+"\n"
+"Permission is hereby granted, free of charge, to any person obtaining\n"
+"a copy of this software and associated documentation files (the\n"
+"\"Software\"), to deal in the Software without restriction, including\n"
+"without limitation the rights to use, copy, modify, merge, publish,\n"
+"distribute, sublicense, and/or sell copies of the Software, and to\n"
+"permit persons to whom the Software is furnished to do so, subject to\n"
+"the following conditions:\n"
+"\n"
+"The above copyright notice and this permission notice shall be\n"
+"included in all copies or substantial portions of the Software.\n"
+"\n"
+"THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,\n"
+"EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n"
+"MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND\n"
+"NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE\n"
+"LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\n"
+"OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION\n"
+"WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n"
+"\n"
+"--- Optional exception to the license ---\n"
+"\n"
+"As an exception, if, as a result of your compiling your source code, portions\n"
+"of this Software are embedded into a machine-executable object form of such\n"
+"source code, you may redistribute such embedded portions in such object form\n"
+"without including the above copyright and permission notices.";
+const char* imgui_License="Copyright (c) 2014-2021 Omar Cornut\n"
+"\n"
+"Permission is hereby granted, free of charge, to any person obtaining a copy\n"
+"of this software and associated documentation files (the \"Software\"), to deal\n"
+"in the Software without restriction, including without limitation the rights\n"
+"to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n"
+"copies of the Software, and to permit persons to whom the Software is\n"
+"furnished to do so, subject to the following conditions:\n"
+"\n"
+"The above copyright notice and this permission notice shall be included in all\n"
+"copies or substantial portions of the Software.\n"
+"\n"
+"THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n"
+"IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n"
+"FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n"
+"AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n"
+"LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n"
+"OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n"
+"SOFTWARE.";
+const char* igfd_License="Copyright (c) 2018-2020 Stephane Cuillerdier (aka Aiekick)\n"
+"\n"
+"Permission is hereby granted, free of charge, to any person obtaining a copy\n"
+"of this software and associated documentation files (the \"Software\"), to deal\n"
+"in the Software without restriction, including without limitation the rights\n"
+"to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n"
+"copies of the Software, and to permit persons to whom the Software is\n"
+"furnished to do so, subject to the following conditions:\n"
+"\n"
+"The above copyright notice and this permission notice shall be included in all\n"
+"copies or substantial portions of the Software.\n"
+"\n"
+"THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n"
+"IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n"
+"FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n"
+"AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n"
+"LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n"
+"OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n"
+"SOFTWARE.";
+const char* ibmplex_License="Copyright © 2017 IBM Corp. with Reserved Font Name \"Plex\"\n"
+"\n"
+"This Font Software is licensed under the SIL Open Font License, Version 1.1.\n"
+"This license is copied below, and is also available with a FAQ at:\n"
+"http://scripts.sil.org/OFL\n"
+"\n"
+"-----------------------------------------------------------\n"
+"SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007\n"
+"-----------------------------------------------------------\n"
+"\n"
+"PREAMBLE\n"
+"The goals of the Open Font License (OFL) are to stimulate worldwide\n"
+"development of collaborative font projects, to support the font creation\n"
+"efforts of academic and linguistic communities, and to provide a free and\n"
+"open framework in which fonts may be shared and improved in partnership\n"
+"with others.\n"
+"\n"
+"The OFL allows the licensed fonts to be used, studied, modified and\n"
+"redistributed freely as long as they are not sold by themselves. The\n"
+"fonts, including any derivative works, can be bundled, embedded, \n"
+"redistributed and/or sold with any software provided that any reserved\n"
+"names are not used by derivative works. The fonts and derivatives,\n"
+"however, cannot be released under any other type of license. The\n"
+"requirement for fonts to remain under this license does not apply\n"
+"to any document created using the fonts or their derivatives.\n"
+"\n"
+"DEFINITIONS\n"
+"\"Font Software\" refers to the set of files released by the Copyright\n"
+"Holder(s) under this license and clearly marked as such. This may\n"
+"include source files, build scripts and documentation.\n"
+"\n"
+"\"Reserved Font Name\" refers to any names specified as such after the\n"
+"copyright statement(s).\n"
+"\n"
+"\"Original Version\" refers to the collection of Font Software components as\n"
+"distributed by the Copyright Holder(s).\n"
+"\n"
+"\"Modified Version\" refers to any derivative made by adding to, deleting,\n"
+"or substituting -- in part or in whole -- any of the components of the\n"
+"Original Version, by changing formats or by porting the Font Software to a\n"
+"new environment.\n"
+"\n"
+"\"Author\" refers to any designer, engineer, programmer, technical\n"
+"writer or other person who contributed to the Font Software.\n"
+"\n"
+"PERMISSION & CONDITIONS\n"
+"Permission is hereby granted, free of charge, to any person obtaining\n"
+"a copy of the Font Software, to use, study, copy, merge, embed, modify,\n"
+"redistribute, and sell modified and unmodified copies of the Font\n"
+"Software, subject to the following conditions:\n"
+"\n"
+"1) Neither the Font Software nor any of its individual components,\n"
+"in Original or Modified Versions, may be sold by itself.\n"
+"\n";
+const char* ibmplex_License2="2) Original or Modified Versions of the Font Software may be bundled,\n"
+"redistributed and/or sold with any software, provided that each copy\n"
+"contains the above copyright notice and this license. These can be\n"
+"included either as stand-alone text files, human-readable headers or\n"
+"in the appropriate machine-readable metadata fields within text or\n"
+"binary files as long as those fields can be easily viewed by the user.\n"
+"\n"
+"3) No Modified Version of the Font Software may use the Reserved Font\n"
+"Name(s) unless explicit written permission is granted by the corresponding\n"
+"Copyright Holder. This restriction only applies to the primary font name as\n"
+"presented to the users.\n"
+"\n"
+"4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font\n"
+"Software shall not be used to promote, endorse or advertise any\n"
+"Modified Version, except to acknowledge the contribution(s) of the\n"
+"Copyright Holder(s) and the Author(s) or with their explicit written\n"
+"permission.\n"
+"\n"
+"5) The Font Software, modified or unmodified, in part or in whole,\n"
+"must be distributed entirely under this license, and must not be\n"
+"distributed under any other license. The requirement for fonts to\n"
+"remain under this license does not apply to any document created\n"
+"using the Font Software.\n"
+"\n"
+"TERMINATION\n"
+"This license becomes null and void if any of the above conditions are\n"
+"not met.\n"
+"\n"
+"DISCLAIMER\n"
+"THE FONT SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,\n"
+"EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF\n"
+"MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT\n"
+"OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE\n"
+"COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,\n"
+"INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL\n"
+"DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING\n"
+"FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM\n"
+"OTHER DEALINGS IN THE FONT SOFTWARE.";
+const char* blip_License="Library Copyright (C) 2003-2009 Shay Green. This library is free software;\n"
+"you can redistribute it and/or modify it under the terms of the GNU Lesser\n"
+"General Public License as published by the Free Software Foundation; either\n"
+"version 2.1 of the License, or (at your option) any later version. This\n"
+"library is distributed in the hope that it will be useful, but WITHOUT ANY\n"
+"WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR\n"
+"A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more\n"
+"details. You should have received a copy of the GNU Lesser General Public\n"
+"License along with this module; if not, write to the Free Software Foundation,\n"
+"Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA";
+
 bool ntsc=false;
 
 //// INCLUDES AND STUFF ////
 #include "tracker.h"
+#include "fonts.h"
 
 #include <deque>
 #include <stdexcept>
@@ -205,6 +391,9 @@ namespace settings {
 SDL_Window* sdlWin;
 SDL_Renderer* sdlRend;
 
+ImFont* mainFont=NULL;
+ImFont* patFont=NULL;
+
 const char* pageNames[]={
   "pattern",
   "instr",
@@ -320,6 +509,7 @@ bool insEditOpen=false;
 bool macroEditOpen=false;
 bool memViewOpen=false;
 bool songEditOpen=false;
+bool aboutOpen=false;
 bool macroGraph=false;
 
 struct SelectionPoint {
@@ -2709,6 +2899,7 @@ void drawPatterns(float ypos) {
   float oneCharSize=ImGui::CalcTextSize("A").x;
 
   ImGui::Begin("Pattern View",NULL,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoBringToFrontOnFocus|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoScrollbar);
+  ImGui::PushFont(patFont);
   ImGui::SetWindowPos("Pattern View",ImVec2(0.0f,ypos));
   ImGui::SetWindowSize("Pattern View",ImVec2(scrW*dpiScale,scrH*dpiScale-ypos),ImGuiCond_Always);
   ImGui::Columns(2);
@@ -2918,6 +3109,7 @@ void drawPatterns(float ypos) {
   delayedPat=player.pat;
   ImGui::PopStyleVar();
   if (ImGui::IsWindowFocused()) curWindow=wPattern;
+  ImGui::PopFont();
   ImGui::End();
 }
 
@@ -3435,6 +3627,59 @@ void drawSongInfo() {
     } else {
       ImGui::Text("not saved");
     }
+  }
+  ImGui::End();
+}
+
+void drawAbout() {
+  if (!aboutOpen) return;
+  if (ImGui::Begin("About",&aboutOpen)) {
+    ImGui::Text("soundtracker " TRACKER_FULLVER " (r%d)",TRACKER_VER);
+    ImGui::Text("copyright © 2014-2021 tildearrow.");
+    ImGui::Separator();
+    ImGui::TextWrapped("This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option) any later version.");
+    ImGui::TextWrapped("This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.");
+    ImGui::TextWrapped("You should have received a copy of the GNU Lesser General Public License along with this library; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA");
+    ImGui::Separator();
+    ImGui::Text("this program makes use of the following things:");
+    ImGui::Text("- SDL2 for the entire program (zlib License)");
+    ImGui::Text("- fmt for some of the code (modified MIT license)");
+    ImGui::Text("- Dear ImGui for the entire UI (MIT License)");
+    ImGui::Text("- ImGuiFileDialog for... you know (MIT License)");
+    ImGui::Text("- IBM Plex Sans/Mono for the UI font (SIL Open Font License)");
+    ImGui::Text("- blip_buf for high quality audio output (GNU Lesser General Public License 2.1)");
+    ImGui::Text("read below for more information.");
+    ImGui::Separator();
+    ImGui::Text("SDL2");
+    ImGui::PushFont(patFont);
+    ImGui::Text("%s",sdl2_License);
+    ImGui::PopFont();
+    ImGui::Separator();
+    ImGui::Text("fmt");
+    ImGui::PushFont(patFont);
+    ImGui::Text("%s",fmt_License);
+    ImGui::PopFont();
+    ImGui::Separator();
+    ImGui::Text("Dear ImGui");
+    ImGui::PushFont(patFont);
+    ImGui::Text("%s",imgui_License);
+    ImGui::PopFont();
+    ImGui::Separator();
+    ImGui::Text("ImGuiFileDialog (modified version, https://github.com/tildearrow/ImGuiFileDialog)");
+    ImGui::PushFont(patFont);
+    ImGui::Text("%s",igfd_License);
+    ImGui::PopFont();
+    ImGui::Separator();
+    ImGui::Text("IBM Plex Sans and IBM Plex Mono");
+    ImGui::PushFont(patFont);
+    ImGui::Text("%s",ibmplex_License);
+    ImGui::Text("%s",ibmplex_License2);
+    ImGui::PopFont();
+    ImGui::Separator();
+    ImGui::Text("blip_buf");
+    ImGui::PushFont(patFont);
+    ImGui::Text("%s",blip_License);
+    ImGui::PopFont();
   }
   ImGui::End();
 }
@@ -4012,7 +4257,9 @@ bool updateDisp() {
   if (ImGui::BeginMenu("help")) {
     ImGui::MenuItem("panic");
     ImGui::Separator();
-    ImGui::MenuItem("about...");
+    if (ImGui::MenuItem("about...")) {
+      aboutOpen=true;
+    }
     ImGui::EndMenu();
   }
   ImGui::EndMainMenuBar();
@@ -4125,6 +4372,8 @@ bool updateDisp() {
 
   drawSongInfo();
 
+  drawAbout();
+
   if (ImGuiFileDialog::Instance()->Display("FileDialog")) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
       curfname=ImGuiFileDialog::Instance()->GetFilePathName();
@@ -4187,8 +4436,12 @@ bool initGUI() {
 
   ImGui::GetStyle().ScaleAllSizes(dpiScale);
 
-  if (!ImGui::GetIO().Fonts->AddFontFromFileTTF("font.ttf",18*dpiScale)) {
+  if ((mainFont=ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF(defFont_main_compressed_data,defFont_main_compressed_size,18*dpiScale))==NULL) {
     printf("could not load UI font!\n");
+    return false;
+  }
+  if ((patFont=ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF(defFont_pat_compressed_data,defFont_pat_compressed_size,18*dpiScale))==NULL) {
+    printf("could not load pattern font!\n");
     return false;
   }
 
