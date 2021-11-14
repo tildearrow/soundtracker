@@ -142,7 +142,6 @@ enum envTypes {
   envPan
 };
 
-Texture logo;
 bool leftclick=false;
 bool leftclickprev=false;
 bool rightclick=false;  
