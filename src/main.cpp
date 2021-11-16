@@ -3520,17 +3520,18 @@ void drawMemoryView() {
       if (mvChip<0) mvChip=0;
       if (mvChip>3) mvChip=3;
     }
-    if (ImGui::BeginTable("Memory",17)) {    
+    ImGui::PushFont(patFont);
+    if (ImGui::BeginTable("Memory",17)) {
       ImGui::TableNextRow();
       ImGui::TableNextColumn();
       for (int i=0; i<16; i++) {
         ImGui::TableNextColumn();
-        ImGui::Text(" %X",i);
+        ImGui::TextColored(ImVec4(0.7f,0.7f,0.7f,1.0f)," %X",i);
       }
       for (int i=0; i<16; i++) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::Text("%X0",i);
+        ImGui::TextColored(ImVec4(0.7f,0.7f,0.7f,1.0f),"%X0",i);
         for (int j=0; j<16; j++) {
           ImGui::TableNextColumn();
           ImGui::Text("%.2x",((unsigned char*)chip[mvChip].chan)[j+(i<<4)]);
@@ -3539,6 +3540,7 @@ void drawMemoryView() {
       }
       ImGui::EndTable();
     }
+    ImGui::PopFont();
   }
   ImGui::End();
 }
