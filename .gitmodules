@@ -8,7 +8,3 @@
 [submodule "fmt"]
 	path = fmt
 	url = https://github.com/fmtlib/fmt.git
-[submodule "ImGuiFileDialog"]
-	path = ImGuiFileDialog
-	url = https://github.com/tildearrow/ImGuiFileDialog
-	branch = Lib_Only
