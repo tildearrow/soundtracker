@@ -42,7 +42,7 @@ imgui/imgui_tables.cpp
 imgui/imgui_widgets.cpp
 imgui/backends/imgui_impl_sdlrenderer.cpp
 imgui/backends/imgui_impl_sdl.cpp
-ImGuiFileDialog/ImGuiFileDialog.cpp
+igfd/ImGuiFileDialog.cpp
 )
 set(TRACKER_SRC src/blip_buf.c
 src/soundchip.cpp
@@ -69,7 +69,7 @@ else()
 endif()
 target_link_libraries(ssinter ${SDL2_LIB})
 if (BUILD_GUI)
-  target_include_directories(soundtracker PRIVATE imgui imgui/backends ImGuiFileDialog)
+  target_include_directories(soundtracker PRIVATE imgui imgui/backends igfd)
   target_compile_definitions(soundtracker PUBLIC HAVE_GUI)
   target_compile_definitions(ssinter PUBLIC HAVE_GUI)
 endif (BUILD_GUI)
