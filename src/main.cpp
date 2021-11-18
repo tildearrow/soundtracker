@@ -9,6 +9,8 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
+#include "SDL_pixels.h"
+#include "SDL_render.h"
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
@@ -361,6 +363,9 @@ namespace settings {
 SDL_Window* sdlWin;
 SDL_Renderer* sdlRend;
 
+SDL_Texture* pcmTexture=NULL;
+int pcmEditHeight=0;
+
 ImFont* mainFont=NULL;
 ImFont* patFont=NULL;
 
@@ -466,6 +471,7 @@ bool insEditOpen=false;
 bool macroEditOpen=false;
 bool memViewOpen=false;
 bool songEditOpen=false;
+bool pcmEditOpen=false;
 bool aboutOpen=false;
 bool macroGraph=false;
 
@@ -3643,6 +3649,45 @@ void drawAbout() {
   ImGui::End();
 }
 
+void updatePCMView() {
+  if (pcmTexture==NULL) {
+    pcmEditHeight=256;
+    pcmTexture=SDL_CreateTexture(sdlRend,SDL_PIXELFORMAT_ARGB32,SDL_TEXTUREACCESS_STREAMING,1024,pcmEditHeight);
+  }
+  unsigned char* data=NULL;
+  int pitch=0;
+  if (SDL_LockTexture(pcmTexture,NULL,(void**)&data,&pitch)<0) return;
+  memset(data,0,pitch*pcmEditHeight);
+  for (int i=0; i<1024; i++) {
+    int yStart=(((int)chip[0].pcm[i]+128)*pcmEditHeight)/256;
+    int yEnd=(((int)chip[0].pcm[i+1]+128)*pcmEditHeight)/256;
+    if (yStart>=pcmEditHeight) yStart=pcmEditHeight-1;
+    if (yEnd>=pcmEditHeight) yEnd=pcmEditHeight-1;
+    if (yStart>yEnd) { // do position swap
+      yStart^=yEnd;
+      yEnd^=yStart;
+      yStart^=yEnd;
+    }
+    for (int j=yStart; j<=yEnd; j++) {
+      data[pitch*j+(i<<2)]=255;
+      data[pitch*j+(i<<2)+1]=255;
+      data[pitch*j+(i<<2)+2]=255;
+      data[pitch*j+(i<<2)+3]=255;
+    }
+  }
+  SDL_UnlockTexture(pcmTexture);
+}
+
+void drawPCMEditor() {
+  if (!pcmEditOpen) return;
+  updatePCMView();
+
+  if (ImGui::Begin("PCM Editor")) {
+    if (pcmTexture!=NULL) ImGui::Image(pcmTexture,ImVec2(1024,pcmEditHeight));
+  }
+  ImGui::End();
+}
+
 void prepareUndo() {
   Pattern* p=song->getPattern(song->order[player.pat],true);
   memcpy(oldPat,p->data,p->length*32*8);
@@ -4205,6 +4250,9 @@ bool updateDisp() {
     if (ImGui::MenuItem("macro editor")) {
       macroEditOpen=!macroEditOpen;
     }
+    if (ImGui::MenuItem("PCM editor")) {
+      pcmEditOpen=!pcmEditOpen;
+    }
     if (ImGui::MenuItem("song info")) {
       songEditOpen=!songEditOpen;
     }
@@ -4330,6 +4378,8 @@ bool updateDisp() {
   drawMemoryView();
 
   drawSongInfo();
+
+  drawPCMEditor();
 
   drawAbout();
 
