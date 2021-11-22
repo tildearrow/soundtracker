@@ -367,7 +367,7 @@ SDL_Texture* pcmTexture=NULL;
 int pcmEditHeight=0;
 int pcmEditWidth=0;
 // fixed point. 256 = 1.0
-unsigned short pcmEditZoom=256;
+unsigned short pcmEditZoom=64;
 unsigned short pcmEditOff=0;
 
 ImFont* mainFont=NULL;
@@ -3128,6 +3128,7 @@ const int I_ZERO=0;
 const int I_U8_MAX=255;
 const int ONE=1;
 const unsigned short ZERO=0;
+const unsigned short TWO_THOUSAND_FORTY_EIGHT=2048;
 const unsigned short SHORT_MAX=65535;
 const unsigned char _CHAR_MAX=255;
 const unsigned char VOL_MAX=64;
@@ -3663,30 +3664,38 @@ void updatePCMView() {
   int pitch=0;
   if (SDL_LockTexture(pcmTexture,NULL,(void**)&data,&pitch)<0) return;
   memset(data,0,pitch*pcmEditHeight);
-  int leftThisTick=pcmEditZoom;
+  int leftThisTick=0;
   int yStart=255;
   int yEnd=0;
-  for (int i=0; i<pcmEditWidth;) {
-    int x=i+pcmEditOff;
-    int pos=127-(chip[0].pcm[x]+(((chip[0].pcm[x+1]-chip[0].pcm[x])*(leftThisTick&255))>>8));
+  int x=pcmEditOff;
+  for (int i=0; i<pcmEditWidth; i++) {
+    int pos=127-(chip[0].pcm[x]);
     if (yStart>pos) yStart=pos;
     if (yEnd<pos) yEnd=pos;
-    leftThisTick-=256;
-    if (leftThisTick<=0) {
-      if (yStart>yEnd) {
-        yStart^=yEnd;
-        yEnd^=yStart;
-        yStart^=yEnd;
+    leftThisTick-=pcmEditZoom;
+    do {      
+      if (leftThisTick<=0) {
+        leftThisTick+=256;
+        x++;
       }
-      for (int j=yStart; j<=yEnd; j++) {
-        data[pitch*j+(i<<2)]=255;
-        data[pitch*j+(i<<2)+1]=255;
-        data[pitch*j+(i<<2)+2]=255;
-        data[pitch*j+(i<<2)+3]=255;
-      }
-      leftThisTick+=pcmEditZoom;
-      i++;
+      pos=127-(chip[0].pcm[x]);
+      if (yStart>pos) yStart=pos;
+      if (yEnd<pos) yEnd=pos;
+    } while (leftThisTick<=0);
+
+    if (yStart>yEnd) {
+      yStart^=yEnd;
+      yEnd^=yStart;
+      yStart^=yEnd;
     }
+    for (int j=yStart; j<=yEnd; j++) {
+      data[pitch*j+(i<<2)]=255;
+      data[pitch*j+(i<<2)+1]=255;
+      data[pitch*j+(i<<2)+2]=255;
+      data[pitch*j+(i<<2)+3]=255;
+    }
+    yStart=255;
+    yEnd=0;
   }
   SDL_UnlockTexture(pcmTexture);
 }
@@ -3697,6 +3706,7 @@ void drawPCMEditor() {
 
   if (ImGui::Begin("PCM Editor",&pcmEditOpen)) {
     if (pcmTexture!=NULL) ImGui::Image(pcmTexture,ImVec2(1024,pcmEditHeight));
+    ImGui::SliderScalar("Zoom",ImGuiDataType_U16,&pcmEditZoom,&ONE,&TWO_THOUSAND_FORTY_EIGHT);
   }
   ImGui::End();
 }
