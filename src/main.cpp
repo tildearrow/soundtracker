@@ -3771,7 +3771,7 @@ void drawPCMEditor() {
       if (ImGui::IsItemHovered() && curX<SOUNDCHIP_PCM_SIZE) {
         ImGui::Text("%d, %d",curX,curY);
       } else {
-        ImGui::Text("");
+        ImGui::Text(" ");
       }
     }
     ImGui::Separator();
