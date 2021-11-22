@@ -365,6 +365,10 @@ SDL_Renderer* sdlRend;
 
 SDL_Texture* pcmTexture=NULL;
 int pcmEditHeight=0;
+int pcmEditWidth=0;
+// fixed point. 256 = 1.0
+unsigned short pcmEditZoom=256;
+unsigned short pcmEditOff=0;
 
 ImFont* mainFont=NULL;
 ImFont* patFont=NULL;
@@ -3651,28 +3655,37 @@ void drawAbout() {
 
 void updatePCMView() {
   if (pcmTexture==NULL) {
+    pcmEditWidth=1024;
     pcmEditHeight=256;
-    pcmTexture=SDL_CreateTexture(sdlRend,SDL_PIXELFORMAT_ARGB32,SDL_TEXTUREACCESS_STREAMING,1024,pcmEditHeight);
+    pcmTexture=SDL_CreateTexture(sdlRend,SDL_PIXELFORMAT_ARGB32,SDL_TEXTUREACCESS_STREAMING,pcmEditWidth,pcmEditHeight);
   }
   unsigned char* data=NULL;
   int pitch=0;
   if (SDL_LockTexture(pcmTexture,NULL,(void**)&data,&pitch)<0) return;
   memset(data,0,pitch*pcmEditHeight);
-  for (int i=0; i<1024; i++) {
-    int yStart=(((int)chip[0].pcm[i]+128)*pcmEditHeight)/256;
-    int yEnd=(((int)chip[0].pcm[i+1]+128)*pcmEditHeight)/256;
-    if (yStart>=pcmEditHeight) yStart=pcmEditHeight-1;
-    if (yEnd>=pcmEditHeight) yEnd=pcmEditHeight-1;
-    if (yStart>yEnd) { // do position swap
-      yStart^=yEnd;
-      yEnd^=yStart;
-      yStart^=yEnd;
-    }
-    for (int j=yStart; j<=yEnd; j++) {
-      data[pitch*j+(i<<2)]=255;
-      data[pitch*j+(i<<2)+1]=255;
-      data[pitch*j+(i<<2)+2]=255;
-      data[pitch*j+(i<<2)+3]=255;
+  int leftThisTick=pcmEditZoom;
+  int yStart=255;
+  int yEnd=0;
+  for (int i=0; i<pcmEditWidth;) {
+    int x=i+pcmEditOff;
+    int pos=127-(chip[0].pcm[x]+(((chip[0].pcm[x+1]-chip[0].pcm[x])*(leftThisTick&255))>>8));
+    if (yStart>pos) yStart=pos;
+    if (yEnd<pos) yEnd=pos;
+    leftThisTick-=256;
+    if (leftThisTick<=0) {
+      if (yStart>yEnd) {
+        yStart^=yEnd;
+        yEnd^=yStart;
+        yStart^=yEnd;
+      }
+      for (int j=yStart; j<=yEnd; j++) {
+        data[pitch*j+(i<<2)]=255;
+        data[pitch*j+(i<<2)+1]=255;
+        data[pitch*j+(i<<2)+2]=255;
+        data[pitch*j+(i<<2)+3]=255;
+      }
+      leftThisTick+=pcmEditZoom;
+      i++;
     }
   }
   SDL_UnlockTexture(pcmTexture);
@@ -3682,7 +3695,7 @@ void drawPCMEditor() {
   if (!pcmEditOpen) return;
   updatePCMView();
 
-  if (ImGui::Begin("PCM Editor")) {
+  if (ImGui::Begin("PCM Editor",&pcmEditOpen)) {
     if (pcmTexture!=NULL) ImGui::Image(pcmTexture,ImVec2(1024,pcmEditHeight));
   }
   ImGui::End();
