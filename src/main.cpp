@@ -3128,7 +3128,8 @@ const int I_ZERO=0;
 const int I_U8_MAX=255;
 const int ONE=1;
 const unsigned short ZERO=0;
-const unsigned short TWO_THOUSAND_FORTY_EIGHT=2048;
+const unsigned short ZOOM_MAX=32768;
+const unsigned short SIXTY_FIVE_THOUSAND_FIVE_HUNDRED_THIRTY_FIVE=65535;
 const unsigned short SHORT_MAX=65535;
 const unsigned char _CHAR_MAX=255;
 const unsigned char VOL_MAX=64;
@@ -3660,24 +3661,36 @@ void updatePCMView() {
     pcmEditHeight=256;
     pcmTexture=SDL_CreateTexture(sdlRend,SDL_PIXELFORMAT_ARGB32,SDL_TEXTUREACCESS_STREAMING,pcmEditWidth,pcmEditHeight);
   }
-  unsigned char* data=NULL;
+  unsigned int* data=NULL;
   int pitch=0;
   if (SDL_LockTexture(pcmTexture,NULL,(void**)&data,&pitch)<0) return;
   memset(data,0,pitch*pcmEditHeight);
+  pitch>>=2;
   int leftThisTick=0;
   int yStart=255;
   int yEnd=0;
   int x=pcmEditOff;
   for (int i=0; i<pcmEditWidth; i++) {
+    unsigned int bgColor=0x00000000;
+    if (song->ins[curins]->filterMode&8) {
+      if (x>=song->ins[curins]->pcmPos && x<=(song->ins[curins]->pcmPos+song->ins[curins]->pcmLen)) {
+        bgColor=0x403010ff;
+        if (song->ins[curins]->pcmMult&128 && x>=(song->ins[curins]->pcmPos+song->ins[curins]->pcmLoop)) {
+          bgColor=0x401030ff;
+        }
+      }
+    }
+    if (x>=SOUNDCHIP_PCM_SIZE) break;
     int pos=127-(chip[0].pcm[x]);
     if (yStart>pos) yStart=pos;
     if (yEnd<pos) yEnd=pos;
     leftThisTick-=pcmEditZoom;
-    do {      
+    do {
       if (leftThisTick<=0) {
         leftThisTick+=256;
         x++;
       }
+      if (x>=SOUNDCHIP_PCM_SIZE) break;
       pos=127-(chip[0].pcm[x]);
       if (yStart>pos) yStart=pos;
       if (yEnd<pos) yEnd=pos;
@@ -3688,14 +3701,27 @@ void updatePCMView() {
       yEnd^=yStart;
       yStart^=yEnd;
     }
-    for (int j=yStart; j<=yEnd; j++) {
-      data[pitch*j+(i<<2)]=255;
-      data[pitch*j+(i<<2)+1]=255;
-      data[pitch*j+(i<<2)+2]=255;
-      data[pitch*j+(i<<2)+3]=255;
+    for (int j=0; j<pcmEditHeight; j++) {
+      if (j>=yStart && j<=yEnd) {
+        data[pitch*j+i]=0xffffffff;
+      } else {
+        data[pitch*j+i]=bgColor;
+      }
     }
     yStart=255;
     yEnd=0;
+  }
+  for (int i=0; i<song->channels; i++) {
+    if (player.channelMask[i]) continue;
+    soundchip::channel& c=chip[i>>3].chan[i&7];
+    if (c.flags.pcm) {
+      int x=((c.pcmpos-pcmEditOff)<<8)/pcmEditZoom;
+      if (x>=0 && x<pcmEditWidth) {
+        for (int j=0; j<pcmEditHeight; j++) {
+          data[pitch*j+x]=0xffff00ff;
+        }
+      }
+    }
   }
   SDL_UnlockTexture(pcmTexture);
 }
@@ -3705,8 +3731,53 @@ void drawPCMEditor() {
   updatePCMView();
 
   if (ImGui::Begin("PCM Editor",&pcmEditOpen)) {
-    if (pcmTexture!=NULL) ImGui::Image(pcmTexture,ImVec2(1024,pcmEditHeight));
-    ImGui::SliderScalar("Zoom",ImGuiDataType_U16,&pcmEditZoom,&ONE,&TWO_THOUSAND_FORTY_EIGHT);
+    ImGui::Button("Load");
+    ImGui::SameLine();
+    ImGui::Button("Save");
+    ImGui::SameLine();
+    ImGui::Button("Draw");
+    ImGui::SameLine();
+    ImGui::Button("Cut");
+    ImGui::SameLine();
+    ImGui::Button("Copy");
+    ImGui::SameLine();
+    ImGui::Button("Paste");
+    ImGui::SameLine();
+    ImGui::Button("Delete");
+    ImGui::SameLine();
+    ImGui::Button("Clear");
+    ImGui::SameLine();
+    ImGui::Button("Select All");
+    ImGui::SameLine();
+    ImGui::Button("Invert");
+    ImGui::SameLine();
+    ImGui::Button("Sign");
+    ImGui::SameLine();
+    ImGui::Button("Fade In");
+    ImGui::SameLine();
+    ImGui::Button("Fade Out");
+    ImGui::SameLine();
+    ImGui::Button("Insert");
+
+    ImGui::Separator();
+    if (pcmTexture!=NULL) {
+      ImGui::Image(pcmTexture,ImVec2(1024,pcmEditHeight));
+      ImVec2 mousePos=ImGui::GetMousePos();
+      ImVec2 pcmViewPos=ImGui::GetItemRectMin();
+      mousePos.x-=pcmViewPos.x;
+      mousePos.y-=pcmViewPos.y;
+      int curX=pcmEditOff+((((int)mousePos.x)*pcmEditZoom)>>8);
+      int curY=127-mousePos.y;
+      if (ImGui::IsItemHovered() && curX<SOUNDCHIP_PCM_SIZE) {
+        ImGui::Text("%d, %d",curX,curY);
+      } else {
+        ImGui::Text("");
+      }
+    }
+    ImGui::Separator();
+
+    ImGui::SliderScalar("Offset",ImGuiDataType_U16,&pcmEditOff,&ZERO,&SIXTY_FIVE_THOUSAND_FIVE_HUNDRED_THIRTY_FIVE);
+    ImGui::SliderScalar("Zoom",ImGuiDataType_U16,&pcmEditZoom,&ONE,&ZOOM_MAX);
   }
   ImGui::End();
 }
