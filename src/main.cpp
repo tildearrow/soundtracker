@@ -9,8 +9,6 @@
 // add 2016, 2017, 2018, 2019 and 2020 to the list.
 // and 2021~
 
-#include "SDL_pixels.h"
-#include "SDL_render.h"
 #define PROGRAM_NAME "soundtracker"
 
 //// DEFINITIONS ////
@@ -936,6 +934,10 @@ void CleanupPatterns() {
     player.setSong(NULL);
   }
   song=new Song;
+  chip[0].Init();
+  chip[1].Init();
+  chip[2].Init();
+  chip[3].Init();
   player.setSong(song);
   origin="";
   undoHist.clear();
@@ -3263,6 +3265,10 @@ void drawInsEditor() {
         ins->pcmMult&=~128;
         ins->pcmMult|=pcmLoopOn<<7;
       }
+      if (ImGui::Button("Open PCM editor")) {
+        pcmEditOpen=true;
+        pcmEditOff=ins->pcmPos;
+      }
     }
     if (ImGui::IsWindowFocused()) curWindow=wInstrument;
     ImGui::EndChild();
@@ -3655,11 +3661,19 @@ void drawAbout() {
   ImGui::End();
 }
 
-void updatePCMView() {
+void updatePCMView(int width, int height) {
+  if (width<1 || height<1) return;
+  if (width!=pcmEditWidth || height!=pcmEditHeight) {
+    if (pcmTexture!=NULL) {
+      SDL_DestroyTexture(pcmTexture);
+      pcmTexture=NULL;
+    }
+  }
   if (pcmTexture==NULL) {
-    pcmEditWidth=1024;
-    pcmEditHeight=256;
+    pcmEditWidth=width;
+    pcmEditHeight=height;
     pcmTexture=SDL_CreateTexture(sdlRend,SDL_PIXELFORMAT_ARGB32,SDL_TEXTUREACCESS_STREAMING,pcmEditWidth,pcmEditHeight);
+    SDL_SetTextureBlendMode(pcmTexture,SDL_BLENDMODE_BLEND);
   }
   unsigned int* data=NULL;
   int pitch=0;
@@ -3667,21 +3681,21 @@ void updatePCMView() {
   memset(data,0,pitch*pcmEditHeight);
   pitch>>=2;
   int leftThisTick=0;
-  int yStart=255;
+  int yStart=pcmEditHeight;
   int yEnd=0;
   int x=pcmEditOff;
   for (int i=0; i<pcmEditWidth; i++) {
     unsigned int bgColor=0x00000000;
     if (song->ins[curins]->filterMode&8) {
       if (x>=song->ins[curins]->pcmPos && x<=(song->ins[curins]->pcmPos+song->ins[curins]->pcmLen)) {
-        bgColor=0x403010ff;
+        bgColor=0xffc04040;
         if (song->ins[curins]->pcmMult&128 && x>=(song->ins[curins]->pcmPos+song->ins[curins]->pcmLoop)) {
-          bgColor=0x401030ff;
+          bgColor=0xff40c040;
         }
       }
     }
     if (x>=SOUNDCHIP_PCM_SIZE) break;
-    int pos=127-(chip[0].pcm[x]);
+    int pos=((127-chip[0].pcm[x])*pcmEditHeight)>>8;
     if (yStart>pos) yStart=pos;
     if (yEnd<pos) yEnd=pos;
     leftThisTick-=pcmEditZoom;
@@ -3691,7 +3705,7 @@ void updatePCMView() {
         x++;
       }
       if (x>=SOUNDCHIP_PCM_SIZE) break;
-      pos=127-(chip[0].pcm[x]);
+      pos=((127-chip[0].pcm[x])*pcmEditHeight)>>8;
       if (yStart>pos) yStart=pos;
       if (yEnd<pos) yEnd=pos;
     } while (leftThisTick<=0);
@@ -3708,7 +3722,7 @@ void updatePCMView() {
         data[pitch*j+i]=bgColor;
       }
     }
-    yStart=255;
+    yStart=pcmEditHeight;
     yEnd=0;
   }
   for (int i=0; i<song->channels; i++) {
@@ -3728,7 +3742,6 @@ void updatePCMView() {
 
 void drawPCMEditor() {
   if (!pcmEditOpen) return;
-  updatePCMView();
 
   if (ImGui::Begin("PCM Editor",&pcmEditOpen)) {
     ImGui::Button("Load");
@@ -3760,18 +3773,22 @@ void drawPCMEditor() {
     ImGui::Button("Insert");
 
     ImGui::Separator();
+    updatePCMView(ImGui::GetContentRegionAvail().x,256*dpiScale);
     if (pcmTexture!=NULL) {
-      ImGui::Image(pcmTexture,ImVec2(1024,pcmEditHeight));
+      ImGui::Image(pcmTexture,ImVec2(pcmEditWidth,pcmEditHeight));
       ImVec2 mousePos=ImGui::GetMousePos();
       ImVec2 pcmViewPos=ImGui::GetItemRectMin();
       mousePos.x-=pcmViewPos.x;
       mousePos.y-=pcmViewPos.y;
       int curX=pcmEditOff+((((int)mousePos.x)*pcmEditZoom)>>8);
-      int curY=127-mousePos.y;
+      int curY=127-(mousePos.y*256/pcmEditHeight);
       if (ImGui::IsItemHovered() && curX<SOUNDCHIP_PCM_SIZE) {
         ImGui::Text("%d, %d",curX,curY);
       } else {
         ImGui::Text(" ");
+      }
+      if (ImGui::IsItemClicked()) {
+
       }
     }
     ImGui::Separator();
