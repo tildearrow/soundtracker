@@ -1177,6 +1177,10 @@ namespace IGFD
 	IGFD::FileManager::FileManager()
 	{
 		puFsRoot = std::string(1u, PATH_SEP);
+    puSortingDirection[0]=false;
+    puSortingDirection[1]=false;
+    puSortingDirection[2]=false;
+    puSortingDirection[3]=false;
 	}
 
 	void IGFD::FileManager::OpenCurrentPath(const FileDialogInternal& vFileDialogInternal)
@@ -1191,7 +1195,7 @@ namespace IGFD
 		ScanDir(vFileDialogInternal, GetCurrentPath());
 	}
 
-	void IGFD::FileManager::SortFields(const FileDialogInternal& vFileDialogInternal, const SortingFieldEnum& vSortingField, const bool& vCanChangeOrder)
+	void IGFD::FileManager::SortFields(const FileDialogInternal& vFileDialogInternal, const SortingFieldEnum& vSortingField, const bool vCanChangeOrder)
 	{
 		if (vSortingField != SortingFieldEnum::FIELD_NONE)
 		{
@@ -1206,8 +1210,10 @@ namespace IGFD
 
 		if (vSortingField == SortingFieldEnum::FIELD_FILENAME)
 		{
-			if (vCanChangeOrder && puSortingField == vSortingField)
-				puSortingDirection[0] = !puSortingDirection[0];
+			if (vCanChangeOrder && puSortingField == vSortingField) {
+        //printf("Change the sorting\n");
+				puSortingDirection[0] = true;//!puSortingDirection[0];
+      }
 
 			if (puSortingDirection[0])
 			{

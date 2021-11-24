@@ -865,7 +865,7 @@ namespace IGFD
 		std::string puHeaderFileThumbnails;									// detail view name of column thumbnails
 		bool puSortingDirection[5] = { true, true, true, true, true };		// detail view // true => Descending, false => Ascending
 #else
-		bool puSortingDirection[4] = { false, true, true, true };			// detail view // true => Descending, false => Ascending
+		bool puSortingDirection[4];			// detail view // true => Descending, false => Ascending
 #endif
 		SortingFieldEnum puSortingField = SortingFieldEnum::FIELD_FILENAME;	// detail view sorting column
 		bool puShowDrives = false;											// drives are shown (only on os windows)
@@ -905,7 +905,7 @@ namespace IGFD
 		void ApplyFilteringOnFileList(const FileDialogInternal& vFileDialogInternal);
 		void OpenCurrentPath(const FileDialogInternal& vFileDialogInternal);							// set the path of the dialog, will launch the directory scan for populate the file listview
 		void SortFields(const FileDialogInternal& vFileDialogInternal, 
-			const SortingFieldEnum& vSortingField, const bool& vCanChangeOrder);						// will sort a column
+			const SortingFieldEnum& vSortingField, const bool vCanChangeOrder);						// will sort a column
 		bool GetDrives();																				// list drives on windows platform
 		bool CreateDir(const std::string& vPath);														// create a directory on the file system
 		void ComposeNewPath(std::vector<std::string>::iterator vIter);									// compose a path from the compose path widget
