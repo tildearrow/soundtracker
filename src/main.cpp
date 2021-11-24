@@ -3247,7 +3247,7 @@ void drawInsEditor() {
     noteOffsetSelector(ins->LFO);
 
     bool pcmOn=ins->filterMode&8;
-    ImGui::BeginChild("PCM",pcmOn?ImVec2(0,120.0f*dpiScale):ImVec2(0,24.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
+    ImGui::BeginChild("PCM",pcmOn?ImVec2(0,150.0f*dpiScale):ImVec2(0,24.0f*dpiScale),true,ImGuiWindowFlags_MenuBar);
     ImGui::BeginMenuBar();
     if (ImGui::Checkbox("PCM",&pcmOn)) {
       ins->filterMode&=~8;
