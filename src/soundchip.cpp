@@ -38,9 +38,13 @@ void soundchip::NextSample(short* l, short* r) {
     }
     
     if (chan[i].flags.pcm) {
-      pcmdec[i]+=chan[i].freq;
-      if (pcmdec[i]>32767) {
-        pcmdec[i]-=32767;
+      if (chan[i].freq>0x8000) {
+        pcmdec[i]+=0x8000;
+      } else {
+        pcmdec[i]+=chan[i].freq;
+      }
+      if (pcmdec[i]>=32768) {
+        pcmdec[i]-=32768;
         if (chan[i].pcmpos<chan[i].pcmbnd) {
           chan[i].pcmpos++;
           chan[i].wc++;

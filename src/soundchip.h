@@ -37,7 +37,7 @@ class soundchip {
     unsigned short swfreqt[8];
     unsigned short swcutt[8];
     //int pcmpos[8];
-    int pcmdec[8];
+    unsigned short pcmdec[8];
     //int pcmend[8];
     //int pcmreset[8];
     //unsigned char pcmmult[8];
