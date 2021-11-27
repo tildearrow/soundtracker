@@ -2300,6 +2300,9 @@ int LoadFile(const char* filename) {
       printf("-applying legacy instrument and sequence compatibility\n");
       printf("-applying legacy noise frequency compatibility\n");
     }
+    if (song->version<153) {
+      printf("-applying no instrument resonance compatibility\n");
+    }
 
     instruments=song->insC; // instruments
     patterns=song->patC; // patterns
@@ -2550,6 +2553,10 @@ int LoadFile(const char* filename) {
         if (song->version<151) {
           li.filterH=65535-(unsigned short)(2.0*sin(3.141592653589*(((double)(65535-li.filterH))/2.5)/297500.0)*65535.0);
         }
+        // version<153 no resonance
+        if (song->version<153) {
+          li.res=48;
+        }
 
         // convert legacy instrument
         memcpy(song->ins[ii]->name,li.name,32);
@@ -2581,6 +2588,11 @@ int LoadFile(const char* filename) {
         song->ins[ii]->RMf=li.RMf;
       } else {
         fread(song->ins[ii],1,96,sfile);
+
+        // version<153 no resonance
+        if (song->version<153) {
+          song->ins[ii]->res=48;
+        }
       }
     }
 

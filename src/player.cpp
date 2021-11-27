@@ -61,7 +61,7 @@ void Player::noteOn(int channel, int note) {
     c.cutoff=ins->filterH;
   }
   //printf("filter mode is now %d\n",c.flags.fmode);
-  c.reson=48;
+  c.reson=ins->res;
 
   /// MACROS
   if (ins->volMacro>=0) {
