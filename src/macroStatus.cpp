@@ -45,7 +45,11 @@ void MacroStatus::next() {
         break;
       case cmdSub:
         hasChanged=true;
-        value-=cmd.value;
+        if (value<cmd.value) {
+          value=0;
+        } else {
+          value-=cmd.value;
+        }
         break;
     }
     if (cmd.type&128) getOut=true;
