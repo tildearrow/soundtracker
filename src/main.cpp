@@ -1848,7 +1848,7 @@ int ImportXM(FILE* xm) {
           point++;
         }
       }
-      song->ins[i]->volMacro=song->macros.size();
+      song->ins[i]->volMacro=song->macros.size()-1;
       song->macros.push_back(m);
       printf("volsus %d\n",ich.volSus);
     }
@@ -1901,6 +1901,8 @@ int ImportXM(FILE* xm) {
         }
         song->ins[i+1]->filterMode|=8;
         song->ins[i+1]->noteOffset=sh.note+24;
+        song->ins[i+1]->vol=sh.vol;
+        song->ins[i+1]->pitch=sh.pitch;
       } else {
         fseek(xm,(sh.flags&16)?(sh.size*2):(sh.size),SEEK_CUR);
       }
