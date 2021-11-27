@@ -1836,6 +1836,7 @@ int ImportXM(FILE* xm) {
     printf("volenv: %d panenv: %d\n",ich.envVolCount,ich.envPanCount);
     if (ich.volType&1) {
       int point=0;
+      int loopPos=0;
       Macro* m=new Macro;
       for (int j=0; (point<ich.envVolCount); j++) {
         if (point<1) {
@@ -1845,10 +1846,14 @@ int ImportXM(FILE* xm) {
         }
         if (j>=ich.envVol[point].pos) {
           if (point==ich.volSus && ich.volType&2) m->cmds.push_back(MacroCommand(cmdWaitRel,0,false));
+          if (point==ich.volLoopStart && ich.volType&4) loopPos=m->cmds.size()-1;
+          if (point==ich.volLoopEnd && ich.volType&4) m->cmds.push_back(MacroCommand(cmdLoop,loopPos,false));
           point++;
         }
       }
-      song->ins[i]->volMacro=song->macros.size()-1;
+      m->cmds.push_back(MacroCommand(cmdSub,1+(ich.volFade>>8),true));
+      m->cmds.push_back(MacroCommand(cmdLoop,m->cmds.size()-1,false));
+      song->ins[i+1]->volMacro=song->macros.size();
       song->macros.push_back(m);
       printf("volsus %d\n",ich.volSus);
     }
