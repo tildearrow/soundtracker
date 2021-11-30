@@ -368,8 +368,10 @@ int pcmEditWidth=0;
 unsigned short pcmEditZoom=64;
 unsigned short pcmEditOff=0;
 
+#ifdef HAVE_GUI
 ImFont* mainFont=NULL;
 ImFont* patFont=NULL;
+#endif
 
 const char* noteNamesPat[256]={
   "...", "C-0", "C#0", "D-0", "D#0", "E-0", "F-0", "F#0", "G-0", "G#0", "A-0", "A#0", "B-0", "===", "~~~", "^^^",
